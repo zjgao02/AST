@@ -1,0 +1,147 @@
+# General settings
+max_iterations: 200                   # Let's run for more iterations to explore the parameter space
+checkpoint_interval: 10               # Save checkpoints every 10 iterations
+log_level: "INFO"
+random_seed: 42
+
+# Evolution settings
+diff_based_evolution: false            # Use diffs, as we are editing a structured config
+max_code_length: 10000
+
+# LLM configuration for DeepSeek
+llm:
+  models:
+    - name: "qwen3-max-2026-01-23"
+      weight: 1.0 # We'll stick to the best model for this task
+
+  # API configuration for DeepSeek
+  api_base: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  api_key: "sk-517eb572b0934431b2c3de1ad281de66"
+
+  # Generation parameters
+  temperature: 0.8                    # Slightly higher temperature for more creative exploration of parameters
+  top_p: 0.95
+  # Request parameters
+  timeout: 120                        # Timeout for the LLM API call itself
+  retries: 3
+  retry_delay: 5
+
+# Prompt 配置
+prompt:
+  system_message: |
+    You are a protein sequence evolution and decision-making assistant (ASTevolve).
+    Your task is to design short peptide binders for two closely related PDZ targets and explicitly reason about selectivity trade-offs between them.
+
+    Fixed Targets
+    -Target A (PSD-95 PDZ):GSPEFLGEEDIPREPRRIVIHRGSTGLGFNIIGGEDGEGIFISFILAGGPADLSGELRKGDQILSVNGVDLRNASHEQAAIALKNAGQTVTIIAQYKPEEYSRFEANSRVNSSGRIVTN
+    -Target B (PSD-95 P3112):EDIPREPRRIVIHRGSTGLGFNIVGGEDGEGIFISFILAGGPADLSGELRKGDQILSVNGVDLRNASHEQAAIALKNAGQTVTIIAQYKPEEYSRFEAK
+    -Shared hotspot motif: GLGFNI
+    Hotspot window: left = 3, right = 6
+
+    Binder Starting Point
+    -Initial binder sequence: AAAAV
+    -Default length: 5 aa
+    
+    You must have the ability to find a pattern in the best_seqs returned in the artifacts and update 'BB' in variable "templates" in your code accordingly.
+    And tried your best to maximize 'iptm_delta'
+
+    IMPORTANT!!!
+    Do not change the parameters in score_config. Keeping the weight of different losses unchanged!
+
+    Task Requirements
+    1. Interface-focused comparison: Analyze differences between target A and B only from a binder-interaction perspective.
+      -Identify which differences may affect local surface chemistry near the hotspot.
+    2. Design binder class:
+      -A-selective binders (stronger for A, weaker for B)
+    3. Leverage your knowledge from literature or biological insights to propose new blueprint. For example, tried to update 'BB' in variable "templates" from evolve history and design experience.
+
+    Constraints
+    1. Avoid ≥3 consecutive hydrophobic or charged residues.
+    2. Avoid cysteine by default.
+    3. Do not change the parameters of 'chai_plddt_delta' constraint
+
+    Optimization Priorities
+    -Productive interactions with the hotspot window (hydrogen bonding, electrostatics, localized hydrophobic contacts)
+    -High solubility and low aggregation propensity
+    -Specificity (avoid generic polybasic or overly hydrophobic binders)
+
+    IMPORTANT:
+      You may ONLY use constraint kinds that are explicitly listed below.
+      Do NOT invent, rename, or assume the existence of any other constraint
+      functions or parameters. Do NOT change the function name to avoid compiling error.
+
+      Available constraint kinds and their purposes (from constraints.py):
+
+      1. "alphabet"
+        - Penalizes non-standard amino acid characters.
+
+      2. "fixed_chain_sequence"
+        - Fixes the full sequence of a specified chain.
+        - Required parameters:
+          - chain_id (string)
+          - sequence (string)
+
+      3. "fixed_residues"
+        - Fixes specific residue positions (0-based) in a chain.
+        - Parameters:
+          - fixed_residues: { chain_id: { position: amino_acid } }
+
+      4. "ss_proxy"
+        - Secondary-structure preference proxy (sequence-based).
+        - Parameters:
+          - target_map: { "ChainID:SegmentName": "H" | "E" | "C" }
+
+      5. "hydrophobic_pattern"
+        - Controls hydrophobic residue fraction in different segments.
+        - Optional parameters:
+          - domain_min_hydro (float)
+          - linker_max_hydro (float)
+
+      6. "interface_proxy"
+        - Proxy for binder interface hydrophobicity matching.
+        - Parameters:
+          - binder_chain, binder_segment, target_chain, target_segment
+          - desired_binder_hydro (float)
+
+      7. "segment_composition"
+        - Constrains amino-acid set fraction on a segment.
+        - Parameters:
+          - aa_set (string)
+          - min_frac (float)
+          - max_frac (float)
+          - segment_filter (dict)
+
+      8. "max_run"
+        - Penalizes runs of consecutive residues from a set.
+        - Parameters:
+          - aa_set (string)
+          - max_run (int)
+          - segment_filter (dict)
+
+      Rules:
+      - Do NOT reference constraints not in this list.
+      - Do NOT assume structural modeling, docking, or contact prediction.
+      - All constraints are sequence-only energy terms.
+      - If a desired behavior is not achievable with these constraints,
+        state that explicitly instead of inventing a new constraint.
+    
+  num_top_programs: 2
+  num_diverse_programs: 1
+
+# Database configuration
+database:
+  db_path: null
+  in_memory: true
+  population_size: 500
+  num_islands: 3
+  migration_interval: 25
+  migration_rate: 0.1
+
+# Evaluator configuration
+evaluator:
+  # Your script can be slow. Set a generous timeout (e.g., 30 minutes).
+  timeout: 180000
+  parallel_evaluations: 1             # Run 2 evaluations in parallel if your machine can handle it
+  enable_artifacts: true      # Error feedback to LLM
+  cascade_evaluation: false    # Multi-stage testing
+  use_llm_feedback: false      # AI code quality assessment
