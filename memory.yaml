@@ -1,0 +1,755 @@
+metadata:
+  memory_name: "CD25_scFv_memory"
+  status: "active"
+  task_type: "AST-guided scFv evolution for CD25 binding optimization"
+  species_context: "human CD25 target; antibody-like binder optimization"
+  last_manual_update: null
+  last_auto_update: null
+  writable_sections:
+    - "adaptive_memory"
+    - "optimization_windows"
+    - "run_state"
+    - "template_memory"
+    - "candidate_statistics"
+  mostly_frozen_sections:
+    - "ast_definition"
+    - "stable_priors"
+    - "llm_guidance"
+    - "safety_and_guardrails"
+  read_priority_for_llm:
+    - "llm_guidance"
+    - "stable_priors.scfv_prior"
+    - "stable_priors.linker_prior"
+    - "stable_priors.aa_prior"
+    - "adaptive_memory"
+    - "optimization_windows"
+
+ast_definition:
+  root: "CD25_scFv_Design_Task"
+  hierarchy:
+    CD25_scFv_Design_Task:
+      children:
+        - "Binder_scFv"
+        - "Target_CD25"
+        - "Interface_System"
+
+    Binder_scFv:
+      node_type: "binder_root"
+      children:
+        - "VH_domain"
+        - "Linker_module"
+        - "VL_domain"
+
+    VH_domain:
+      node_type: "domain"
+      role: "heavy_chain_variable_domain"
+      children:
+        - "VH_FR1"
+        - "VH_CDR1"
+        - "VH_FR2"
+        - "VH_CDR2"
+        - "VH_FR3"
+        - "VH_CDR3"
+        - "VH_FR4"
+
+    Linker_module:
+      node_type: "connector"
+      role: "vh_vl_orientation_and_flexibility"
+      children:
+        - "Linker_head"
+        - "Linker_core"
+        - "Linker_tail"
+
+    VL_domain:
+      node_type: "domain"
+      role: "light_chain_variable_domain"
+      children:
+        - "VL_FR1"
+        - "VL_CDR1"
+        - "VL_FR2"
+        - "VL_CDR2"
+        - "VL_FR3"
+        - "VL_CDR3"
+        - "VL_FR4"
+
+    Target_CD25:
+      node_type: "target_root"
+      children:
+        - "CD25_global"
+        - "CD25_epitope_candidate"
+        - "CD25_non_epitope"
+
+    Interface_System:
+      node_type: "interaction_context"
+      children:
+        - "Paratope_System"
+        - "Presentation_System"
+        - "Developability_System"
+
+  region_roles:
+    CDR:
+      semantic_role: "main_functional_interface_motif"
+      typical_priority: "high"
+    FR:
+      semantic_role: "structural_support_scaffold"
+      typical_priority: "low"
+    Linker:
+      semantic_role: "orientation_and_flexibility_modulator"
+      typical_priority: "medium_low"
+    Target_epitope_candidate:
+      semantic_role: "putative_binder-facing_target_patch"
+      typical_priority: "context_dependent"
+
+stable_priors:
+  aa_prior:
+    property_dimensions:
+      - "hydrophobicity_class"
+      - "charge_class"
+      - "polarity"
+      - "aromaticity"
+      - "size_class"
+      - "flexibility_bias"
+      - "hbond_donor_acceptor_tendency"
+      - "secondary_structure_bias"
+      - "aggregation_risk_bias"
+      - "antibody_interface_preference_bias"
+
+    amino_acids:
+      A:
+        hydrophobicity_class: "mild_hydrophobic"
+        charge_class: "neutral"
+        polarity: "low"
+        aromaticity: false
+        size_class: "small"
+        flexibility_bias: "medium"
+        hbond_donor_acceptor_tendency: "low"
+        secondary_structure_bias: "helix_friendly"
+        aggregation_risk_bias: "low_to_medium"
+        antibody_interface_preference_bias: "neutral"
+      R:
+        hydrophobicity_class: "hydrophilic"
+        charge_class: "positive"
+        polarity: "high"
+        aromaticity: false
+        size_class: "large"
+        flexibility_bias: "medium"
+        hbond_donor_acceptor_tendency: "high"
+        secondary_structure_bias: "surface_friendly"
+        aggregation_risk_bias: "medium_if_clustered"
+        antibody_interface_preference_bias: "context_dependent"
+      N:
+        hydrophobicity_class: "hydrophilic"
+        charge_class: "neutral"
+        polarity: "high"
+        aromaticity: false
+        size_class: "small"
+        flexibility_bias: "medium"
+        hbond_donor_acceptor_tendency: "high"
+        secondary_structure_bias: "turn_friendly"
+        aggregation_risk_bias: "low"
+        antibody_interface_preference_bias: "favorable"
+      D:
+        hydrophobicity_class: "hydrophilic"
+        charge_class: "negative"
+        polarity: "high"
+        aromaticity: false
+        size_class: "small"
+        flexibility_bias: "medium"
+        hbond_donor_acceptor_tendency: "high"
+        secondary_structure_bias: "surface_friendly"
+        aggregation_risk_bias: "medium_if_clustered"
+        antibody_interface_preference_bias: "context_dependent"
+      C:
+        hydrophobicity_class: "mild_hydrophobic"
+        charge_class: "neutral"
+        polarity: "medium"
+        aromaticity: false
+        size_class: "small"
+        flexibility_bias: "medium"
+        hbond_donor_acceptor_tendency: "medium"
+        secondary_structure_bias: "neutral"
+        aggregation_risk_bias: "disulfide_sensitive"
+        antibody_interface_preference_bias: "use_with_caution"
+      Q:
+        hydrophobicity_class: "hydrophilic"
+        charge_class: "neutral"
+        polarity: "high"
+        aromaticity: false
+        size_class: "medium"
+        flexibility_bias: "medium"
+        hbond_donor_acceptor_tendency: "high"
+        secondary_structure_bias: "surface_friendly"
+        aggregation_risk_bias: "low"
+        antibody_interface_preference_bias: "favorable"
+      E:
+        hydrophobicity_class: "hydrophilic"
+        charge_class: "negative"
+        polarity: "high"
+        aromaticity: false
+        size_class: "medium"
+        flexibility_bias: "medium"
+        hbond_donor_acceptor_tendency: "high"
+        secondary_structure_bias: "surface_friendly"
+        aggregation_risk_bias: "medium_if_clustered"
+        antibody_interface_preference_bias: "context_dependent"
+      G:
+        hydrophobicity_class: "neutral"
+        charge_class: "neutral"
+        polarity: "low"
+        aromaticity: false
+        size_class: "smallest"
+        flexibility_bias: "very_high"
+        hbond_donor_acceptor_tendency: "low"
+        secondary_structure_bias: "turn_loop_friendly"
+        aggregation_risk_bias: "low"
+        antibody_interface_preference_bias: "context_dependent"
+      H:
+        hydrophobicity_class: "borderline"
+        charge_class: "weak_positive_contextual"
+        polarity: "medium"
+        aromaticity: true
+        size_class: "medium"
+        flexibility_bias: "medium"
+        hbond_donor_acceptor_tendency: "high"
+        secondary_structure_bias: "surface_friendly"
+        aggregation_risk_bias: "low_to_medium"
+        antibody_interface_preference_bias: "often_useful"
+      I:
+        hydrophobicity_class: "hydrophobic"
+        charge_class: "neutral"
+        polarity: "low"
+        aromaticity: false
+        size_class: "medium"
+        flexibility_bias: "low"
+        hbond_donor_acceptor_tendency: "low"
+        secondary_structure_bias: "beta_friendly"
+        aggregation_risk_bias: "medium_to_high_if_clustered"
+        antibody_interface_preference_bias: "use_sparingly"
+      L:
+        hydrophobicity_class: "hydrophobic"
+        charge_class: "neutral"
+        polarity: "low"
+        aromaticity: false
+        size_class: "medium"
+        flexibility_bias: "low"
+        hbond_donor_acceptor_tendency: "low"
+        secondary_structure_bias: "helix_friendly"
+        aggregation_risk_bias: "medium_to_high_if_clustered"
+        antibody_interface_preference_bias: "use_sparingly"
+      K:
+        hydrophobicity_class: "hydrophilic"
+        charge_class: "positive"
+        polarity: "high"
+        aromaticity: false
+        size_class: "large"
+        flexibility_bias: "medium"
+        hbond_donor_acceptor_tendency: "high"
+        secondary_structure_bias: "surface_friendly"
+        aggregation_risk_bias: "medium_if_clustered"
+        antibody_interface_preference_bias: "context_dependent"
+      M:
+        hydrophobicity_class: "mild_hydrophobic"
+        charge_class: "neutral"
+        polarity: "low"
+        aromaticity: false
+        size_class: "medium"
+        flexibility_bias: "low"
+        hbond_donor_acceptor_tendency: "low"
+        secondary_structure_bias: "helix_friendly"
+        aggregation_risk_bias: "medium"
+        antibody_interface_preference_bias: "neutral"
+      F:
+        hydrophobicity_class: "hydrophobic"
+        charge_class: "neutral"
+        polarity: "low"
+        aromaticity: true
+        size_class: "large"
+        flexibility_bias: "low"
+        hbond_donor_acceptor_tendency: "low"
+        secondary_structure_bias: "core_or_interface"
+        aggregation_risk_bias: "high_if_clustered"
+        antibody_interface_preference_bias: "often_useful_but_risky_if_overused"
+      P:
+        hydrophobicity_class: "borderline"
+        charge_class: "neutral"
+        polarity: "low"
+        aromaticity: false
+        size_class: "medium"
+        flexibility_bias: "rigid"
+        hbond_donor_acceptor_tendency: "low"
+        secondary_structure_bias: "turn_inducer"
+        aggregation_risk_bias: "low"
+        antibody_interface_preference_bias: "context_dependent"
+      S:
+        hydrophobicity_class: "hydrophilic"
+        charge_class: "neutral"
+        polarity: "high"
+        aromaticity: false
+        size_class: "small"
+        flexibility_bias: "medium"
+        hbond_donor_acceptor_tendency: "high"
+        secondary_structure_bias: "loop_friendly"
+        aggregation_risk_bias: "low"
+        antibody_interface_preference_bias: "favorable"
+      T:
+        hydrophobicity_class: "hydrophilic"
+        charge_class: "neutral"
+        polarity: "high"
+        aromaticity: false
+        size_class: "small"
+        flexibility_bias: "medium"
+        hbond_donor_acceptor_tendency: "high"
+        secondary_structure_bias: "loop_beta_friendly"
+        aggregation_risk_bias: "low"
+        antibody_interface_preference_bias: "favorable"
+      W:
+        hydrophobicity_class: "hydrophobic"
+        charge_class: "neutral"
+        polarity: "low"
+        aromaticity: true
+        size_class: "very_large"
+        flexibility_bias: "low"
+        hbond_donor_acceptor_tendency: "medium"
+        secondary_structure_bias: "interface_specialist"
+        aggregation_risk_bias: "high_if_clustered"
+        antibody_interface_preference_bias: "often_high_value_if_sparse"
+      Y:
+        hydrophobicity_class: "borderline_aromatic"
+        charge_class: "neutral"
+        polarity: "medium"
+        aromaticity: true
+        size_class: "large"
+        flexibility_bias: "medium_low"
+        hbond_donor_acceptor_tendency: "high"
+        secondary_structure_bias: "interface_friendly"
+        aggregation_risk_bias: "medium_if_clustered"
+        antibody_interface_preference_bias: "highly_favorable"
+      V:
+        hydrophobicity_class: "hydrophobic"
+        charge_class: "neutral"
+        polarity: "low"
+        aromaticity: false
+        size_class: "small_medium"
+        flexibility_bias: "low"
+        hbond_donor_acceptor_tendency: "low"
+        secondary_structure_bias: "beta_friendly"
+        aggregation_risk_bias: "medium_if_clustered"
+        antibody_interface_preference_bias: "use_sparingly"
+
+    aa_sets:
+      hydrophobic: "AILMFWV"
+      aromatic: "FWYH"
+      polar_uncharged: "NQSTY"
+      positive: "KRH"
+      negative: "DE"
+      flexible: "GSA"
+      rigid_turning: "P"
+      small: "AGSTCP"
+      low_complexity_risk_if_clustered: "GSDEK"
+      aggregation_risk_if_clustered: "ILVFWY"
+
+    substitution_preferences:
+      conservative_groups:
+        aliphatic: ["A", "V", "I", "L", "M"]
+        aromatic: ["F", "Y", "W", "H"]
+        positive: ["K", "R", "H"]
+        negative: ["D", "E"]
+        polar_amide_hydroxyl: ["N", "Q", "S", "T", "Y"]
+        flexible_small: ["G", "S", "A", "T"]
+      global_default_allowed_new_positions:
+        - "A"
+        - "D"
+        - "E"
+        - "G"
+        - "H"
+        - "K"
+        - "N"
+        - "P"
+        - "Q"
+        - "R"
+        - "S"
+        - "T"
+        - "Y"
+      globally_disfavored_new_positions:
+        - "C"
+      notes:
+        - "Default new-position amino-acid palette is biased toward soluble, interface-competent residues."
+        - "Hydrophobic/aromatic residues can still be introduced, but in a sparse and justified manner."
+
+  scfv_prior:
+    general:
+      format: "single-chain variable fragment"
+      architecture: "VH-Linker-VL"
+      core_design_principle: >
+        CDRs are the main functional interface motifs, framework regions are
+        primarily structural supports, and linker is primarily a presentation
+        and flexibility module.
+      preferred_edit_order:
+        - "VH_CDR3"
+        - "VH_CDR2"
+        - "VL_CDR3"
+        - "VH_CDR1"
+        - "VL_CDR1"
+        - "VL_CDR2"
+        - "Linker_module"
+        - "framework_regions"
+      edit_budget_bias:
+        cdr: "high"
+        linker: "low_to_medium"
+        framework: "low"
+
+    cdr_importance:
+      VH_CDR3: 1.00
+      VH_CDR2: 0.78
+      VL_CDR3: 0.72
+      VH_CDR1: 0.58
+      VL_CDR1: 0.52
+      VL_CDR2: 0.42
+
+    cdr_design_bias:
+      preferred_functional_residue_classes:
+        - "aromatic"
+        - "polar_uncharged"
+        - "contextual_positive"
+        - "contextual_negative"
+      favored_residues_sparse:
+        - "Y"
+        - "W"
+        - "H"
+        - "N"
+        - "Q"
+        - "S"
+        - "T"
+        - "R"
+        - "D"
+        - "E"
+      disfavored_patterns:
+        - "long_hydrophobic_runs"
+        - "long_polybasic_runs"
+        - "multi_cysteine_gain"
+        - "overly_flat_low_complexity_loops"
+      cdr_loop_logic:
+        VH_CDR3:
+          role: "highest_priority_affinity_driver"
+          tolerance_for_change: "highest"
+          suggested_edit_modes:
+            - "single_point_mutation"
+            - "small_motif_refinement"
+            - "composition_rebalancing"
+            - "short_pattern_enrichment"
+        VH_CDR2:
+          role: "secondary_contact_and_shape_tuner"
+          tolerance_for_change: "medium"
+          suggested_edit_modes:
+            - "sparse_point_mutation"
+            - "polarity_adjustment"
+        VL_CDR3:
+          role: "supporting_paratope_shaping"
+          tolerance_for_change: "medium"
+          suggested_edit_modes:
+            - "sparse_point_mutation"
+            - "aromatic_or_polar_tuning"
+        remaining_cdrs:
+          role: "fine_tuning"
+          tolerance_for_change: "medium_low"
+          suggested_edit_modes:
+            - "minimal_interpretable_edits"
+
+    framework_prior:
+      philosophy: >
+        Framework regions should preserve foldability, maintain antibody-like
+        architecture, and support CDR presentation. They are not the primary
+        affinity engine.
+      edit_policy:
+        default: "conservative_only"
+        mutation_rate_bias: "low"
+        allow_when:
+          - "stability_support_needed"
+          - "solubility_support_needed"
+          - "recurrent_evolve_history_signal"
+          - "local_CDR_presentation_logic"
+        avoid_when:
+          - "pure_affinity_chasing_without_supporting_reason"
+      favored_framework_substitutions:
+        - "polar_surface_cleanup"
+        - "charge_balance_cleanup"
+        - "conservative_size_matched_substitutions"
+      framework_disfavored_patterns:
+        - "buried_hydrophobic_disruption"
+        - "gratuitous_aromatic_inflation"
+        - "multiple_nonconservative_substitutions_in_same_FR_block"
+
+    paratope_reasoning_prior:
+      concept: >
+        In absence of explicit residue-contact annotation, treat CDR-facing residues
+        as the main latent paratope pool and prioritize edits there.
+      latent_paratope_nodes:
+        - "VH_CDR1"
+        - "VH_CDR2"
+        - "VH_CDR3"
+        - "VL_CDR1"
+        - "VL_CDR2"
+        - "VL_CDR3"
+      supporting_nonparatope_nodes:
+        - "VH_FR2"
+        - "VH_FR3"
+        - "VL_FR2"
+        - "VL_FR3"
+      nonprimary_nodes:
+        - "Linker_head"
+        - "Linker_core"
+        - "Linker_tail"
+
+  linker_prior:
+    global_role: "vh_vl_orientation_and_flexibility_modulator"
+    default_sequence: "GGGGSGGGGSGGGGS"
+    default_length: 15
+    default_class: "flexible_gly_ser_linker"
+    principles:
+      - "Preserve linker-like character overall."
+      - "Use linker edits sparingly."
+      - "Do not make linker a hydrophobic patch."
+      - "Do not overload linker with charged runs."
+      - "Prioritize flexibility and low aggregation over aggressive redesign."
+    canonical_templates:
+      highly_common:
+        - "GGGGS"
+        - "GGGGSGGGGS"
+        - "GGGGSGGGGSGGGGS"
+      moderate_variants:
+        - "GGGGSAGGGGS"
+        - "GGGGSGSGGSGGGGS"
+    residue_bias:
+      favored:
+        - "G"
+        - "S"
+        - "A"
+        - "T"
+      conditionally_allowed:
+        - "P"
+        - "N"
+        - "Q"
+      disfavored:
+        - "W"
+        - "F"
+        - "I"
+        - "L"
+        - "V"
+        - "C"
+    composition_targets:
+      gly_ser_fraction_preferred_min: 0.60
+      hydrophobic_fraction_preferred_max: 0.15
+      charged_fraction_preferred_max: 0.20
+    segmentation:
+      Linker_head:
+        role: "junction_buffer_near_VH"
+        edit_bias: "very_low"
+      Linker_core:
+        role: "main_flexibility_body"
+        edit_bias: "low_to_medium"
+      Linker_tail:
+        role: "junction_buffer_near_VL"
+        edit_bias: "very_low"
+    linker_edit_rules:
+      use_only_if:
+        - "recurrent_evolve_signal"
+        - "presentation_logic"
+        - "foldability_support_logic"
+      avoid_if:
+        - "using_linker_as_main_affinity_driver"
+        - "introducing_sticky_patch"
+        - "breaking_flexible_character"
+    length_rules:
+      preferred_range: [12, 18]
+      shorter_than_10: "risk_of_orientation_or_presentation_penalty"
+      longer_than_25: "risk_of_excessive_flexibility_or_expression_penalty"
+
+llm_guidance:
+  reading_instructions:
+    - "Read stable_priors first."
+    - "Use adaptive_memory only as a soft bias unless recurrence thresholds are met."
+    - "Prefer AST-aware explanations rather than generic sequence reasoning."
+    - "When in doubt, preserve framework and focus on CDR-centered refinement."
+  reasoning_priority:
+    - "preserve_scFv_foldability"
+    - "prefer_CDR_centered_interface_edits"
+    - "keep_linker_flexible_and_nonsticky"
+    - "avoid_global_aggregation_risk"
+    - "prefer_sparse_interpretable_mutations"
+  default_edit_strategy:
+    phase_1: "VH_CDR3-first focused refinement"
+    phase_2: "supporting CDR tuning"
+    phase_3: "rare linker or framework adjustment if justified by recurrent evidence"
+  explanation_templates:
+    cdr_edit: >
+      This edit is justified because the selected CDR node is a primary or supporting
+      paratope region and can change local recognition with relatively limited disruption
+      to overall scFv architecture.
+    framework_edit: >
+      This edit is conservative and should only be used to support foldability, solubility,
+      or local CDR presentation rather than to act as the main affinity driver.
+    linker_edit: >
+      This edit is secondary and should only be used to tune presentation or flexibility,
+      not as the main engine of affinity improvement.
+
+safety_and_guardrails:
+  hard_preferences:
+    avoid_new_cysteine_by_default: true
+    avoid_three_or_more_consecutive_hydrophobic: true
+    avoid_three_or_more_consecutive_charged: true
+    avoid_excessive_global_hydrophobicity: true
+    avoid_polybasic_sticky_designs: true
+  soft_preferences:
+    preserve_antibody_like_composition: true
+    prefer_soluble_surface_logic: true
+    prefer_aromatics_sparse_and_targeted: true
+    prefer_framework_conservatism: true
+  anti_overfitting_rules:
+    - "Do not update templates from a single outlier sequence."
+    - "Do not rewrite stable priors based on one run."
+    - "Do not promote low-complexity motifs unless repeatedly enriched in high-scoring candidates."
+    - "Do not let adaptive memory override basic developability logic."
+
+optimization_windows:
+  editable_windows:
+    highest_priority:
+      - node: "VH_CDR3"
+        edit_modes:
+          - "point_mutation"
+          - "motif_refinement"
+          - "composition_rebalancing"
+        mutation_budget_hint: "1_to_3"
+      - node: "VH_CDR2"
+        edit_modes:
+          - "point_mutation"
+          - "polarity_shift"
+        mutation_budget_hint: "1_to_2"
+      - node: "VL_CDR3"
+        edit_modes:
+          - "point_mutation"
+          - "aromatic_polar_tuning"
+        mutation_budget_hint: "1_to_2"
+    medium_priority:
+      - node: "VH_CDR1"
+        edit_modes: ["point_mutation"]
+        mutation_budget_hint: "0_to_2"
+      - node: "VL_CDR1"
+        edit_modes: ["point_mutation"]
+        mutation_budget_hint: "0_to_2"
+      - node: "VL_CDR2"
+        edit_modes: ["point_mutation"]
+        mutation_budget_hint: "0_to_1"
+    low_priority:
+      - node: "Linker_core"
+        edit_modes:
+          - "composition_tuning"
+        mutation_budget_hint: "0_to_2"
+      - node: "VH_FR3"
+        edit_modes:
+          - "conservative_support_mutation"
+        mutation_budget_hint: "0_to_1"
+      - node: "VL_FR3"
+        edit_modes:
+          - "conservative_support_mutation"
+        mutation_budget_hint: "0_to_1"
+
+  protected_windows:
+    strongly_protected:
+      - "VH_FR1"
+      - "VH_FR2"
+      - "VH_FR4"
+      - "VL_FR1"
+      - "VL_FR2"
+      - "VL_FR4"
+      - "Linker_head"
+      - "Linker_tail"
+    conditionally_protected:
+      - "VH_FR3"
+      - "VL_FR3"
+
+  node_specific_bias:
+    VH_CDR3:
+      preferred_residue_classes:
+        - "aromatic"
+        - "polar_uncharged"
+        - "contextual_charge"
+      disfavored_patterns:
+        - "multi_hydrophobic_cluster"
+        - "polybasic_cluster"
+        - "low_complexity_monotony"
+    linker_core:
+      preferred_residue_classes:
+        - "flexible_small"
+      disfavored_patterns:
+        - "hydrophobic_patch"
+        - "charged_patch"
+
+adaptive_memory:
+  enabled: true
+
+  motif_memory:
+    VH_CDR3:
+      enriched_motifs: []
+      enriched_residues: []
+      favored_classes: []
+      depleted_patterns: []
+      confidence: 0.0
+      support_count: 0
+      last_update: null
+    VH_CDR2:
+      enriched_motifs: []
+      enriched_residues: []
+      favored_classes: []
+      depleted_patterns: []
+      confidence: 0.0
+      support_count: 0
+      last_update: null
+    VL_CDR3:
+      enriched_motifs: []
+      enriched_residues: []
+      favored_classes: []
+      depleted_patterns: []
+      confidence: 0.0
+      support_count: 0
+      last_update: null
+    linker_core:
+      enriched_motifs: []
+      enriched_residues: []
+      favored_classes: []
+      depleted_patterns: []
+      confidence: 0.0
+      support_count: 0
+      last_update: null
+
+  pattern_memory:
+    recurrent_good_patterns: []
+    recurrent_bad_patterns: []
+    charge_balance_preferences: []
+    hydrophobicity_preferences: []
+    aromatic_sparsity_preferences: []
+
+  node_level_statistics:
+    VH_CDR3:
+      top_residue_frequency: {}
+      top_class_frequency: {}
+      mean_mutation_count: null
+      mean_hydrophobic_fraction: null
+      mean_charge_fraction: null
+    VH_CDR2:
+      top_residue_frequency: {}
+      top_class_frequency: {}
+      mean_mutation_count: null
+      mean_hydrophobic_fraction: null
+      mean_charge_fraction: null
+    VL_CDR3:
+      top_residue_frequency: {}
+      top_class_frequency: {}
+      mean_mutation_count: null
+      mean_hydrophobic_fraction: null
+      mean_charge_fraction: null
+    linker_core:
+      top_residue_frequency: {}
+      top_class_frequency: {}
+      mean_mutation_count: null
+      mean_hydrophobic_fraction: null
+      mean_charge_fraction: null
