@@ -4,7 +4,16 @@ import numpy as np
 import traceback
 import concurrent.futures
 import os
-from openevolve.evaluation_result import EvaluationResult
+try:
+    from openevolve.evaluation_result import EvaluationResult
+except ModuleNotFoundError:
+    from dataclasses import dataclass
+    from typing import Any, Dict
+
+    @dataclass
+    class EvaluationResult:  # local fallback for smoke tests outside OpenEvolve
+        metrics: Dict[str, float]
+        artifacts: Dict[str, Any]
 
 OUTPUT_DIR = "best_sequences"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -70,6 +79,7 @@ def evaluate(program_path: str):
         progen_scores = []
         plddts = []
         plddt_deltas = []
+        struct_scores = []
         success = 0
 
         best_trial_score = -1.0
@@ -89,13 +99,15 @@ def evaluate(program_path: str):
                 progen = float(out.get("progen_loglik_avg", 0.0))
                 plddt = out.get("chai_plddt", None)
                 chai_results = out.get("chai_results", [])
-                plddt_delta = None
+                plddt_delta = out.get("plddt_delta", None)
                 if len(chai_results) > 0:
-                    plddt_delta = chai_results[0].get("plddt_delta", None)
+                    plddt_delta = chai_results[0].get("plddt_delta", plddt_delta)
+                struct_score_value = plddt_delta if plddt_delta is not None else plddt
 
                 score_cfg = out.get("score_config", {})
-                # combined, fast_score, plddt_score = _compute_combined_score(total_loss, plddt, score_cfg)
-                combined, fast_score, plddt_score = _compute_combined_score(total_loss, plddt_delta, score_cfg)
+                combined, fast_score, plddt_score = _compute_combined_score(
+                    total_loss, struct_score_value, score_cfg
+                )
 
                 total_losses.append(total_loss)
                 progen_scores.append(progen)
@@ -103,6 +115,8 @@ def evaluate(program_path: str):
                     plddts.append(float(plddt))
                 if plddt_delta is not None:
                     plddt_deltas.append(float(plddt_delta))
+                if struct_score_value is not None:
+                    struct_scores.append(float(struct_score_value))
 
                 success += 1
 
@@ -122,9 +136,12 @@ def evaluate(program_path: str):
         avg_progen = float(np.mean(progen_scores)) if progen_scores else 0.0
         avg_plddt = float(np.mean(plddts)) if plddts else 0.0
         avg_plddt_delta = float(np.mean(plddt_deltas)) if plddt_deltas else 0.0
+        avg_struct_score = float(np.mean(struct_scores)) if struct_scores else 0.0
 
         score_cfg = best_trial_out.get("score_config", {}) if best_trial_out else {}
-        combined, fast_score, plddt_score = _compute_combined_score(avg_loss, avg_plddt, score_cfg)
+        combined, fast_score, plddt_score = _compute_combined_score(
+            avg_loss, avg_struct_score, score_cfg
+        )
 
         saved_path = "N/A"
         if best_trial_out is not None:
@@ -143,6 +160,7 @@ def evaluate(program_path: str):
                 "combined_score": combined,
                 "iptm": avg_plddt,
                 "iptm_delta": avg_plddt_delta,
+                "struct_score": avg_struct_score,
                 "total_loss": avg_loss,
                 "fast_score": fast_score,
                 "plddt_score": plddt_score,
@@ -159,6 +177,7 @@ def evaluate(program_path: str):
                 "chain_lengths": best_trial_out.get("chain_lengths") if best_trial_out else None,
                 "blueprint_summary": best_trial_out.get("blueprint_summary") if best_trial_out else None,
                 "segments": best_trial_out.get("segments") if best_trial_out else None,
+                "search_artifacts": best_trial_out.get("search_artifacts") if best_trial_out else None,
                 "saved_fasta_path": saved_path,
             }
         )

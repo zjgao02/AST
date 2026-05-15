@@ -1,0 +1,15 @@
+{
+  "html_path": "D:\\Downloads\\ast\\data\\sabdab_raw\\cdrs_chothia.html",
+  "out": "D:\\Downloads\\ast\\data\\antibody_kb\\sabdab_cdr_records.jsonl",
+  "records_written": 108892,
+  "unique_pdbs": 10728,
+  "node_counts": {
+    "VH_CDR1": 20026,
+    "VH_CDR2": 19982,
+    "VH_CDR3": 20016,
+    "VL_CDR1": 16289,
+    "VL_CDR2": 16289,
+    "VL_CDR3": 16290
+  },
+  "source": "sabdab_cdrsearch"
+}

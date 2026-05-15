@@ -1,0 +1,83 @@
+label	element_name	interpro_id
+0	Cysteine peptidase, cysteine active site	IPR000169
+1	Prokaryotic transglycosylase, active site	IPR000189
+2	Malate dehydrogenase, active site	IPR001252
+3	Phosphoglycerate/bisphosphoglycerate mutase, active site	IPR001345
+4	Phosphoribosylglycinamide formyltransferase, active site	IPR001555
+5	Glycosyl hydrolase family 18, active site	IPR001579
+6	Aspartic peptidase, active site	IPR001969
+7	Adenosine/AMP deaminase active site	IPR006650
+8	Pyridine nucleotide-disulphide oxidoreductase, class-II, active site	IPR008255
+9	FMN-dependent alpha-hydroxy acid dehydrogenase, active site	IPR008259
+10	Tyrosine-protein kinase, active site	IPR008266
+11	Peptidase S16, active site	IPR008268
+12	Serine/threonine-protein kinase, active site	IPR008271
+13	Pyridine nucleotide-disulphide oxidoreductase, class I, active site	IPR012999
+14	Protein-tyrosine phosphatase, active site	IPR016130
+15	Urease active site	IPR017950
+16	Uracil-DNA glycosylase, active site	IPR018085
+17	Chalcone/stilbene synthase, active site	IPR018088
+18	Orotidine 5'-phosphate decarboxylase, active site	IPR018089
+19	Serine proteases, trypsin family, histidine active site	IPR018114
+20	DNA methylase, C-5 cytosine-specific, active site	IPR018117
+21	Glycoside hydrolase family 1, active site	IPR018120
+22	Phosphoenolpyruvate carboxylase, Lys active site	IPR018129
+23	Methylglyoxal synthase, active site	IPR018148
+24	L-lactate dehydrogenase, active site	IPR018177
+25	Asp/Glu racemase, active site 1	IPR018187
+26	Beta-ketoacyl synthase, active site	IPR018201
+27	Serine carboxypeptidase, serine active site	IPR018202
+28	Tryptophan synthase, alpha chain, active site	IPR018204
+29	Glycoside hydrolase family 11, active site 1	IPR018208
+30	Pyruvate kinase, active site	IPR018209
+31	ClpP, Ser active site	IPR018215
+32	Transaldolase, active site	IPR018225
+33	NAD-dependent DNA ligase, active site	IPR018239
+34	3-dehydroquinate dehydratase, active site	IPR018508
+35	Diaminopimelate epimerase, active site	IPR018510
+36	Peptidase S26A, signal peptidase I, serine active site	IPR019756
+37	Ferrochelatase, active site	IPR019772
+38	Peroxidase, active site	IPR019794
+39	Glycoside hydrolase, family 3, active site	IPR019800
+40	Citrate synthase active site	IPR019810
+41	Carboxylesterase type B, active site	IPR019826
+42	ATPase, alpha/beta subunit, nucleotide-binding domain, active site	IPR020003
+43	Fructose-1,6-bisphosphatase, active site	IPR020548
+44	Thiolase, active site	IPR020610
+45	Thiolase, acyl-enzyme intermediate active site	IPR020615
+46	Schiff base-forming aldolase, active site	IPR020625
+47	Glyceraldehyde 3-phosphate dehydrogenase, active site	IPR020830
+48	Triosephosphate isomerase, active site	IPR020861
+49	Ribulose bisphosphate carboxylase, large chain, active site	IPR020878
+50	Thymidylate synthase, active site	IPR020940
+51	Phenylalanine/histidine ammonia-lyases, active site	IPR022313
+52	Peptidase S8, subtilisin, His-active site	IPR022398
+53	ATP:guanido phosphotransferase active site	IPR022415
+54	Nucleoside diphosphate kinase, active site	IPR023005
+55	ATP synthase, F0 complex, subunit A, active site	IPR023011
+56	N-acetyl-gamma-glutamyl-phosphate reductase, active site	IPR023013
+57	Glycoside hydrolase, family 2, active site	IPR023232
+58	Ubiquitin-conjugating enzyme, active site	IPR023313
+59	DNA topoisomerase, type IA, active site	IPR023406
+60	Ribonuclease A, active site	IPR023411
+61	Beta-lactamase, class-A active site	IPR023650
+62	Peptidase S8, subtilisin, Asp-active site	IPR023827
+63	Peptidase S8, subtilisin, Ser-active site	IPR023828
+64	Catalase active site	IPR024708
+65	Cysteine peptidase, histidine active site	IPR025660
+66	Cysteine peptidase, asparagine active site	IPR025661
+67	Serine proteases, V8 family, histidine active site	IPR028301
+68	RNA methyltransferase TrmA, active site	IPR030390
+69	Phospholipase A2, aspartic acid active site	IPR033112
+70	Phospholipase A2, histidine active site	IPR033113
+71	Serine proteases, trypsin family, serine active site	IPR033116
+72	Serine carboxypeptidases, histidine active site	IPR033124
+73	Adenylosuccinate synthase, active site	IPR033128
+74	Phosphoenolpyruvate carboxylase, His active site	IPR033129
+75	Pectinesterase, Asp active site	IPR033131
+76	Asp/Glu racemase, active site 2	IPR033134
+77	ClpP, histidine active site	IPR033135
+78	Histidine acid phosphatase active site	IPR033379
+79	Leu/Phe/Val dehydrogenases active site	IPR033524
+80	Pyroglutamyl peptidase I, Glu active site	IPR033693
+81	Pyroglutamyl peptidase I, Cys active site	IPR033694

@@ -1,0 +1,69 @@
+{
+  "metadata": {
+    "provider_schema": "astevolve_external_prior_v1",
+    "source": "curated_external_kb_abstraction",
+    "description": "Abstract mutation priors for CD25 scFv MCTS. These are search priors, not sequence templates.",
+    "do_not_copy_sequences": true
+  },
+  "defaults": {
+    "priority_boost": 1.0,
+    "confidence": 0.35,
+    "disfavored_residues": ["C"]
+  },
+  "by_kind": {
+    "cdr": {
+      "priority_boost": 1.12,
+      "confidence": 0.45,
+      "favored_residue_classes": ["aromatic", "polar_uncharged", "contextual_charge"],
+      "favored_residues": ["Y", "W", "H", "N", "Q", "S", "T", "R", "D", "E"],
+      "disfavored_patterns": ["multi_hydrophobic_cluster", "polybasic_cluster", "low_complexity_monotony"],
+      "source": "antibody_interface_prior"
+    },
+    "linker": {
+      "priority_boost": 0.70,
+      "confidence": 0.60,
+      "favored_residue_classes": ["flexible_small"],
+      "favored_residues": ["G", "S", "A", "T"],
+      "disfavored_residues": ["C", "W", "F", "I", "L", "V"],
+      "source": "scfv_linker_prior"
+    },
+    "framework": {
+      "priority_boost": 0.45,
+      "confidence": 0.35,
+      "favored_residues": ["S", "T", "N", "Q", "G", "P"],
+      "disfavored_residues": ["C", "W"],
+      "source": "framework_conservation_prior"
+    }
+  },
+  "nodes": {
+    "VH_CDR3": {
+      "priority_boost": 1.45,
+      "confidence": 0.60,
+      "favored_residue_classes": ["aromatic", "polar_uncharged", "contextual_charge"],
+      "favored_residues": ["Y", "W", "H", "N", "Q", "R", "D", "E", "S", "T"],
+      "source": "dominant_antibody_paratope_loop_prior"
+    },
+    "VH_CDR2": {
+      "priority_boost": 1.25,
+      "confidence": 0.50,
+      "favored_residue_classes": ["polar_uncharged", "contextual_charge"],
+      "favored_residues": ["Y", "H", "N", "Q", "S", "T", "R", "D", "E"],
+      "source": "secondary_heavy_chain_contact_prior"
+    },
+    "VL_CDR3": {
+      "priority_boost": 1.20,
+      "confidence": 0.45,
+      "favored_residue_classes": ["aromatic", "polar_uncharged"],
+      "favored_residues": ["Y", "W", "H", "N", "Q", "S", "T"],
+      "source": "light_chain_paratope_support_prior"
+    },
+    "Linker_core": {
+      "priority_boost": 0.55,
+      "confidence": 0.70,
+      "favored_residue_classes": ["flexible_small"],
+      "favored_residues": ["G", "S"],
+      "disfavored_residues": ["C", "W", "F", "I", "L", "V", "K", "R", "D", "E"],
+      "source": "scfv_linker_flexibility_prior"
+    }
+  }
+}

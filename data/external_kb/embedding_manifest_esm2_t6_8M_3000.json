@@ -1,0 +1,17 @@
+{
+  "records": "D:\\Downloads\\data\\external_kb\\substructure_records.jsonl",
+  "embeddings": "D:\\Downloads\\data\\external_kb\\embeddings_esm2_t6_8M_3000.npy",
+  "metadata": "D:\\Downloads\\data\\external_kb\\embedding_metadata_esm2_t6_8M_3000.jsonl",
+  "model": "facebook/esm2_t6_8M_UR50D",
+  "device": "cuda",
+  "embedding_shape": [
+    3000,
+    320
+  ],
+  "pooling": "mean_residue_embedding",
+  "selected_records": 3000,
+  "skipped_no_sequence": 0,
+  "skipped_long": 0,
+  "max_length": 1022,
+  "max_records": 3000
+}

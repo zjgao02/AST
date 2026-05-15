@@ -1,0 +1,49 @@
+label	element_name	interpro_id
+0	IQ motif, EF-hand binding site	IPR000048
+1	PPM-type phosphatase, divalent cation binding	IPR000222
+2	Serine/threonine dehydratase, pyridoxal-phosphate-binding site	IPR000634
+3	Cysteine synthase/cystathionine beta-synthase, pyridoxal-phosphate attachment site	IPR001216
+4	Copper centre Cu(A)	IPR001505
+5	Biotin-binding site	IPR001882
+6	Aminotransferase, class-II, pyridoxal-phosphate binding site	IPR001917
+7	Catalase haem-binding site	IPR002226
+8	Multicopper oxidase, copper-binding site	IPR002355
+9	2-oxo acid dehydrogenase, lipoyl-binding site	IPR003016
+10	Aminotransferases, class-I, pyridoxal-phosphate-binding site	IPR004838
+11	2Fe-2S ferredoxin, iron-sulphur binding site	IPR006058
+12	Nitrite/sulphite reductase iron-sulphur/sirohaem-binding site	IPR006066
+13	Beta tubulin, autoregulation binding site	IPR013838
+14	DNA glycosylase/AP lyase, zinc finger domain, DNA-binding site	IPR015887
+15	APOBEC/CMP deaminase, zinc-binding	IPR016192
+16	Protein kinase, ATP binding site	IPR017441
+17	Metallothionein, vertebrate, metal binding site	IPR018064
+18	Aconitase family, 4Fe-4S cluster binding site	IPR018136
+19	Superoxide dismutase, copper/zinc, binding site	IPR018152
+20	Transferrin family, iron binding site	IPR018195
+21	Adenylosuccinate synthase, GTP-binding site	IPR018220
+22	AP endonuclease 2, zinc binding site	IPR018246
+23	EF-Hand 1, calcium-binding site	IPR018247
+24	Peptidase M24A, methionine aminopeptidase, subfamily 2, binding site	IPR018349
+25	Cytochrome b5, heme-binding site	IPR018506
+26	Germin, manganese binding site	IPR019780
+27	Peroxidases heam-ligand binding site	IPR019793
+28	Serine hydroxymethyltransferase, pyridoxal phosphate binding site	IPR019798
+29	Legume lectin, beta chain, Mn/Ca-binding site	IPR019825
+30	Manganese/iron superoxide dismutase, binding site	IPR019833
+31	ATP synthase, F0 complex, subunit C, DCCD-binding site	IPR020537
+32	Crossover junction endodeoxyribonuclease RuvC, magnesium-binding site	IPR020563
+33	Aminotransferase class-V, pyridoxal-phosphate binding site	IPR020578
+34	Inositol monophosphatase, metal-binding site	IPR020583
+35	Alanine racemase, pyridoxal-phosphate attachment site	IPR020622
+36	Transketolase binding site	IPR020826
+37	Ureohydrolase, manganese-binding site	IPR020855
+38	Pyridoxal-phosphate binding site	IPR021115
+39	Porphobilinogen deaminase, dipyrromethane cofactor binding site	IPR022419
+40	Orn/DAP/Arg decarboxylase 2, pyridoxal-phosphate binding site	IPR022653
+41	Cytochrome c oxidase, subunit I, copper-binding site	IPR023615
+42	Sigma-54 interaction domain, ATP-binding site 1	IPR025662
+43	Sigma-54 interaction domain, ATP-binding site 2	IPR025943
+44	Visual pigments (opsins) retinal binding site	IPR027430
+45	Molybdopterin oxidoreductase, molybdopterin cofactor binding site	IPR027467
+46	Blue (type 1) copper protein, binding site	IPR028871
+47	Urease nickel binding site	IPR029754

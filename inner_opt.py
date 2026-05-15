@@ -1,6 +1,11 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, List, Tuple
+from pathlib import Path
+import hashlib
+import json
+import math
+import time
 import numpy as np
 
 from constraints import (
@@ -49,6 +54,25 @@ class SAConfig:
     })
 
     history_size: int = 50
+
+    # ---- node-aware search ----
+    search_method: str = "mcts"
+    mcts_c_puct: float = 1.4
+    mcts_max_depth: int = 4
+    mcts_reward_scale: float = 1.0
+    mcts_output_dir: str = "inner_loop"
+    mcts_save_tree: bool = True
+    mcts_save_variants: bool = True
+    mcts_memory_enabled: bool = True
+    external_kb_enabled: bool = True
+    external_kb_path: Optional[str] = None
+    external_kb_weight: float = 0.7
+    external_kb_embedding_manifest: Optional[str] = None
+    external_kb_retrieval_enabled: bool = True
+    external_kb_retrieval_top_k: int = 20
+    external_kb_retrieval_weight: float = 0.6
+    external_kb_device: str = "auto"
+    external_kb_max_length: int = 128
 
 
 def _to_bool_mask(mask, L: int) -> np.ndarray:
@@ -272,6 +296,749 @@ def _extract_plddt_delta(
     return None, None, None
 
 
+def _seqs_hash(seqs: Dict[str, str]) -> str:
+    payload = "|".join(f"{k}:{seqs[k]}" for k in sorted(seqs))
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:16]
+
+
+def _jsonable(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        return {str(k): _jsonable(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_jsonable(v) for v in obj]
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, (np.integer,)):
+        return int(obj)
+    if isinstance(obj, (np.floating,)):
+        return float(obj)
+    if isinstance(obj, (float, int, str, bool)) or obj is None:
+        return obj
+    return str(obj)
+
+
+def _write_json(path: Path, data: Any) -> None:
+    path.write_text(
+        json.dumps(_jsonable(data), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def _write_yaml(path: Path, data: Any) -> None:
+    try:
+        import yaml  # type: ignore
+
+        path.write_text(
+            yaml.safe_dump(_jsonable(data), sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+    except Exception:
+        path.write_text(
+            json.dumps(_jsonable(data), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+
+def _score_fast_candidate(
+    seqs: Dict[str, str],
+    terms_fast: List[tuple[float, Any]],
+    cfg: SAConfig,
+    compiled: Dict[str, Any],
+) -> Tuple[Dict[str, float], Dict[str, float], float]:
+    breakdown = energy_breakdown(seqs, compiled, terms_fast)
+    progen = _progen_score(seqs, cfg.progen_chains, cfg.progen_reduce)
+    fast_loss = breakdown["total"] + cfg.progen_weight * (-progen["loglik_avg"])
+    return breakdown, progen, float(fast_loss)
+
+
+def _designable_segments(
+    compiled: Dict[str, Any],
+    masks: Dict[str, np.ndarray],
+) -> List[Tuple[Any, List[int]]]:
+    out: List[Tuple[Any, List[int]]] = []
+    for seg in compiled["segments"]:
+        mask = masks.get(seg.chain_id)
+        if mask is None:
+            continue
+        positions = [
+            int(i)
+            for i in seg.indices()
+            if 0 <= int(i) < len(mask) and bool(mask[int(i)])
+        ]
+        if positions:
+            out.append((seg, positions))
+    return out
+
+
+def _memory_node_block(internal_memory: Optional[Dict[str, Any]], section: str, node_name: str) -> Dict[str, Any]:
+    if not internal_memory:
+        return {}
+    block = internal_memory.get(section, {})
+    if not isinstance(block, dict):
+        return {}
+    for key in (node_name, node_name.lower(), node_name.casefold()):
+        val = block.get(key)
+        if isinstance(val, dict):
+            return val
+    return {}
+
+
+def _window_priority_map(internal_memory: Optional[Dict[str, Any]]) -> Dict[str, float]:
+    if not internal_memory:
+        return {}
+    windows = internal_memory.get("optimization_windows", {})
+    editable = windows.get("editable_windows", {}) if isinstance(windows, dict) else {}
+    priority = {}
+    weights = {
+        "highest_priority": 2.8,
+        "medium_priority": 1.6,
+        "low_priority": 0.8,
+    }
+    for group, weight in weights.items():
+        for item in editable.get(group, []) or []:
+            if isinstance(item, dict) and "node" in item:
+                priority[str(item["node"])] = weight
+
+    protected = windows.get("protected_windows", {}) if isinstance(windows, dict) else {}
+    for name in protected.get("strongly_protected", []) or []:
+        priority[str(name)] = min(priority.get(str(name), 1.0), 0.05)
+    for name in protected.get("conditionally_protected", []) or []:
+        priority[str(name)] = min(priority.get(str(name), 1.0), 0.35)
+    return priority
+
+
+def _segment_prior(
+    seg: Any,
+    internal_memory: Optional[Dict[str, Any]],
+    external_kb: Optional[Any] = None,
+    external_weight: float = 0.0,
+) -> float:
+    priority = _window_priority_map(internal_memory).get(seg.name, 1.0)
+    if seg.kind == "cdr":
+        priority *= 1.25
+    elif seg.kind == "linker":
+        priority *= 0.85
+    elif seg.kind == "framework":
+        priority *= 0.55
+
+    adaptive = internal_memory.get("adaptive_memory", {}) if internal_memory else {}
+    motif_memory = adaptive.get("motif_memory", {}) if isinstance(adaptive, dict) else {}
+    motif = {}
+    for key in (seg.name, seg.name.lower(), seg.name.casefold()):
+        if isinstance(motif_memory.get(key), dict):
+            motif = motif_memory[key]
+            break
+    if motif:
+        confidence = float(motif.get("confidence") or 0.0)
+        support = float(motif.get("support_count") or 0.0)
+        priority *= 1.0 + min(1.0, confidence) + min(0.5, 0.03 * support)
+
+    external_prior = _external_prior_for_segment(external_kb, seg)
+    priority *= _external_priority_multiplier(external_prior, external_weight)
+
+    return max(0.01, float(priority))
+
+
+def _aa_class_members(class_name: str) -> str:
+    table = {
+        "aromatic": "YWHF",
+        "polar_uncharged": "STNQY",
+        "contextual_charge": "RKHDE",
+        "flexible_small": "GSA",
+        "positive": "RKH",
+        "negative": "DE",
+        "hydrophobic": "AILMFWVY",
+        "charged": "RKHDE",
+        "small": "GAS",
+        "turn_loop": "GSPNDT",
+    }
+    return table.get(class_name, "")
+
+
+def _external_prior_for_segment(
+    external_kb: Optional[Any],
+    seg: Any,
+    sequence: Optional[str] = None,
+    top_k: Optional[int] = None,
+) -> Dict[str, Any]:
+    if external_kb is None:
+        return {}
+    try:
+        if sequence and hasattr(external_kb, "get_sequence_prior"):
+            prior = external_kb.get_sequence_prior(
+                node_name=seg.name,
+                node_kind=seg.kind,
+                chain_id=seg.chain_id,
+                sequence=sequence,
+                top_k=top_k,
+            )
+            return prior if isinstance(prior, dict) else {}
+        if hasattr(external_kb, "get_node_prior"):
+            prior = external_kb.get_node_prior(seg.name, seg.kind, seg.chain_id)
+            return prior if isinstance(prior, dict) else {}
+    except Exception:
+        return {}
+    return {}
+
+
+def _external_priority_multiplier(prior: Dict[str, Any], weight: float) -> float:
+    if not prior:
+        return 1.0
+    raw = prior.get("priority_boost", prior.get("priority_multiplier", 1.0))
+    try:
+        boost = float(raw)
+    except (TypeError, ValueError):
+        boost = 1.0
+    try:
+        confidence = float(prior.get("confidence", 1.0))
+    except (TypeError, ValueError):
+        confidence = 1.0
+    strength = max(0.0, float(weight)) * max(0.0, min(1.0, confidence))
+    return max(0.05, 1.0 + (boost - 1.0) * strength)
+
+
+def _apply_external_residue_prior(
+    weights: np.ndarray,
+    prior: Dict[str, Any],
+    external_weight: float,
+) -> np.ndarray:
+    if not prior:
+        return weights
+
+    aa_index = {aa: i for i, aa in enumerate(AA)}
+    try:
+        confidence = float(prior.get("confidence", 1.0))
+    except (TypeError, ValueError):
+        confidence = 1.0
+    strength = max(0.0, float(external_weight)) * max(0.0, min(1.0, confidence))
+    if strength <= 0:
+        return weights
+
+    for aa in prior.get("favored_residues", []) or []:
+        aa = str(aa)
+        if aa in aa_index:
+            weights[aa_index[aa]] *= 1.0 + 1.8 * strength
+
+    for class_name in prior.get("favored_residue_classes", []) or []:
+        for aa in _aa_class_members(str(class_name)):
+            if aa in aa_index:
+                weights[aa_index[aa]] *= 1.0 + 1.2 * strength
+
+    for aa in prior.get("disfavored_residues", []) or []:
+        aa = str(aa)
+        if aa in aa_index:
+            weights[aa_index[aa]] *= max(0.03, 1.0 - 0.85 * strength)
+
+    for class_name in prior.get("disfavored_residue_classes", []) or []:
+        for aa in _aa_class_members(str(class_name)):
+            if aa in aa_index:
+                weights[aa_index[aa]] *= max(0.05, 1.0 - 0.65 * strength)
+
+    aa_weights = prior.get("aa_weights", {})
+    if isinstance(aa_weights, dict):
+        raw = np.zeros(len(AA), dtype=float)
+        for aa, value in aa_weights.items():
+            aa = str(aa)
+            if aa not in aa_index:
+                continue
+            try:
+                raw[aa_index[aa]] = max(0.0, float(value))
+            except (TypeError, ValueError):
+                continue
+        if raw.sum() > 0:
+            freq = raw / raw.sum()
+            uniform = 1.0 / len(AA)
+            multipliers = np.clip(freq / uniform, 0.20, 5.0)
+            weights *= np.power(multipliers, 0.45 * strength)
+
+    return weights
+
+
+def _aa_weights_for_segment(
+    seg: Any,
+    internal_memory: Optional[Dict[str, Any]],
+    external_kb: Optional[Any] = None,
+    external_weight: float = 0.0,
+    external_prior: Optional[Dict[str, Any]] = None,
+) -> np.ndarray:
+    weights = np.ones(len(AA), dtype=float)
+    aa_index = {aa: i for i, aa in enumerate(AA)}
+
+    if "C" in aa_index:
+        weights[aa_index["C"]] *= 0.05
+
+    if seg.kind == "linker":
+        for aa in "GS":
+            weights[aa_index[aa]] *= 6.0
+        for aa in "AT":
+            weights[aa_index[aa]] *= 1.8
+        for aa in HYDROPHOBIC:
+            weights[aa_index[aa]] *= 0.25
+        for aa in CHARGED:
+            weights[aa_index[aa]] *= 0.45
+    elif seg.kind == "cdr":
+        for aa in "YWHNQSTRDE":
+            weights[aa_index[aa]] *= 2.0
+        for aa in "ILMFV":
+            weights[aa_index[aa]] *= 0.75
+    elif seg.kind == "framework":
+        for aa in "GSPNQ":
+            weights[aa_index[aa]] *= 1.2
+        for aa in "CWF":
+            weights[aa_index[aa]] *= 0.35
+
+    windows = internal_memory.get("optimization_windows", {}) if internal_memory else {}
+    node_bias = windows.get("node_specific_bias", {}) if isinstance(windows, dict) else {}
+    bias = {}
+    for key in (seg.name, seg.name.lower(), seg.name.casefold()):
+        if isinstance(node_bias.get(key), dict):
+            bias = node_bias[key]
+            break
+    for class_name in bias.get("preferred_residue_classes", []) if bias else []:
+        for aa in _aa_class_members(str(class_name)):
+            if aa in aa_index:
+                weights[aa_index[aa]] *= 1.6
+
+    adaptive = internal_memory.get("adaptive_memory", {}) if internal_memory else {}
+    motif_memory = adaptive.get("motif_memory", {}) if isinstance(adaptive, dict) else {}
+    motif = {}
+    for key in (seg.name, seg.name.lower(), seg.name.casefold()):
+        if isinstance(motif_memory.get(key), dict):
+            motif = motif_memory[key]
+            break
+    for aa in motif.get("enriched_residues", []) if motif else []:
+        if aa in aa_index:
+            weights[aa_index[aa]] *= 2.5
+
+    if external_prior is None:
+        external_prior = _external_prior_for_segment(external_kb, seg)
+    weights = _apply_external_residue_prior(weights, external_prior, external_weight)
+
+    weights = np.maximum(weights, 1e-6)
+    return weights / weights.sum()
+
+
+def _sample_aa(
+    rng: np.random.Generator,
+    weights: np.ndarray,
+    old_aa: Optional[str] = None,
+) -> str:
+    for _ in range(6):
+        aa = AA[int(rng.choice(len(AA), p=weights))]
+        if old_aa is None or aa != old_aa:
+            return aa
+    return AA[int(rng.choice(len(AA), p=weights))]
+
+
+def _mutate_node_seqs(
+    seqs: Dict[str, str],
+    seg: Any,
+    designable_positions: List[int],
+    rng: np.random.Generator,
+    cfg: SAConfig,
+    masks: Dict[str, np.ndarray],
+    internal_memory: Optional[Dict[str, Any]],
+    external_kb: Optional[Any],
+) -> Tuple[Dict[str, str], Dict[str, Any]]:
+    new = {k: list(v) for k, v in seqs.items()}
+    cid = seg.chain_id
+    positions = [
+        i
+        for i in designable_positions
+        if cid in new and 0 <= i < len(new[cid]) and bool(masks[cid][i])
+    ]
+    move: Dict[str, Any] = {
+        "op": None,
+        "node": seg.name,
+        "node_kind": seg.kind,
+        "chain_id": cid,
+        "positions": {cid: []},
+        "segments": [(cid, seg.name, seg.spans)],
+        "changes": [],
+    }
+    if not positions:
+        return seqs, move
+
+    op = _choose_op(rng, cfg.mutation_ops)
+    move["op"] = op
+    current_fragment = seg.extract(seqs.get(cid, ""))
+    external_prior = _external_prior_for_segment(
+        external_kb,
+        seg,
+        sequence=current_fragment if cfg.external_kb_retrieval_enabled else None,
+        top_k=cfg.external_kb_retrieval_top_k,
+    )
+    weights = _aa_weights_for_segment(
+        seg,
+        internal_memory,
+        external_kb=external_kb,
+        external_weight=cfg.external_kb_weight if cfg.external_kb_enabled else 0.0,
+        external_prior=external_prior,
+    )
+    if external_prior:
+        move["external_prior"] = {
+            "source": external_prior.get("source"),
+            "priority_boost": external_prior.get("priority_boost"),
+            "confidence": external_prior.get("confidence"),
+            "favored_residues": external_prior.get("favored_residues", [])[:12],
+            "favored_residue_classes": external_prior.get("favored_residue_classes", [])[:8],
+            "retrieval": external_prior.get("retrieval"),
+        }
+
+    base_k = max(1, int(round(cfg.mutation_rate * len(positions))))
+    if op == "segment_resample":
+        k = min(len(positions), max(base_k, min(4, len(positions))))
+        chosen = sorted(rng.choice(positions, size=k, replace=False).tolist())
+    elif op == "block":
+        start = int(rng.choice(positions))
+        block_len = int(rng.integers(2, 6))
+        pos_set = set(positions)
+        chosen = [i for i in range(start, start + block_len) if i in pos_set]
+        if not chosen:
+            chosen = [start]
+    elif op == "swap" and len(positions) >= 2:
+        i, j = rng.choice(positions, size=2, replace=False)
+        i, j = int(i), int(j)
+        old_i, old_j = new[cid][i], new[cid][j]
+        new[cid][i], new[cid][j] = old_j, old_i
+        chosen = [i, j]
+        move["changes"] = [
+            {"chain_id": cid, "position": i, "from": old_i, "to": old_j, "node": seg.name},
+            {"chain_id": cid, "position": j, "from": old_j, "to": old_i, "node": seg.name},
+        ]
+        move["positions"][cid] = chosen
+        return {k: "".join(v) for k, v in new.items()}, move
+    else:
+        k = min(len(positions), base_k)
+        chosen = sorted(rng.choice(positions, size=k, replace=False).tolist())
+
+    for pos in chosen:
+        old = new[cid][pos]
+        aa = _sample_aa(rng, weights, old_aa=old)
+        new[cid][pos] = aa
+        move["changes"].append(
+            {"chain_id": cid, "position": int(pos), "from": old, "to": aa, "node": seg.name}
+        )
+
+    move["positions"][cid] = [int(x) for x in chosen]
+    return {k: "".join(v) for k, v in new.items()}, move
+
+
+def _mcts_child_score(parent: Dict[str, Any], child: Dict[str, Any], cfg: SAConfig) -> float:
+    q = 0.0 if child["visits"] == 0 else child["total_reward"] / child["visits"]
+    u = (
+        float(cfg.mcts_c_puct)
+        * float(child.get("prior", 1.0))
+        * math.sqrt(max(1.0, float(parent["visits"])))
+        / (1.0 + float(child["visits"]))
+    )
+    return float(q + u)
+
+
+def _mcts_select_leaf(
+    tree: Dict[str, Dict[str, Any]],
+    root_id: str,
+    cfg: SAConfig,
+) -> str:
+    node_id = root_id
+    while tree[node_id]["children"] and tree[node_id]["depth"] < cfg.mcts_max_depth:
+        parent = tree[node_id]
+        node_id = max(
+            parent["children"],
+            key=lambda child_id: _mcts_child_score(parent, tree[child_id], cfg),
+        )
+    if tree[node_id]["depth"] >= cfg.mcts_max_depth:
+        return root_id
+    return node_id
+
+
+def _mcts_backprop(
+    tree: Dict[str, Dict[str, Any]],
+    node_id: str,
+    reward: float,
+) -> None:
+    cur: Optional[str] = node_id
+    while cur is not None:
+        node = tree[cur]
+        node["visits"] += 1
+        node["total_reward"] += float(reward)
+        node["best_reward"] = max(float(node.get("best_reward", -1e9)), float(reward))
+        cur = node.get("parent")
+
+
+def _mcts_best_path(tree: Dict[str, Dict[str, Any]], node_id: str) -> List[str]:
+    path = []
+    cur: Optional[str] = node_id
+    while cur is not None:
+        path.append(cur)
+        cur = tree[cur].get("parent")
+    return list(reversed(path))
+
+
+def _summarize_mcts_round(
+    tree: Dict[str, Dict[str, Any]],
+    candidates: List[Dict[str, Any]],
+    best_node_id: str,
+    root_fast: float,
+) -> Dict[str, Any]:
+    node_stats: Dict[str, Dict[str, Any]] = {}
+    mutation_successes: List[Dict[str, Any]] = []
+
+    for cand in candidates:
+        move = cand.get("move", {})
+        node_name = str(move.get("node", "unknown"))
+        stats = node_stats.setdefault(
+            node_name,
+            {
+                "evaluated": 0,
+                "improved": 0,
+                "best_fast_loss": None,
+                "mean_fast_loss": 0.0,
+                "mean_reward": 0.0,
+                "top_changes": [],
+            },
+        )
+        stats["evaluated"] += 1
+        stats["mean_fast_loss"] += float(cand["fast_loss"])
+        stats["mean_reward"] += float(cand.get("reward", 0.0))
+        if cand["fast_loss"] < root_fast:
+            stats["improved"] += 1
+            for change in move.get("changes", [])[:4]:
+                mutation_successes.append({
+                    **change,
+                    "fast_loss": float(cand["fast_loss"]),
+                    "reward": float(cand.get("reward", 0.0)),
+                })
+        best_loss = stats["best_fast_loss"]
+        if best_loss is None or cand["fast_loss"] < best_loss:
+            stats["best_fast_loss"] = float(cand["fast_loss"])
+            stats["top_changes"] = move.get("changes", [])[:8]
+
+    for stats in node_stats.values():
+        n = max(1, int(stats["evaluated"]))
+        stats["mean_fast_loss"] = float(stats["mean_fast_loss"] / n)
+        stats["mean_reward"] = float(stats["mean_reward"] / n)
+        stats["success_rate"] = float(stats["improved"] / n)
+
+    promoted = sorted(
+        node_stats,
+        key=lambda n: (
+            node_stats[n]["success_rate"],
+            -float(node_stats[n]["best_fast_loss"] or 0.0),
+        ),
+        reverse=True,
+    )[:5]
+    suppressed = sorted(
+        node_stats,
+        key=lambda n: (node_stats[n]["success_rate"], node_stats[n]["mean_reward"]),
+    )[:5]
+
+    mutation_successes = sorted(
+        mutation_successes,
+        key=lambda x: (-float(x["reward"]), float(x["fast_loss"])),
+    )[:25]
+
+    return {
+        "created_at_unix": int(time.time()),
+        "search_method": "mcts",
+        "root_fast_loss": float(root_fast),
+        "best_node_id": best_node_id,
+        "best_path": _mcts_best_path(tree, best_node_id),
+        "num_tree_nodes": len(tree),
+        "num_evaluated_variants": len(candidates),
+        "node_level_statistics": node_stats,
+        "internal_memory_update_suggestion": {
+            "promote_nodes": promoted,
+            "suppress_nodes": suppressed,
+            "effective_mutations": mutation_successes,
+            "note": "Use this summary to update adaptive_memory; the full MCTS tree is short-term search state.",
+        },
+    }
+
+
+def _write_inner_loop_artifacts(
+    cfg: SAConfig,
+    tree: Dict[str, Dict[str, Any]],
+    candidates: List[Dict[str, Any]],
+    round_summary: Dict[str, Any],
+) -> Dict[str, str]:
+    out_dir = Path(cfg.mcts_output_dir)
+    if not out_dir.is_absolute():
+        out_dir = Path.cwd() / out_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    paths: Dict[str, str] = {}
+    if cfg.mcts_save_tree:
+        tree_json = []
+        for node in tree.values():
+            item = {k: v for k, v in node.items() if k != "seqs"}
+            if node.get("seqs") is not None:
+                item["seq_hash"] = _seqs_hash(node["seqs"])
+            tree_json.append(item)
+        path = out_dir / "mcts_tree.json"
+        _write_json(path, {"nodes": tree_json, "root": "root"})
+        paths["mcts_tree"] = str(path)
+
+    if cfg.mcts_save_variants:
+        path = out_dir / "evaluated_variants.json"
+        _write_json(path, candidates)
+        paths["evaluated_variants"] = str(path)
+
+    path = out_dir / "round_summary.yaml"
+    _write_yaml(path, round_summary)
+    paths["round_summary"] = str(path)
+    return paths
+
+
+def _run_mcts_search(
+    compiled: Dict[str, Any],
+    terms_fast: List[tuple[float, Any]],
+    cfg: SAConfig,
+    masks: Dict[str, np.ndarray],
+    rng: np.random.Generator,
+    template_seqs: Optional[Dict[str, str]],
+    fixed_residues: Optional[Dict[str, Dict[int, str]]],
+    internal_memory: Optional[Dict[str, Any]],
+    external_kb: Optional[Any],
+) -> Tuple[Dict[str, str], Dict[str, float], Dict[str, float], float, Dict[str, Any], List[Dict[str, Any]], Dict[str, Any]]:
+    chain_lengths = compiled["chain_lengths"]
+    root_seqs = init_seqs(
+        chain_lengths, rng, template_seqs=template_seqs, fixed_residues=fixed_residues
+    )
+    root_break, root_progen, root_fast = _score_fast_candidate(root_seqs, terms_fast, cfg, compiled)
+
+    designable = _designable_segments(compiled, masks)
+    if not designable:
+        history = {"accepted_moves": [], "op_counts": {}, "node_visit_counts": {}}
+        return root_seqs, root_break, root_progen, root_fast, history, [], {}
+
+    raw_priors = np.array([
+        _segment_prior(
+            seg,
+            internal_memory if cfg.mcts_memory_enabled else None,
+            external_kb if cfg.external_kb_enabled else None,
+            cfg.external_kb_weight,
+        )
+        for seg, _ in designable
+    ], dtype=float)
+    raw_priors = np.maximum(raw_priors, 1e-6)
+    norm_priors = raw_priors / raw_priors.sum()
+
+    tree: Dict[str, Dict[str, Any]] = {
+        "root": {
+            "id": "root",
+            "parent": None,
+            "children": [],
+            "depth": 0,
+            "visits": 0,
+            "total_reward": 0.0,
+            "best_reward": -1e9,
+            "prior": 1.0,
+            "move": None,
+            "seqs": root_seqs,
+            "fast_loss": float(root_fast),
+            "constraint_penalty": float(root_break["total"]),
+            "progen_loglik_avg": float(root_progen["loglik_avg"]),
+        }
+    }
+    candidates: List[Dict[str, Any]] = []
+    history: Dict[str, Any] = {
+        "accepted_moves": [],
+        "op_counts": {},
+        "node_visit_counts": {},
+        "search_method": "mcts",
+    }
+
+    best = root_seqs
+    best_break = root_break
+    best_progen = root_progen
+    best_fast = float(root_fast)
+    best_node_id = "root"
+    reward_scale = max(float(cfg.mcts_reward_scale), abs(float(root_fast)) * 0.05, 1.0)
+
+    for step in range(cfg.iterations):
+        parent_id = _mcts_select_leaf(tree, "root", cfg)
+        parent = tree[parent_id]
+        seg_idx = int(rng.choice(len(designable), p=norm_priors))
+        seg, positions = designable[seg_idx]
+        prop, move = _mutate_node_seqs(
+            parent["seqs"],
+            seg,
+            positions,
+            rng,
+            cfg,
+            masks,
+            internal_memory if cfg.mcts_memory_enabled else None,
+            external_kb if cfg.external_kb_enabled else None,
+        )
+        prop_break, prop_progen, prop_fast = _score_fast_candidate(prop, terms_fast, cfg, compiled)
+        reward = float(np.tanh((float(root_fast) - float(prop_fast)) / reward_scale))
+
+        node_id = f"n{step + 1}"
+        child = {
+            "id": node_id,
+            "parent": parent_id,
+            "children": [],
+            "depth": int(parent["depth"]) + 1,
+            "visits": 0,
+            "total_reward": 0.0,
+            "best_reward": -1e9,
+            "prior": float(norm_priors[seg_idx]),
+            "move": move,
+            "seqs": prop,
+            "fast_loss": float(prop_fast),
+            "constraint_penalty": float(prop_break["total"]),
+            "progen_loglik_avg": float(prop_progen["loglik_avg"]),
+            "reward": reward,
+        }
+        tree[node_id] = child
+        parent["children"].append(node_id)
+        _mcts_backprop(tree, node_id, reward)
+
+        history["op_counts"][move["op"]] = history["op_counts"].get(move["op"], 0) + 1
+        history["node_visit_counts"][seg.name] = history["node_visit_counts"].get(seg.name, 0) + 1
+        if cfg.history_size > 0:
+            history["accepted_moves"].append(move)
+            if len(history["accepted_moves"]) > cfg.history_size:
+                history["accepted_moves"].pop(0)
+
+        cand = {
+            "variant_id": node_id,
+            "parent_id": parent_id,
+            "seq_hash": _seqs_hash(prop),
+            "seqs": prop,
+            "fast_loss": float(prop_fast),
+            "constraint_penalty": float(prop_break["total"]),
+            "progen_loglik_avg": float(prop_progen["loglik_avg"]),
+            "progen_loglik_sum": float(prop_progen["loglik_sum"]),
+            "reward": reward,
+            "move": move,
+            "mcts": {
+                "depth": child["depth"],
+                "prior": child["prior"],
+                "path": _mcts_best_path(tree, node_id),
+            },
+        }
+        candidates.append(cand)
+
+        if prop_fast < best_fast:
+            best, best_fast = prop, float(prop_fast)
+            best_break, best_progen = prop_break, prop_progen
+            best_node_id = node_id
+
+    round_summary = _summarize_mcts_round(tree, candidates, best_node_id, float(root_fast))
+    artifact_paths = _write_inner_loop_artifacts(cfg, tree, candidates, round_summary)
+    search_artifacts = {
+        "method": "mcts",
+        "best_node_id": best_node_id,
+        "best_path": _mcts_best_path(tree, best_node_id),
+        "artifact_paths": artifact_paths,
+        "round_summary": round_summary,
+        "external_kb": external_kb.describe() if external_kb is not None and hasattr(external_kb, "describe") else None,
+    }
+    return best, best_break, best_progen, best_fast, history, candidates, search_artifacts
+
+
 def optimize_multichain(
     compiled: Dict[str, Any],
     constraint_specs: list[dict],
@@ -279,6 +1046,8 @@ def optimize_multichain(
     masks: Dict[str, np.ndarray],
     template_seqs: Optional[Dict[str, str]] = None,
     fixed_residues: Optional[Dict[str, Dict[int, str]]] = None,
+    internal_memory: Optional[Dict[str, Any]] = None,
+    external_kb: Optional[Any] = None,
 ) -> Dict[str, Any]:
     rng = np.random.default_rng(cfg.seed)
     chain_lengths = compiled["chain_lengths"]
@@ -286,62 +1055,75 @@ def optimize_multichain(
     terms_fast = build_terms_from_specs(constraint_specs, stage="fast")
     terms_chai = build_terms_from_specs(constraint_specs, stage="chai")
 
-    cur = init_seqs(
-        chain_lengths, rng, template_seqs=template_seqs, fixed_residues=fixed_residues
-    )
-    cur_break = energy_breakdown(cur, compiled, terms_fast)
-    cur_progen = _progen_score(cur, cfg.progen_chains, cfg.progen_reduce)
-    cur_fast = cur_break["total"] + cfg.progen_weight * (-cur_progen["loglik_avg"])
+    search_artifacts: Dict[str, Any] = {}
+    if str(cfg.search_method).lower() == "mcts":
+        best, best_break, best_progen, best_fast, history, candidates, search_artifacts = _run_mcts_search(
+            compiled=compiled,
+            terms_fast=terms_fast,
+            cfg=cfg,
+            masks=masks,
+            rng=rng,
+            template_seqs=template_seqs,
+            fixed_residues=fixed_residues,
+            internal_memory=internal_memory,
+            external_kb=external_kb,
+        )
+    else:
+        cur = init_seqs(
+            chain_lengths, rng, template_seqs=template_seqs, fixed_residues=fixed_residues
+        )
+        cur_break, cur_progen, cur_fast = _score_fast_candidate(cur, terms_fast, cfg, compiled)
 
-    best = cur
-    best_break = cur_break
-    best_progen = cur_progen
-    best_fast = cur_fast
+        best = cur
+        best_break = cur_break
+        best_progen = cur_progen
+        best_fast = cur_fast
 
-    T = float(cfg.init_temp)
+        T = float(cfg.init_temp)
 
-    history: Dict[str, Any] = {"accepted_moves": [], "op_counts": {}}
-    candidates: List[Dict[str, Any]] = []
+        history = {"accepted_moves": [], "op_counts": {}, "search_method": "sa"}
+        candidates = []
 
-    for _ in range(cfg.iterations):
-        prop, move = mutate_seqs(cur, compiled, rng, cfg, masks=masks)
+        for step in range(cfg.iterations):
+            prop, move = mutate_seqs(cur, compiled, rng, cfg, masks=masks)
 
-        prop_break = energy_breakdown(prop, compiled, terms_fast)
-        prop_progen = _progen_score(prop, cfg.progen_chains, cfg.progen_reduce)
-        prop_fast = prop_break["total"] + cfg.progen_weight * (-prop_progen["loglik_avg"])
+            prop_break, prop_progen, prop_fast = _score_fast_candidate(prop, terms_fast, cfg, compiled)
 
-        accept = False
-        if prop_fast <= cur_fast:
-            accept = True
-        else:
-            if T > 1e-8 and rng.random() < float(np.exp((cur_fast - prop_fast) / T)):
+            accept = False
+            if prop_fast <= cur_fast:
                 accept = True
+            else:
+                if T > 1e-8 and rng.random() < float(np.exp((cur_fast - prop_fast) / T)):
+                    accept = True
 
-        if accept:
-            cur, cur_fast = prop, prop_fast
-            cur_break, cur_progen = prop_break, prop_progen
+            if accept:
+                cur, cur_fast = prop, prop_fast
+                cur_break, cur_progen = prop_break, prop_progen
 
-            history["op_counts"][move["op"]] = (
-                history["op_counts"].get(move["op"], 0) + 1
-            )
-            if cfg.history_size > 0:
-                history["accepted_moves"].append(move)
-                if len(history["accepted_moves"]) > cfg.history_size:
-                    history["accepted_moves"].pop(0)
+                history["op_counts"][move["op"]] = (
+                    history["op_counts"].get(move["op"], 0) + 1
+                )
+                if cfg.history_size > 0:
+                    history["accepted_moves"].append(move)
+                    if len(history["accepted_moves"]) > cfg.history_size:
+                        history["accepted_moves"].pop(0)
 
-            if cur_fast < best_fast:
-                best, best_fast = cur, cur_fast
-                best_break, best_progen = cur_break, cur_progen
+                if cur_fast < best_fast:
+                    best, best_fast = cur, cur_fast
+                    best_break, best_progen = cur_break, cur_progen
 
-        candidates.append({
-            "seqs": prop,
-            "fast_loss": float(prop_fast),
-            "constraint_penalty": float(prop_break["total"]),
-            "progen_loglik_avg": float(prop_progen["loglik_avg"]),
-            "progen_loglik_sum": float(prop_progen["loglik_sum"]),
-        })
+            candidates.append({
+                "variant_id": f"sa_{step + 1}",
+                "seq_hash": _seqs_hash(prop),
+                "seqs": prop,
+                "fast_loss": float(prop_fast),
+                "constraint_penalty": float(prop_break["total"]),
+                "progen_loglik_avg": float(prop_progen["loglik_avg"]),
+                "progen_loglik_sum": float(prop_progen["loglik_sum"]),
+                "move": move,
+            })
 
-        T *= float(cfg.cooling)
+            T *= float(cfg.cooling)
 
     # ---- 结构预测阶段（protenix 替代 chai1） ----
     chai_results: List[Dict[str, Any]] = []
@@ -377,9 +1159,10 @@ def optimize_multichain(
                     return 'plddt'
 
                 _metric = _get_metric(terms_chai)
+                pred_name = "__".join(cid for cid, _ in chains) or "pred"
 
                 plddt = run_protenix_plddt_multichain(
-                    pred_name=chain_ids[0],
+                    pred_name=pred_name,
                     chains=chains,
                     metric=_metric,                    # ← 新增
                     seed=cfg.protenix_seed,
@@ -391,9 +1174,11 @@ def optimize_multichain(
 
             struct_pen = 0.0
             if terms_chai:
+                compiled["_struct_cache"] = {}
                 compiled["_plddt"] = float(plddt)
                 struct_pen = energy_breakdown(c["seqs"], compiled, terms_chai)["total"]
                 compiled["_plddt"] = None
+                compiled["_struct_cache"] = {}
 
             plddt_delta, plddt_A, plddt_B = _extract_plddt_delta(
                 c["seqs"], compiled, terms_chai
@@ -460,5 +1245,7 @@ def optimize_multichain(
         "plddt_B": final_plddt_B,
         "mutation_history": history,
         "segment_scores": compute_segment_scores(final, compiled),
+        "search_method": str(cfg.search_method).lower(),
+        "search_artifacts": search_artifacts,
     }
     return out
