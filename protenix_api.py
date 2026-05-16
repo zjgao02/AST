@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 _SCALAR_CACHE: Dict[str, float] = {}
 _CONF_CACHE: Dict[str, Dict[str, Any]] = {}
+_DEFAULT_PROTENIX_ROOT = Path(os.environ.get("ASTEVOLVE_PROTENIX_ROOT", r"D:\Downloads\protenix"))
 
 
 def _default_pred_name(chains: List[Tuple[str, str]]) -> str:
@@ -37,6 +38,13 @@ def _tmp_root() -> Path:
         path = Path(tempfile.gettempdir()) / "astevolve_protenix"
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def _protenix_env() -> Dict[str, str]:
+    env = os.environ.copy()
+    env.setdefault("PROTENIX_ROOT_DIR", str(_DEFAULT_PROTENIX_ROOT))
+    env.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")
+    return env
 
 
 def _cache_key(
@@ -95,6 +103,7 @@ def _run_protenix(
             capture_output=True,
             text=True,
             timeout=600,
+            env=_protenix_env(),
         )
     except subprocess.TimeoutExpired:
         print("[protenix] prediction timed out (600s)")

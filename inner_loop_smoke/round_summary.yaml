@@ -1,0 +1,35 @@
+created_at_unix: 1778919837
+search_method: mcts
+root_fast_loss: 24.34541585393163
+best_node_id: root
+best_path:
+- root
+num_tree_nodes: 2
+num_evaluated_variants: 1
+node_level_statistics:
+  VH_CDR3:
+    evaluated: 1
+    improved: 0
+    best_fast_loss: 24.346473033700512
+    mean_fast_loss: 24.346473033700512
+    mean_reward: -0.0008684834216243059
+    top_changes:
+    - chain_id: BB
+      position: 102
+      from: F
+      to: R
+      node: VH_CDR3
+    - chain_id: BB
+      position: 103
+      from: D
+      to: Y
+      node: VH_CDR3
+    success_rate: 0.0
+internal_memory_update_suggestion:
+  promote_nodes:
+  - VH_CDR3
+  suppress_nodes:
+  - VH_CDR3
+  effective_mutations: []
+  note: Use this summary to update adaptive_memory; the full MCTS tree is short-term
+    search state.

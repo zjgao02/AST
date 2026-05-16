@@ -1,0 +1,188 @@
+{
+  "fast_loss": 24.33373825179947,
+  "constraint_penalty": 21.362144522144522,
+  "progen_loglik_avg": -2.971593729654948,
+  "progen_loglik_sum": -713.1824951171875,
+  "chai_plddt": 75.80976867675781,
+  "chai_struct_penalty": 0.0,
+  "chai_combined_loss": 24.33373825179947,
+  "chai_evaluated": 1,
+  "plddt_delta": null,
+  "plddt_A": null,
+  "plddt_B": null,
+  "search_method": "mcts",
+  "seq_keys": [
+    "BB",
+    "T"
+  ],
+  "search_artifacts": {
+    "method": "mcts",
+    "best_node_id": "n5",
+    "best_path": [
+      "root",
+      "n5"
+    ],
+    "artifact_paths": {
+      "mcts_tree": "D:\\Downloads\\ast\\inner_loop_iter5\\mcts_tree.json",
+      "evaluated_variants": "D:\\Downloads\\ast\\inner_loop_iter5\\evaluated_variants.json",
+      "round_summary": "D:\\Downloads\\ast\\inner_loop_iter5\\round_summary.yaml"
+    },
+    "round_summary": {
+      "created_at_unix": 1778920140,
+      "search_method": "mcts",
+      "root_fast_loss": 24.34541585393163,
+      "best_node_id": "n5",
+      "best_path": [
+        "root",
+        "n5"
+      ],
+      "num_tree_nodes": 6,
+      "num_evaluated_variants": 5,
+      "node_level_statistics": {
+        "VH_CDR3": {
+          "evaluated": 2,
+          "improved": 1,
+          "best_fast_loss": 24.33373825179947,
+          "mean_fast_loss": 24.34010564274999,
+          "mean_reward": 0.004362243994173914,
+          "top_changes": [
+            {
+              "chain_id": "BB",
+              "position": 100,
+              "from": "G",
+              "to": "D",
+              "node": "VH_CDR3"
+            },
+            {
+              "chain_id": "BB",
+              "position": 101,
+              "from": "V",
+              "to": "Y",
+              "node": "VH_CDR3"
+            },
+            {
+              "chain_id": "BB",
+              "position": 102,
+              "from": "F",
+              "to": "H",
+              "node": "VH_CDR3"
+            }
+          ],
+          "success_rate": 0.5
+        },
+        "VH_CDR2": {
+          "evaluated": 1,
+          "improved": 0,
+          "best_fast_loss": 24.351668905689444,
+          "mean_fast_loss": 24.351668905689444,
+          "mean_reward": -0.005136898702955978,
+          "top_changes": [
+            {
+              "chain_id": "BB",
+              "position": 55,
+              "from": "G",
+              "to": "H",
+              "node": "VH_CDR2"
+            }
+          ],
+          "success_rate": 0.0
+        },
+        "VL_CDR3": {
+          "evaluated": 2,
+          "improved": 0,
+          "best_fast_loss": 24.35548131413671,
+          "mean_fast_loss": 24.35737492985937,
+          "mean_reward": -0.009824159349824729,
+          "top_changes": [
+            {
+              "chain_id": "BB",
+              "position": 221,
+              "from": "T",
+              "to": "H",
+              "node": "VL_CDR3"
+            }
+          ],
+          "success_rate": 0.0
+        }
+      },
+      "internal_memory_update_suggestion": {
+        "promote_nodes": [
+          "VH_CDR3",
+          "VH_CDR2",
+          "VL_CDR3"
+        ],
+        "suppress_nodes": [
+          "VL_CDR3",
+          "VH_CDR2",
+          "VH_CDR3"
+        ],
+        "effective_mutations": [
+          {
+            "chain_id": "BB",
+            "position": 100,
+            "from": "G",
+            "to": "D",
+            "node": "VH_CDR3",
+            "fast_loss": 24.33373825179947,
+            "reward": 0.009592971409972135
+          },
+          {
+            "chain_id": "BB",
+            "position": 101,
+            "from": "V",
+            "to": "Y",
+            "node": "VH_CDR3",
+            "fast_loss": 24.33373825179947,
+            "reward": 0.009592971409972135
+          },
+          {
+            "chain_id": "BB",
+            "position": 102,
+            "from": "F",
+            "to": "H",
+            "node": "VH_CDR3",
+            "fast_loss": 24.33373825179947,
+            "reward": 0.009592971409972135
+          }
+        ],
+        "note": "Use this summary to update adaptive_memory; the full MCTS tree is short-term search state."
+      }
+    },
+    "external_kb": {
+      "enabled": true,
+      "path": "D:\\Downloads\\ast\\data\\antibody_kb\\sabdab_external_prior_cache.json",
+      "metadata": {
+        "provider_schema": "astevolve_external_prior_v1",
+        "source": "sabdab_antibody_kb_summary",
+        "records_path": "D:\\Downloads\\ast\\data\\antibody_kb\\sabdab_cdr_records.jsonl",
+        "description": "SAbDab-derived antibody-antigen prior cache for ASTevolve MCTS.",
+        "do_not_copy_sequences": true
+      },
+      "node_count": 6,
+      "kind_count": 2,
+      "embedding_retrieval": {
+        "enabled": true,
+        "manifest": "D:\\Downloads\\ast\\data\\antibody_kb\\embedding_manifest_esm2_t6_8M_sabdab_cdr.json",
+        "top_k": 20,
+        "weight": 0.6,
+        "device": "auto",
+        "loaded": true,
+        "shape": [
+          108892,
+          320
+        ],
+        "model": "facebook/esm2_t6_8M_UR50D"
+      }
+    }
+  },
+  "score_config": {
+    "weight_fast": 1.0,
+    "weight_plddt": 5.0,
+    "plddt_scale": 100.0,
+    "fast_loss_nonneg": true
+  },
+  "chain_lengths": {
+    "BB": 240,
+    "T": 217
+  }
+}

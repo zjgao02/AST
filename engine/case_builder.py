@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -16,6 +17,8 @@ from .design_state import (
     load_design_state,
     segment_spans,
 )
+
+AA_CANONICAL = set("ACDEFGHIKLMNPQRSTVWY")
 
 
 def _safe_import_yaml():
@@ -91,6 +94,292 @@ def extract_memory_bias(memory: Dict[str, Any], state: Dict[str, Any]) -> Dict[s
         pass
 
     return out
+
+
+def _as_bool(value: Any, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+    return default
+
+
+def _safe_float(value: Any, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_int(value: Any, default: int) -> int:
+    try:
+        return int(round(float(value)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _strategy_tree(strategy: Dict[str, Any]) -> Dict[str, Any]:
+    for key in ("strategy_tree", "design_tree", "node_tree"):
+        tree = strategy.get(key)
+        if isinstance(tree, dict):
+            return tree
+    return {}
+
+
+def _iter_strategy_nodes(
+    node: Dict[str, Any],
+    inherited_mutable: bool = True,
+    path: Tuple[str, ...] = (),
+):
+    order = 0
+
+    def walk(cur: Dict[str, Any], parent_mutable: bool, cur_path: Tuple[str, ...]):
+        nonlocal order
+        if not isinstance(cur, dict):
+            return
+
+        name = str(cur.get("name") or cur.get("node") or "")
+        if "mutable" in cur:
+            mutable = _as_bool(cur.get("mutable"), parent_mutable)
+        elif "enabled" in cur:
+            mutable = _as_bool(cur.get("enabled"), parent_mutable)
+        else:
+            mutable = parent_mutable
+
+        order += 1
+        next_path = cur_path + ((name,) if name else ())
+        yield cur, mutable, order, next_path
+
+        for child in cur.get("children", []) or []:
+            if isinstance(child, dict):
+                yield from walk(child, mutable, next_path)
+
+    yield from walk(node, inherited_mutable, path)
+
+
+def _segment_metadata(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    meta: Dict[str, Dict[str, Any]] = {}
+    for name, kind, seq in flatten_binder_parts(state):
+        meta[str(name)] = {"kind": str(kind), "length": len(seq)}
+    return meta
+
+
+def _copy_node_field(policy: Dict[str, Any], node: Dict[str, Any], field: str) -> None:
+    if field in node and field not in policy:
+        policy[field] = node[field]
+
+
+def _collect_strategy_tree_policies(
+    state: Dict[str, Any],
+    strategy: Dict[str, Any],
+    memory_bias: Dict[str, Any],
+) -> Tuple[Dict[str, Dict[str, Any]], List[str]]:
+    tree = _strategy_tree(strategy)
+    if not tree:
+        return {}, []
+
+    segment_meta = _segment_metadata(state)
+    policies: Dict[str, Dict[str, Any]] = {}
+    edit_entries: List[Tuple[float, int, str]] = []
+
+    for node, inherited_mutable, order, path in _iter_strategy_nodes(tree):
+        name = str(node.get("name") or node.get("node") or "")
+        if name not in segment_meta:
+            continue
+
+        policy = dict(node.get("edit_policy") or {})
+        for field in (
+            "target_length",
+            "length",
+            "length_delta",
+            "length_range",
+            "min_length",
+            "max_length",
+            "length_mutable",
+            "mutable",
+            "enabled",
+            "priority",
+            "priority_boost",
+            "mutation_rate",
+            "mutation_ops",
+            "max_mutations_per_step",
+            "favored_residues",
+            "disfavored_residues",
+            "favored_residue_classes",
+            "disfavored_residue_classes",
+            "aa_weights",
+            "fill_residues",
+            "seed_sequence",
+            "template_sequence",
+            "policy_weight",
+            "confidence",
+            "edit_intent",
+            "allow_framework_length_change",
+        ):
+            _copy_node_field(policy, node, field)
+
+        mutable = _as_bool(policy.get("mutable"), inherited_mutable)
+        enabled = _as_bool(policy.get("enabled"), mutable)
+        priority = _safe_float(
+            policy.get("priority_boost", policy.get("priority", 1.0)),
+            1.0,
+        )
+
+        policy.update(
+            {
+                "node_name": name,
+                "kind": segment_meta[name]["kind"],
+                "current_length": segment_meta[name]["length"],
+                "mutable": mutable,
+                "enabled": enabled,
+                "priority_boost": priority,
+                "tree_order": order,
+                "tree_path": list(path),
+            }
+        )
+        policies[name] = policy
+
+        if enabled and mutable:
+            edit_entries.append((priority, order, name))
+
+    if edit_entries:
+        edit_entries.sort(key=lambda x: (-x[0], x[1]))
+        edit_order = [name for _priority, _order, name in edit_entries]
+    else:
+        edit_order = list(memory_bias.get("preferred_edit_order", []))
+
+    return policies, edit_order
+
+
+def normalize_strategy_tree(
+    state: Dict[str, Any],
+    strategy: Dict[str, Any],
+    memory_bias: Dict[str, Any],
+) -> Dict[str, Any]:
+    normalized = dict(strategy)
+    policies, edit_order = _collect_strategy_tree_policies(state, strategy, memory_bias)
+    if not policies:
+        normalized.setdefault("node_edit_policies", {})
+        return normalized
+
+    normalized["_tree_policy_active"] = True
+    normalized["node_edit_policies"] = policies
+    if not normalized.get("preferred_edit_order"):
+        normalized["preferred_edit_order"] = edit_order
+    return normalized
+
+
+def _sanitize_aa_sequence(seq: Any) -> str:
+    return "".join(aa for aa in str(seq).upper() if aa in AA_CANONICAL)
+
+
+def _fill_residues(kind: str, policy: Dict[str, Any]) -> str:
+    explicit = _sanitize_aa_sequence(policy.get("fill_residues", ""))
+    if explicit:
+        return explicit
+    if kind == "linker":
+        return "GGGGS"
+    if kind == "cdr":
+        return "YSGNQ"
+    return "S"
+
+
+def _repeat_to_length(seed: str, length: int) -> str:
+    if length <= 0:
+        return ""
+    seed = seed or "S"
+    repeats = (length + len(seed) - 1) // len(seed)
+    return (seed * repeats)[:length]
+
+
+def _resize_segment_sequence(seq: str, target_len: int, kind: str, policy: Dict[str, Any]) -> str:
+    seed = _sanitize_aa_sequence(policy.get("seed_sequence") or policy.get("template_sequence") or "")
+    if seed:
+        seq = seed
+    seq = _sanitize_aa_sequence(seq)
+    if len(seq) == target_len:
+        return seq
+    if target_len <= 0:
+        return ""
+
+    if len(seq) > target_len:
+        if kind == "cdr" and target_len >= 2:
+            left = target_len // 2
+            right = target_len - left
+            return seq[:left] + seq[-right:]
+        return seq[:target_len]
+
+    insert = _repeat_to_length(_fill_residues(kind, policy), target_len - len(seq))
+    if kind == "cdr" and len(seq) >= 2:
+        mid = len(seq) // 2
+        return seq[:mid] + insert + seq[mid:]
+    return seq + insert
+
+
+def _length_bounds(kind: str, current_len: int, policy: Dict[str, Any]) -> Tuple[int, int]:
+    if isinstance(policy.get("length_range"), list) and len(policy["length_range"]) == 2:
+        lo = _safe_int(policy["length_range"][0], current_len)
+        hi = _safe_int(policy["length_range"][1], current_len)
+    else:
+        if kind == "cdr":
+            lo, hi = 4, 24
+        elif kind == "linker":
+            lo, hi = 1, 20
+        else:
+            lo, hi = current_len, current_len
+        lo = _safe_int(policy.get("min_length"), lo)
+        hi = _safe_int(policy.get("max_length"), hi)
+    lo = max(1, min(lo, hi))
+    hi = max(lo, hi)
+    return lo, hi
+
+
+def _target_length(kind: str, current_len: int, policy: Dict[str, Any]) -> int:
+    if "target_length" in policy:
+        raw_target = _safe_int(policy.get("target_length"), current_len)
+    elif "length" in policy:
+        raw_target = _safe_int(policy.get("length"), current_len)
+    elif "length_delta" in policy:
+        raw_target = current_len + _safe_int(policy.get("length_delta"), 0)
+    else:
+        raw_target = current_len
+    lo, hi = _length_bounds(kind, current_len, policy)
+    return max(lo, min(hi, raw_target))
+
+
+def apply_strategy_tree_to_state(state: Dict[str, Any], strategy: Dict[str, Any]) -> Dict[str, Any]:
+    policies = strategy.get("node_edit_policies", {})
+    if not isinstance(policies, dict) or not policies:
+        return state
+
+    updated = deepcopy(state)
+    fixed_linker = set(updated["mutation_policy"].get("fixed_linker_segments", []))
+    for group in ("vh_segments", "linker_segments", "vl_segments"):
+        for segment in updated["binder"].get(group, []):
+            if len(segment) < 3:
+                continue
+            name, kind, seq = str(segment[0]), str(segment[1]), str(segment[2])
+            policy = policies.get(name)
+            if not isinstance(policy, dict):
+                continue
+            if not _as_bool(policy.get("enabled"), _as_bool(policy.get("mutable"), True)):
+                continue
+            if not _as_bool(policy.get("length_mutable"), False):
+                continue
+            if kind == "framework" and not _as_bool(policy.get("allow_framework_length_change"), False):
+                continue
+            if name in fixed_linker:
+                continue
+
+            target_len = _target_length(kind, len(seq), policy)
+            if target_len != len(seq):
+                segment[2] = _resize_segment_sequence(seq, target_len, kind, policy)
+
+    return updated
 
 
 def _make_domain_node(name: str, children: List[List[str]]) -> Node:
@@ -171,15 +460,22 @@ def build_masks(state: Dict[str, Any], memory_bias: Dict[str, Any], strategy: Di
     always_open = set(policy.get("always_open_segments", []))
     conditionally_open = set(policy.get("conditionally_open_segments", []))
     edit_order = list(strategy.get("preferred_edit_order") or memory_bias.get("preferred_edit_order", []))
+    tree_policy_active = bool(strategy.get("_tree_policy_active"))
+    node_policies = strategy.get("node_edit_policies", {})
 
     selected: List[Tuple[int, int]] = []
     for name in edit_order:
+        if tree_policy_active:
+            node_policy = node_policies.get(name, {}) if isinstance(node_policies, dict) else {}
+            if not _as_bool(node_policy.get("enabled"), _as_bool(node_policy.get("mutable"), False)):
+                continue
         if name in always_open or name in conditionally_open:
             if name in spans and spans[name] not in selected:
                 selected.append(spans[name])
-    for name in sorted(always_open):
-        if name in spans and spans[name] not in selected:
-            selected.append(spans[name])
+    if not tree_policy_active:
+        for name in sorted(always_open):
+            if name in spans and spans[name] not in selected:
+                selected.append(spans[name])
 
     return {
         state["binder"].get("chain_id", "BB"): _mask_from_spans(len(binder_sequence(state)), selected),
@@ -281,6 +577,9 @@ def build_sa_config(strategy: Dict[str, Any]) -> Dict[str, Any]:
         "chai1_max_candidates": int(strategy.get("chai1_max_candidates", 3)),
         "chai1_num_trunk_recycles": 3,
         "chai1_num_diffn_timesteps": 50,
+        "protenix_model_name": str(strategy.get("protenix_model_name", "protenix_mini_esm_v0.5.0")),
+        "protenix_conda_env": str(strategy.get("protenix_conda_env", "pytorch")),
+        "protenix_seed": int(strategy.get("protenix_seed", 101)),
         "mutation_ops": dict(strategy.get("mutation_ops", {
             "point": 0.75,
             "block": 0.15,
@@ -305,6 +604,7 @@ def build_sa_config(strategy: Dict[str, Any]) -> Dict[str, Any]:
         "external_kb_retrieval_weight": float(strategy.get("external_kb_retrieval_weight", 0.6)),
         "external_kb_device": str(strategy.get("external_kb_device", "auto")),
         "external_kb_max_length": int(strategy.get("external_kb_max_length", 128)),
+        "node_edit_policies": dict(strategy.get("node_edit_policies", {})),
     }
 
 
@@ -326,6 +626,8 @@ def build_case_inputs(
     state = load_design_state(design_state_path)
     memory = load_memory_yaml(memory_path or state.get("memory_path"))
     memory_bias = extract_memory_bias(memory, state)
+    strategy = normalize_strategy_tree(state, strategy, memory_bias)
+    state = apply_strategy_tree_to_state(state, strategy)
 
     bp = build_blueprint(state)
     masks = build_masks(state, memory_bias, strategy)

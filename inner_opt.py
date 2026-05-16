@@ -73,6 +73,7 @@ class SAConfig:
     external_kb_retrieval_weight: float = 0.6
     external_kb_device: str = "auto"
     external_kb_max_length: int = 128
+    node_edit_policies: Dict[str, Dict[str, Any]] = field(default_factory=dict)
 
 
 def _to_bool_mask(mask, L: int) -> np.ndarray:
@@ -407,11 +408,37 @@ def _window_priority_map(internal_memory: Optional[Dict[str, Any]]) -> Dict[str,
     return priority
 
 
+def _node_policy(cfg: SAConfig, seg: Any) -> Dict[str, Any]:
+    policies = cfg.node_edit_policies or {}
+    if not isinstance(policies, dict):
+        return {}
+    for key in (seg.name, seg.name.lower(), seg.name.casefold()):
+        val = policies.get(key)
+        if isinstance(val, dict):
+            return val
+    return {}
+
+
+def _policy_float(policy: Dict[str, Any], key: str, default: float) -> float:
+    try:
+        return float(policy.get(key, default))
+    except (TypeError, ValueError):
+        return default
+
+
+def _policy_int(policy: Dict[str, Any], key: str, default: int) -> int:
+    try:
+        return int(round(float(policy.get(key, default))))
+    except (TypeError, ValueError):
+        return default
+
+
 def _segment_prior(
     seg: Any,
     internal_memory: Optional[Dict[str, Any]],
     external_kb: Optional[Any] = None,
     external_weight: float = 0.0,
+    node_policy: Optional[Dict[str, Any]] = None,
 ) -> float:
     priority = _window_priority_map(internal_memory).get(seg.name, 1.0)
     if seg.kind == "cdr":
@@ -435,6 +462,9 @@ def _segment_prior(
 
     external_prior = _external_prior_for_segment(external_kb, seg)
     priority *= _external_priority_multiplier(external_prior, external_weight)
+
+    if isinstance(node_policy, dict) and node_policy:
+        priority *= max(0.01, _policy_float(node_policy, "priority_boost", 1.0))
 
     return max(0.01, float(priority))
 
@@ -554,12 +584,27 @@ def _apply_external_residue_prior(
     return weights
 
 
+def _policy_residue_prior(node_policy: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    if not isinstance(node_policy, dict) or not node_policy:
+        return {}
+    prior: Dict[str, Any] = {
+        "confidence": node_policy.get("confidence", node_policy.get("policy_weight", 1.0)),
+        "favored_residues": node_policy.get("favored_residues", []),
+        "favored_residue_classes": node_policy.get("favored_residue_classes", []),
+        "disfavored_residues": node_policy.get("disfavored_residues", []),
+        "disfavored_residue_classes": node_policy.get("disfavored_residue_classes", []),
+        "aa_weights": node_policy.get("aa_weights", {}),
+    }
+    return prior
+
+
 def _aa_weights_for_segment(
     seg: Any,
     internal_memory: Optional[Dict[str, Any]],
     external_kb: Optional[Any] = None,
     external_weight: float = 0.0,
     external_prior: Optional[Dict[str, Any]] = None,
+    node_policy: Optional[Dict[str, Any]] = None,
 ) -> np.ndarray:
     weights = np.ones(len(AA), dtype=float)
     aa_index = {aa: i for i, aa in enumerate(AA)}
@@ -614,6 +659,14 @@ def _aa_weights_for_segment(
         external_prior = _external_prior_for_segment(external_kb, seg)
     weights = _apply_external_residue_prior(weights, external_prior, external_weight)
 
+    policy_prior = _policy_residue_prior(node_policy)
+    if policy_prior:
+        weights = _apply_external_residue_prior(
+            weights,
+            policy_prior,
+            _policy_float(node_policy or {}, "policy_weight", 1.0),
+        )
+
     weights = np.maximum(weights, 1e-6)
     return weights / weights.sum()
 
@@ -659,7 +712,11 @@ def _mutate_node_seqs(
     if not positions:
         return seqs, move
 
-    op = _choose_op(rng, cfg.mutation_ops)
+    node_policy = _node_policy(cfg, seg)
+    op_weights = node_policy.get("mutation_ops", cfg.mutation_ops) if node_policy else cfg.mutation_ops
+    if not isinstance(op_weights, dict):
+        op_weights = cfg.mutation_ops
+    op = _choose_op(rng, op_weights)
     move["op"] = op
     current_fragment = seg.extract(seqs.get(cid, ""))
     external_prior = _external_prior_for_segment(
@@ -674,7 +731,17 @@ def _mutate_node_seqs(
         external_kb=external_kb,
         external_weight=cfg.external_kb_weight if cfg.external_kb_enabled else 0.0,
         external_prior=external_prior,
+        node_policy=node_policy,
     )
+    if node_policy:
+        move["node_policy"] = {
+            "priority_boost": node_policy.get("priority_boost"),
+            "mutation_rate": node_policy.get("mutation_rate"),
+            "max_mutations_per_step": node_policy.get("max_mutations_per_step"),
+            "edit_intent": node_policy.get("edit_intent"),
+            "favored_residues": list(node_policy.get("favored_residues", []) or [])[:12],
+            "favored_residue_classes": list(node_policy.get("favored_residue_classes", []) or [])[:8],
+        }
     if external_prior:
         move["external_prior"] = {
             "source": external_prior.get("source"),
@@ -685,17 +752,26 @@ def _mutate_node_seqs(
             "retrieval": external_prior.get("retrieval"),
         }
 
-    base_k = max(1, int(round(cfg.mutation_rate * len(positions))))
+    mutation_rate = _policy_float(node_policy, "mutation_rate", cfg.mutation_rate)
+    base_k = max(1, int(round(mutation_rate * len(positions))))
+    max_step = _policy_int(node_policy, "max_mutations_per_step", 0)
+    if max_step > 0:
+        base_k = min(base_k, max_step)
     if op == "segment_resample":
         k = min(len(positions), max(base_k, min(4, len(positions))))
+        if max_step > 0:
+            k = min(k, max_step)
         chosen = sorted(rng.choice(positions, size=k, replace=False).tolist())
     elif op == "block":
         start = int(rng.choice(positions))
-        block_len = int(rng.integers(2, 6))
+        block_upper = max(3, min(6, (max_step + 1) if max_step > 0 else 6))
+        block_len = int(rng.integers(2, block_upper))
         pos_set = set(positions)
         chosen = [i for i in range(start, start + block_len) if i in pos_set]
         if not chosen:
             chosen = [start]
+        if max_step > 0:
+            chosen = chosen[:max_step]
     elif op == "swap" and len(positions) >= 2:
         i, j = rng.choice(positions, size=2, replace=False)
         i, j = int(i), int(j)
@@ -918,6 +994,7 @@ def _run_mcts_search(
             internal_memory if cfg.mcts_memory_enabled else None,
             external_kb if cfg.external_kb_enabled else None,
             cfg.external_kb_weight,
+            _node_policy(cfg, seg),
         )
         for seg, _ in designable
     ], dtype=float)
