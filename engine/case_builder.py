@@ -9,6 +9,7 @@ import numpy as np
 from protein_lang import Blueprint, Node
 from inner_opt import SAConfig, optimize_multichain
 from external_kb import load_external_knowledge_provider
+from .memory_update import update_internal_memory
 
 from .design_state import (
     PROJECT_ROOT,
@@ -49,6 +50,19 @@ def load_memory_yaml(memory_path: Optional[str] = None) -> Dict[str, Any]:
         except Exception:
             continue
     return {}
+
+
+def resolve_memory_path(memory_path: Optional[str] = None) -> Path:
+    candidates: List[Path] = []
+    if memory_path:
+        p = Path(memory_path)
+        candidates.append(p if p.is_absolute() else PROJECT_ROOT / p)
+    candidates.append(PROJECT_ROOT / "memory.yaml")
+
+    for path in candidates:
+        if path.exists():
+            return path
+    return candidates[0]
 
 
 def extract_memory_bias(memory: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:
@@ -704,4 +718,17 @@ def run_design_search(
     }
     out["score_config"] = score_cfg
     out["design_state_version"] = state.get("version")
+    if bool(strategy.get("memory_auto_update_enabled", True)) and cfg.mcts_memory_enabled:
+        memory_update = update_internal_memory(
+            resolve_memory_path(memory_path or state.get("memory_path")),
+            out,
+            max_recent_runs=int(strategy.get("memory_update_max_recent_runs", 10)),
+            max_residues_per_node=int(strategy.get("memory_update_max_residues_per_node", 8)),
+        )
+        out["memory_update"] = {k: v for k, v in memory_update.items() if k != "memory"}
+    else:
+        out["memory_update"] = {
+            "updated": False,
+            "reason": "disabled by strategy or mcts_memory_enabled=False",
+        }
     return out

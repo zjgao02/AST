@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import subprocess
 import tempfile
 from pathlib import Path
@@ -192,6 +193,12 @@ def _npz_values(path: Path, keys: Iterable[str]) -> Optional[List[float]]:
     return None
 
 
+def _maybe_scale_metric(metric_name: str, value: float) -> float:
+    if "plddt" in metric_name.lower() and abs(value) <= 1.5:
+        return float(value) * 100.0
+    return float(value)
+
+
 def _scalar_metrics(summary: Any) -> Dict[str, float]:
     out: Dict[str, float] = {}
     if not isinstance(summary, dict):
@@ -199,6 +206,25 @@ def _scalar_metrics(summary: Any) -> Dict[str, float]:
     for key, value in summary.items():
         if isinstance(value, (int, float)):
             out[str(key)] = float(value)
+    return out
+
+
+def _chain_metrics(summary: Any, chains: List[Tuple[str, str]]) -> Dict[str, Dict[str, float]]:
+    out: Dict[str, Dict[str, float]] = {}
+    if not isinstance(summary, dict) or not chains:
+        return out
+
+    for key, value in summary.items():
+        if not str(key).startswith("chain_") or str(key).startswith("chain_pair_"):
+            continue
+        vals = _numeric_list(value)
+        if not vals or len(vals) != len(chains):
+            continue
+        metric_name = str(key)[len("chain_"):]
+        out[metric_name] = {
+            cid: _maybe_scale_metric(metric_name, float(vals[i]))
+            for i, (cid, _) in enumerate(chains)
+        }
     return out
 
 
@@ -223,6 +249,111 @@ def _split_per_chain(
         out[cid] = values[offset : offset + n]
         offset += n
     return out
+
+
+def _atom_site_rows_from_cif(path: Path) -> Iterable[Dict[str, str]]:
+    try:
+        lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    except OSError:
+        return
+
+    headers: List[str] = []
+    in_atom_loop = False
+    data_started = False
+
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            if data_started:
+                break
+            continue
+
+        if line == "loop_":
+            if data_started:
+                break
+            headers = []
+            in_atom_loop = False
+            continue
+
+        if line.startswith("_"):
+            if data_started:
+                break
+            if line.startswith("_atom_site."):
+                headers.append(line.split()[0])
+                in_atom_loop = True
+            elif in_atom_loop:
+                break
+            continue
+
+        if not in_atom_loop or not headers:
+            continue
+        if not (line.startswith("ATOM") or line.startswith("HETATM")):
+            continue
+
+        data_started = True
+        try:
+            tokens = shlex.split(line, posix=False)
+        except ValueError:
+            tokens = line.split()
+        if len(tokens) < len(headers):
+            continue
+        yield {headers[i]: tokens[i] for i in range(len(headers))}
+
+
+def _extract_residue_plddt_from_cif(
+    out_dir: Path,
+    chains: List[Tuple[str, str]],
+) -> Dict[str, List[float]]:
+    if not chains:
+        return {}
+
+    for path in sorted(out_dir.rglob("*.cif")):
+        by_asym: Dict[str, Dict[int, List[float]]] = {}
+        asym_order: List[str] = []
+
+        for row in _atom_site_rows_from_cif(path):
+            asym = row.get("_atom_site.label_asym_id") or row.get("_atom_site.auth_asym_id")
+            seq_raw = row.get("_atom_site.label_seq_id") or row.get("_atom_site.auth_seq_id")
+            b_raw = row.get("_atom_site.B_iso_or_equiv")
+            if not asym or not seq_raw or not b_raw or seq_raw in {".", "?"}:
+                continue
+            try:
+                seq_id = int(float(seq_raw))
+                b_val = float(b_raw)
+            except ValueError:
+                continue
+            if seq_id <= 0:
+                continue
+            if asym not in by_asym:
+                by_asym[asym] = {}
+                asym_order.append(asym)
+            by_asym[asym].setdefault(seq_id, []).append(b_val)
+
+        if not by_asym:
+            continue
+
+        per_chain: Dict[str, List[float]] = {}
+        for chain_idx, (cid, seq) in enumerate(chains):
+            if chain_idx >= len(asym_order):
+                break
+            residues = by_asym.get(asym_order[chain_idx], {})
+            all_vals = [v for vals in residues.values() for v in vals]
+            if not all_vals:
+                continue
+            fallback = float(sum(all_vals) / len(all_vals))
+            values: List[float] = []
+            for residue_idx in range(1, len(seq) + 1):
+                vals = residues.get(residue_idx)
+                if vals:
+                    values.append(float(sum(vals) / len(vals)))
+                else:
+                    values.append(fallback)
+            per_chain[cid] = values
+
+        if per_chain:
+            return per_chain
+
+    return {}
 
 
 def _extract_residue_plddt(
@@ -251,6 +382,9 @@ def _extract_residue_plddt(
             per_chain = _split_per_chain(vals, chains)
             if per_chain:
                 return per_chain
+    per_chain = _extract_residue_plddt_from_cif(out_dir, chains)
+    if per_chain:
+        return per_chain
     return {}
 
 
@@ -287,11 +421,14 @@ def run_protenix_confidence_multichain(
     summary_json = _first_json(out_dir, "*summary_confidence*.json")
     summary = _load_json(summary_json) if summary_json else None
     metrics = _scalar_metrics(summary)
+    chain_metrics = _chain_metrics(summary, chains)
     residue_plddt = _extract_residue_plddt(out_dir, chains)
 
     result = {
         "metrics": metrics,
+        "chain_metrics": chain_metrics,
         "residue_plddt": residue_plddt,
+        "summary_json": str(summary_json) if summary_json else None,
         "out_dir": str(out_dir),
     }
     _CONF_CACHE[cache_key] = result

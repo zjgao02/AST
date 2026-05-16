@@ -1,0 +1,107 @@
+created_at_unix: 1778922652
+search_method: mcts
+root_fast_loss: 24.34541585393163
+best_node_id: n5
+best_path:
+- root
+- n5
+num_tree_nodes: 6
+num_evaluated_variants: 5
+node_level_statistics:
+  VH_CDR3:
+    evaluated: 2
+    improved: 1
+    best_fast_loss: 24.33373825179947
+    mean_fast_loss: 24.34010564274999
+    mean_reward: 0.004362243994173914
+    top_changes:
+    - chain_id: BB
+      position: 100
+      from: G
+      to: D
+      node: VH_CDR3
+    - chain_id: BB
+      position: 101
+      from: V
+      to: Y
+      node: VH_CDR3
+    - chain_id: BB
+      position: 102
+      from: F
+      to: H
+      node: VH_CDR3
+    success_rate: 0.5
+  VH_CDR2:
+    evaluated: 1
+    improved: 0
+    best_fast_loss: 24.351668905689444
+    mean_fast_loss: 24.351668905689444
+    mean_reward: -0.005136898702955978
+    top_changes:
+    - chain_id: BB
+      position: 55
+      from: G
+      to: H
+      node: VH_CDR2
+    success_rate: 0.0
+  VL_CDR2:
+    evaluated: 1
+    improved: 0
+    best_fast_loss: 24.353251750741528
+    mean_fast_loss: 24.353251750741528
+    mean_reward: -0.006437177843271015
+    top_changes:
+    - chain_id: BB
+      position: 181
+      from: N
+      to: H
+      node: VL_CDR2
+    success_rate: 0.0
+  VL_CDR3:
+    evaluated: 1
+    improved: 0
+    best_fast_loss: 24.35704686589452
+    mean_fast_loss: 24.35704686589452
+    mean_reward: -0.009554700633111599
+    top_changes:
+    - chain_id: BB
+      position: 225
+      from: T
+      to: Y
+      node: VL_CDR3
+    success_rate: 0.0
+internal_memory_update_suggestion:
+  promote_nodes:
+  - VH_CDR3
+  - VH_CDR2
+  - VL_CDR2
+  - VL_CDR3
+  suppress_nodes:
+  - VL_CDR3
+  - VL_CDR2
+  - VH_CDR2
+  - VH_CDR3
+  effective_mutations:
+  - chain_id: BB
+    position: 100
+    from: G
+    to: D
+    node: VH_CDR3
+    fast_loss: 24.33373825179947
+    reward: 0.009592971409972135
+  - chain_id: BB
+    position: 101
+    from: V
+    to: Y
+    node: VH_CDR3
+    fast_loss: 24.33373825179947
+    reward: 0.009592971409972135
+  - chain_id: BB
+    position: 102
+    from: F
+    to: H
+    node: VH_CDR3
+    fast_loss: 24.33373825179947
+    reward: 0.009592971409972135
+  note: Use this summary to update adaptive_memory; the full MCTS tree is short-term
+    search state.

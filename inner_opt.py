@@ -14,7 +14,7 @@ from constraints import (
     ChaiPlddtDeltaTerm,          # 实际是 ProtenixPlddtDeltaTerm 的别名
 )
 from progen_api import sequence_loglikelihood
-from protenix_api import run_protenix_plddt_multichain
+from protenix_api import run_protenix_confidence_multichain
 
 
 @dataclass
@@ -278,6 +278,77 @@ def compute_segment_scores(
     return out
 
 
+def _safe_stat(values: List[float], kind: str) -> Optional[float]:
+    if not values:
+        return None
+    arr = np.asarray(values, dtype=float)
+    if kind == "min":
+        return float(arr.min())
+    if kind == "max":
+        return float(arr.max())
+    return float(arr.mean())
+
+
+def compute_node_plddt(
+    compiled: Dict[str, Any],
+    residue_plddt: Optional[Dict[str, List[float]]],
+) -> Dict[str, Dict[str, Any]]:
+    if not residue_plddt:
+        return {}
+
+    name_counts: Dict[str, int] = {}
+    for seg in compiled.get("segments", []):
+        name_counts[seg.name] = name_counts.get(seg.name, 0) + 1
+
+    out: Dict[str, Dict[str, Any]] = {}
+    for seg in compiled.get("segments", []):
+        chain_vals = residue_plddt.get(seg.chain_id)
+        if not chain_vals:
+            continue
+        vals: List[float] = []
+        for idx in seg.indices():
+            if 0 <= int(idx) < len(chain_vals):
+                vals.append(float(chain_vals[int(idx)]))
+        if not vals:
+            continue
+        key = seg.name if name_counts.get(seg.name, 0) == 1 else f"{seg.chain_id}:{seg.name}"
+        out[key] = {
+            "chain_id": seg.chain_id,
+            "kind": seg.kind,
+            "name": seg.name,
+            "spans": seg.spans,
+            "residue_count": len(vals),
+            "plddt_mean": _safe_stat(vals, "mean"),
+            "plddt_min": _safe_stat(vals, "min"),
+            "plddt_max": _safe_stat(vals, "max"),
+        }
+    return out
+
+
+def _install_confidence_cache(
+    compiled: Dict[str, Any],
+    seqs: Dict[str, str],
+    chains: List[Tuple[str, str]],
+    confidence: Dict[str, Any],
+) -> None:
+    struct_cache: Dict[Any, Any] = {}
+    chain_ids = [cid for cid, _ in chains]
+    struct_cache[("residue_plddt_signature", tuple(chain_ids))] = tuple(
+        (cid, seqs.get(cid, "")) for cid in chain_ids
+    )
+
+    for metric_name, value in (confidence.get("metrics", {}) or {}).items():
+        try:
+            struct_cache[("scalar", str(metric_name), tuple(chain_ids))] = float(value)
+        except (TypeError, ValueError):
+            continue
+
+    for cid, vals in (confidence.get("residue_plddt", {}) or {}).items():
+        struct_cache[("residue_plddt", str(cid))] = [float(x) for x in vals]
+
+    compiled["_struct_cache"] = struct_cache
+
+
 def _extract_plddt_delta(
     seqs: Dict[str, str],
     compiled: Dict[str, Any],
@@ -459,6 +530,18 @@ def _segment_prior(
         confidence = float(motif.get("confidence") or 0.0)
         support = float(motif.get("support_count") or 0.0)
         priority *= 1.0 + min(1.0, confidence) + min(0.5, 0.03 * support)
+
+    node_stats = adaptive.get("node_level_statistics", {}) if isinstance(adaptive, dict) else {}
+    stats = {}
+    for key in (seg.name, seg.name.lower(), seg.name.casefold()):
+        if isinstance(node_stats.get(key), dict):
+            stats = node_stats[key]
+            break
+    if stats:
+        try:
+            priority *= max(0.5, min(1.75, float(stats.get("priority_multiplier", 1.0))))
+        except (TypeError, ValueError):
+            pass
 
     external_prior = _external_prior_for_segment(external_kb, seg)
     priority *= _external_priority_multiplier(external_prior, external_weight)
@@ -654,6 +737,12 @@ def _aa_weights_for_segment(
     for aa in motif.get("enriched_residues", []) if motif else []:
         if aa in aa_index:
             weights[aa_index[aa]] *= 2.5
+    confidence = float(motif.get("confidence") or 0.0) if motif else 0.0
+    class_boost = 1.0 + 1.1 * min(1.0, confidence)
+    for class_name in motif.get("favored_classes", []) if motif else []:
+        for aa in _aa_class_members(str(class_name)):
+            if aa in aa_index:
+                weights[aa_index[aa]] *= class_boost
 
     if external_prior is None:
         external_prior = _external_prior_for_segment(external_kb, seg)
@@ -1215,6 +1304,12 @@ def optimize_multichain(
         top = candidates_sorted[:k]
 
         for c in top:
+            chains: List[Tuple[str, str]] = []
+            confidence: Dict[str, Any] = {"metrics": {}, "chain_metrics": {}, "residue_plddt": {}}
+            node_plddt: Dict[str, Dict[str, Any]] = {}
+            chain_plddt: Dict[str, float] = {}
+            protenix_out_dir: Optional[str] = None
+            protenix_summary_json: Optional[str] = None
             try:
                 def _get_chains_B(tc):
                     for _, t in tc:
@@ -1238,7 +1333,7 @@ def optimize_multichain(
                 _metric = _get_metric(terms_chai)
                 pred_name = "__".join(cid for cid, _ in chains) or "pred"
 
-                plddt = run_protenix_plddt_multichain(
+                confidence = run_protenix_confidence_multichain(
                     pred_name=pred_name,
                     chains=chains,
                     metric=_metric,                    # ← 新增
@@ -1246,23 +1341,38 @@ def optimize_multichain(
                     model_name=cfg.protenix_model_name,
                     conda_env=cfg.protenix_conda_env,
                 )
+                plddt = float(confidence.get("metrics", {}).get(_metric, 0.0))
+                chain_plddt = dict(confidence.get("chain_metrics", {}).get("plddt", {}) or {})
+                node_plddt = compute_node_plddt(
+                    compiled,
+                    confidence.get("residue_plddt", {}) or {},
+                )
+                protenix_out_dir = confidence.get("out_dir")
+                protenix_summary_json = confidence.get("summary_json")
             except Exception:
                 plddt = 0.0
 
             struct_pen = 0.0
             if terms_chai:
-                compiled["_struct_cache"] = {}
                 compiled["_plddt"] = float(plddt)
+                if chains:
+                    _install_confidence_cache(compiled, c["seqs"], chains, confidence)
+                else:
+                    compiled["_struct_cache"] = {}
                 struct_pen = energy_breakdown(c["seqs"], compiled, terms_chai)["total"]
                 compiled["_plddt"] = None
-                compiled["_struct_cache"] = {}
 
             plddt_delta, plddt_A, plddt_B = _extract_plddt_delta(
                 c["seqs"], compiled, terms_chai
             )
+            compiled["_struct_cache"] = {}
 
             c2 = dict(c)
             c2["plddt"] = float(plddt)
+            c2["chain_plddt"] = chain_plddt
+            c2["node_plddt"] = node_plddt
+            c2["protenix_out_dir"] = protenix_out_dir
+            c2["protenix_summary_json"] = protenix_summary_json
             c2["struct_penalty"] = float(struct_pen)
             c2["combined_loss"] = float(c["fast_loss"] + struct_pen)
             c2["plddt_delta"] = plddt_delta
@@ -1283,6 +1393,10 @@ def optimize_multichain(
     final_delta = None
     final_plddt_A = None
     final_plddt_B = None
+    final_chain_plddt: Dict[str, float] = {}
+    final_node_plddt: Dict[str, Dict[str, Any]] = {}
+    final_protenix_out_dir = None
+    final_protenix_summary_json = None
 
     if chai_results:
         chai_best = min(
@@ -1305,6 +1419,10 @@ def optimize_multichain(
         final_delta = chai_best.get("plddt_delta", None)
         final_plddt_A = chai_best.get("plddt_A", None)
         final_plddt_B = chai_best.get("plddt_B", None)
+        final_chain_plddt = chai_best.get("chain_plddt", {}) or {}
+        final_node_plddt = chai_best.get("node_plddt", {}) or {}
+        final_protenix_out_dir = chai_best.get("protenix_out_dir")
+        final_protenix_summary_json = chai_best.get("protenix_summary_json")
 
     out = {
         "seqs": final,
@@ -1320,6 +1438,10 @@ def optimize_multichain(
         "plddt_delta": final_delta,
         "plddt_A": final_plddt_A,
         "plddt_B": final_plddt_B,
+        "chain_plddt": final_chain_plddt,
+        "node_plddt": final_node_plddt,
+        "protenix_out_dir": final_protenix_out_dir,
+        "protenix_summary_json": final_protenix_summary_json,
         "mutation_history": history,
         "segment_scores": compute_segment_scores(final, compiled),
         "search_method": str(cfg.search_method).lower(),
