@@ -1,0 +1,11 @@
+{
+  "case_id": "tetr_dopamine",
+  "name": "TetR dopamine-responsive redesign",
+  "task_type": "allosteric_tf_ligand_switch",
+  "design_state_path": "design_state.json",
+  "memory_path": "memory.yaml",
+  "output_root": "../../artifacts/tetr_dopamine",
+  "entry_program": "initial_program.py",
+  "config_path": "config.yaml",
+  "notes": "TetR-family homodimer redesign case. State A models TetR dimer + TetO DNA; State B models TetR dimer + dopamine."
+}

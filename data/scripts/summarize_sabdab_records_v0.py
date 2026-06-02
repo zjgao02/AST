@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from collections import Counter, defaultdict
 from pathlib import Path
 from statistics import mean
@@ -13,6 +14,8 @@ AROMATIC = set("FYW")
 CHARGED = set("KRHDE")
 HYDROPHOBIC = set("AILMFWVY")
 POLAR = set("STNQY")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA_ROOT = Path(os.environ.get("ASTEVOLVE_DATA_ROOT", PROJECT_ROOT / "data"))
 
 
 def _read_jsonl(path: Path) -> Iterable[Dict[str, Any]]:
@@ -248,9 +251,9 @@ def make_external_prior(summary: Dict[str, Any], records_path: Path) -> Dict[str
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Summarize ASTevolve SAbDab antibody_kb records.")
-    parser.add_argument("--records", default="D:/Downloads/ast/data/antibody_kb/sabdab_records.jsonl")
-    parser.add_argument("--out", default="D:/Downloads/ast/data/antibody_kb/sabdab_summary.json")
-    parser.add_argument("--prior-out", default="D:/Downloads/ast/data/antibody_kb/sabdab_external_prior_cache.json")
+    parser.add_argument("--records", default=str(DATA_ROOT / "antibody_kb" / "sabdab_records.jsonl"))
+    parser.add_argument("--out", default=str(DATA_ROOT / "antibody_kb" / "sabdab_summary.json"))
+    parser.add_argument("--prior-out", default=str(DATA_ROOT / "antibody_kb" / "sabdab_external_prior_cache.json"))
     args = parser.parse_args()
 
     summary = summarize(Path(args.records), Path(args.out), Path(args.prior_out))

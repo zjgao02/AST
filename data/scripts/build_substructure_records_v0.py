@@ -4,13 +4,16 @@ import argparse
 import csv
 import gzip
 import json
+import os
 from collections import Counter
 from pathlib import Path
 from typing import Iterable
 
 
-DEFAULT_RAW_ROOT = Path(r"D:\Downloads\data\magneton_raw")
-DEFAULT_OUT = Path(r"D:\Downloads\data\external_kb\substructure_records.jsonl")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA_ROOT = Path(os.environ.get("ASTEVOLVE_DATA_ROOT", PROJECT_ROOT / "data"))
+DEFAULT_RAW_ROOT = DATA_ROOT / "magneton_raw"
+DEFAULT_OUT = DATA_ROOT / "external_kb" / "substructure_records.jsonl"
 
 DEFAULT_CLASSES = (
     "Active_site",

@@ -1,0 +1,160 @@
+{
+  "task_name": "CD25_scFv_Design_Task",
+  "version": "cd25_scfv_v1",
+  "memory_path": "memory.yaml",
+  "binder": {
+    "chain_id": "BB",
+    "architecture": "VH-Linker-VL",
+    "domain_segment_keys": {
+      "VH_domain": "vh_segments",
+      "Linker_module": "linker_segments",
+      "VL_domain": "vl_segments"
+    },
+    "domain_aliases": {
+      "VH": "VH_domain",
+      "heavy": "VH_domain",
+      "heavy_chain": "VH_domain",
+      "Linker": "Linker_module",
+      "linker": "Linker_module",
+      "VL": "VL_domain",
+      "light": "VL_domain",
+      "light_chain": "VL_domain"
+    },
+    "domain_order": [
+      "VH_domain",
+      "Linker_module",
+      "VL_domain"
+    ],
+    "vh_segments": [
+      ["VH_FR1", "framework", "QVQLVQSGAEVKKPGSSVKVS"],
+      ["VH_CDR1", "cdr", "CKASGYTFTSYRMH"],
+      ["VH_FR2", "framework", "WVRQAPGQGLEWI"],
+      ["VH_CDR2", "cdr", "GYINPSTGYTEYNQKF"],
+      ["VH_FR3", "framework", "KDKATITADESTNTAYMELSSLRSEDTAVYYCA"],
+      ["VH_CDR3", "cdr", "RGGGVFDY"],
+      ["VH_FR4", "framework", "WGQGTLVTVS"]
+    ],
+    "linker_segments": [
+      ["Linker_head", "linker", "GGGGS"],
+      ["Linker_core", "linker", "GGGGS"],
+      ["Linker_tail", "linker", "GGGGS"]
+    ],
+    "vl_segments": [
+      ["VL_FR1", "framework", "DIQMTQSPSTLSASVGDRVTITC"],
+      ["VL_CDR1", "cdr", "SASSSISYMH"],
+      ["VL_FR2", "framework", "WYQQKPGKAPKLLIY"],
+      ["VL_CDR2", "cdr", "TTSNLAS"],
+      ["VL_FR3", "framework", "GVPARFSGSGSGTEFTLTISSLQPDDFATYYC"],
+      ["VL_CDR3", "cdr", "HQRSTYPLT"],
+      ["VL_FR4", "framework", "FGQGTKVEVKRTVA"]
+    ]
+  },
+  "target": {
+    "chain_id": "T",
+    "name": "CD25",
+    "uniprot_id": "P01589",
+    "sequence_numbering": "The first residue in target.sequence is PDB 3IU3 CD25 residue 1 and UniProt P01589 residue 22.",
+    "sequence": "ELCDDDPPEIPHATFKAMAYKEGTMLNCECKRGFRRIKSGSLYMLCTGNSSHSSWDNQCQCTSSATRNTTKQVTPQPEEQKERKTTEMQSPMQPVDQASLPGHCREPPPWENEATERIYHFVVGQMVYYQCVQGYRALHRGPAESVCKMTHGKTRWTQPQLICTGEMETSQFPGEEKPQASPEGRPESETSCLVTTTDFQIQTEMAATMETSIFTTE",
+    "literature_fragment": "DDPPEIPHATFKAMAYKEGTMLNCECKRGFRRIKSGSLYMLCTGNSSHSSWDNQCQCTSSATRNTTKQVTPQPEEQKERKTTEMQSPMQPVDQASLPGHCREPPPWENEATERIYHFVVGQMVYYQCVQGYRALHRGPAESVCKMTHGKTRWTQPQLICTG",
+    "epitope_name": "CD25_basiliximab_epitope",
+    "epitope_source": "PDB 3IU3 Basiliximab-CD25 interface, strict three-copy consensus, 4.0 A heavy-atom cutoff.",
+    "epitope_spans": [
+      [0, 2],
+      [3, 6],
+      [21, 23],
+      [24, 25],
+      [26, 27],
+      [28, 29],
+      [41, 43],
+      [44, 45],
+      [46, 48],
+      [55, 57],
+      [119, 120]
+    ],
+    "hotspot_motif": "ERIYHFV",
+    "hotspot_motif_interpretation": "Hotspot-centered functional interface region, not a complete standalone linear epitope."
+  },
+  "complex_states": [
+    {
+      "name": "cd25_bound_state",
+      "role": "CD25-bound scFv design state",
+      "objective": "The designed scFv should form a plausible interface with the fixed CD25 target.",
+      "metric": "plddt",
+      "entities": [
+        {"type": "protein", "id": "scFv", "source_chain": "BB"},
+        {"type": "protein", "id": "CD25", "source_chain": "T"}
+      ]
+    }
+  ],
+  "multistate_regions": {
+    "cdr_binding_surface": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3"
+    ],
+    "linker_core": [
+      "Linker_core"
+    ]
+  },
+  "multistate_objectives": [
+    {
+      "name": "cd25_interface_on",
+      "type": "interface_on",
+      "state": "cd25_bound_state",
+      "pair": ["scFv", "CD25"],
+      "weight": 1.0,
+      "contact_target": 80,
+      "residue_pair_target": 16
+    },
+    {
+      "name": "bound_state_confidence",
+      "type": "confidence",
+      "states": ["cd25_bound_state"],
+      "metric": "plddt",
+      "weight": 0.6
+    }
+  ],
+  "mutation_policy": {
+    "preferred_edit_order": [
+      "VH_CDR3",
+      "VH_CDR2",
+      "VL_CDR3",
+      "VH_CDR1",
+      "VL_CDR1",
+      "VL_CDR2",
+      "Linker_core",
+      "VH_FR2",
+      "VH_FR3",
+      "VL_FR2",
+      "VL_FR3"
+    ],
+    "always_open_segments": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3"
+    ],
+    "conditionally_open_segments": [
+      "Linker_core",
+      "VH_FR2",
+      "VH_FR3",
+      "VL_FR2",
+      "VL_FR3"
+    ],
+    "fixed_linker_segments": [
+      "Linker_head",
+      "Linker_tail"
+    ],
+    "generally_frozen": [
+      "FR1",
+      "FR4",
+      "Target_CD25"
+    ]
+  },
+  "round_history": []
+}

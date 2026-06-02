@@ -1,0 +1,76 @@
+from __future__ import annotations
+
+from copy import deepcopy
+from typing import Any, Dict
+
+
+_BASE_STRATEGY: Dict[str, Any] = {
+    "preferred_edit_order": [],
+    "iterations": 1200,
+    "init_temp": 2.0,
+    "cooling": 0.995,
+    "mutation_rate": 0.06,
+    "resample_segment_prob": 0.08,
+    "mutation_ops": {
+        "point": 0.75,
+        "block": 0.15,
+        "segment_resample": 0.07,
+        "swap": 0.03,
+    },
+    "search_method": "mcts",
+    "mcts_c_puct": 1.4,
+    "mcts_max_depth": 4,
+    "mcts_reward_scale": 1.0,
+    "mcts_output_dir": "inner_loop",
+    "mcts_save_tree": True,
+    "mcts_save_variants": True,
+    "mcts_memory_enabled": True,
+    "memory_auto_update_enabled": True,
+    "memory_update_max_recent_runs": 10,
+    "memory_update_max_residues_per_node": 8,
+    "external_kb_enabled": False,
+    "external_kb_path": None,
+    "external_kb_weight": 0.7,
+    "external_kb_embedding_manifest": None,
+    "external_kb_retrieval_enabled": False,
+    "external_kb_retrieval_top_k": 20,
+    "external_kb_retrieval_weight": 0.6,
+    "external_kb_device": "auto",
+    "external_kb_max_length": 128,
+    "progen_weight": 1.0,
+    "sequence_prior_model": "progen",
+    "structure_model": "protenix",
+    "structure_model_name": None,
+    "protenix_conda_env": "pytorch",
+    "esmfold2_mode": "local",
+    "esmfold2_conda_env": None,
+    "esmfold2_num_loops": 3,
+    "esmfold2_num_sampling_steps": 32,
+    "esmfold2_num_diffusion_samples": 1,
+    "multistate_objectives_enabled": True,
+    "multistate_objective_weight": 1.0,
+    "chai1_enabled": True,
+    "chai1_top_frac": 0.01,
+    "chai1_min_candidates": 1,
+    "chai1_max_candidates": 3,
+    "history_size": 50,
+    "max_hydrophobic_run": 2,
+    "max_charged_run": 2,
+    "score_config": {
+        "weight_fast": 1.0,
+        "weight_plddt": 5.0,
+        "weight_iptm": 1.0,
+        "weight_ptm": 0.5,
+        "weight_interface_plddt": 1.0,
+        "weight_node_plddt_min": 0.5,
+        "weight_clash": 1.0,
+        "weight_multistate": 1.0,
+        "plddt_scale": 100.0,
+        "clash_scale": 10.0,
+        "fast_loss_nonneg": True,
+    },
+}
+
+
+def base_strategy() -> Dict[str, Any]:
+    return deepcopy(_BASE_STRATEGY)

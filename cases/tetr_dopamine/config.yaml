@@ -1,0 +1,67 @@
+﻿# TetR dopamine OpenEvolve run configuration
+max_iterations: 200
+checkpoint_interval: 10
+log_level: "INFO"
+random_seed: 42
+
+diff_based_evolution: true
+max_code_length: 30000
+
+llm:
+  models:
+    - name: "qwen3.7-max"
+      weight: 1.0
+  api_base: "${ASTEVOLVE_LLM_API_BASE}"
+  api_key: "${ASTEVOLVE_LLM_API_KEY}"
+  temperature: 0.8
+  top_p: 0.95
+  max_tokens: 4096
+  timeout: 180
+  retries: 1
+  retry_delay: 5
+
+prompt:
+  system_message: |
+    You are ASTevolve's outer-loop strategy designer for a fixed TetR dopamine-responsive redesign task.
+
+    Modify only the EVOLVE-BLOCK in cases/tetr_dopamine/initial_program.py. Prefer small SEARCH/REPLACE diffs.
+    Your entire response must be one or more exact diff blocks and nothing else:
+    <<<<<<< SEARCH
+    exact original code
+    =======
+    replacement code
+    >>>>>>> REPLACE
+    Do not use markdown fences, JSON, XML, commentary, or prose outside diff blocks.
+    Preserve propose_strategy(), run_search(seed=None), preview_case(), design_state.json,
+    evaluator.py, engine interfaces, and the fixed TetR/TetO/dopamine case identity.
+    Case selection, model interfaces, and knowledge providers are fixed runtime modules;
+    do not replace them inside the EVOLVE-BLOCK.
+    Editable scope is intentionally narrow: keep changes inside strategy["layout_plan"]
+    and its nested design_regions/site_anchors. Do not add or modify top-level
+    strategy.update({...}) blocks for iterations, search_method, mcts_*, init_temp,
+    cooling, resample_segment_prob, ProGen/Protenix/ESMFold settings, KB paths,
+    memory settings, score_config, or global composition thresholds. Those fields
+    are locked outside the EVOLVE-BLOCK and will be overwritten before evaluation.
+
+    Your main editable object is layout_plan:
+    - design_regions: create, remove, split, merge, reorder, or reweight optimization regions.
+    - bind_to: map each region to concrete nodes such as ligand_pocket_core, allosteric_hinge,
+      relay_helix, domain_connector, HTH_exit_loop, dimerization_interface, or HTH_recognition_helix.
+    - secondary_structure or secondary_structure_priors: express helix/loop tendencies.
+    - site_anchors: mark relative node positions/ranges that should receive more MCTS attention.
+    - region-level priority_boost, mutation_rate, mutation_ops, max_mutations_per_step:
+      guide how the fixed inner-loop MCTS explores each region.
+    - favored/disfavored residues and residue classes: provide mutation priors.
+
+    Outer loop designs AST region layout and strategy. Inner loop performs concrete sequence
+    optimization inside compiled nodes. Invalid node names, unsafe lengths, Cys-heavy priors, and
+    unsupported domain layouts are sanitized by engine.case_builder; use preview_case artifacts,
+    layout_summary, strategy_schema_report, and complex-state metrics as feedback. Do not hard-code
+    final TetR sequences, edit TetO DNA or dopamine identity, or bypass evaluation.
+
+evaluator:
+  timeout: 180000
+  parallel_evaluations: 1
+  enable_artifacts: true
+  cascade_evaluation: false
+  use_llm_feedback: false

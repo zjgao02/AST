@@ -1,0 +1,11 @@
+{
+  "case_id": "cd25_scfv",
+  "name": "CD25 scFv design",
+  "task_type": "interface_centric_scfv_evolution",
+  "design_state_path": "design_state.json",
+  "memory_path": "memory.yaml",
+  "output_root": "../../artifacts/cd25_scfv",
+  "entry_program": "initial_program.py",
+  "config_path": "config.yaml",
+  "notes": "Self-contained CD25-scFv case state, memory, OpenEvolve entry program, and run config."
+}

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
@@ -39,6 +40,8 @@ FIELD_ALIASES = {
     "light_subclass": ["light_subclass", "l_subclass"],
     "light_ctype": ["light_ctype", "l_ctype"],
 }
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA_ROOT = Path(os.environ.get("ASTEVOLVE_DATA_ROOT", PROJECT_ROOT / "data"))
 
 
 def _norm_header(name: str) -> str:
@@ -206,9 +209,9 @@ def build_records(summary_tsv: Path, out_jsonl: Path, source: str, max_rows: Opt
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build ASTevolve antibody_kb records from SAbDab summary TSV.")
-    parser.add_argument("--summary", default="D:/Downloads/ast/data/sabdab_raw/sabdab_summary.tsv")
-    parser.add_argument("--out", default="D:/Downloads/ast/data/antibody_kb/sabdab_records.jsonl")
-    parser.add_argument("--manifest", default="D:/Downloads/ast/data/antibody_kb/sabdab_records.manifest.json")
+    parser.add_argument("--summary", default=str(DATA_ROOT / "sabdab_raw" / "sabdab_summary.tsv"))
+    parser.add_argument("--out", default=str(DATA_ROOT / "antibody_kb" / "sabdab_records.jsonl"))
+    parser.add_argument("--manifest", default=str(DATA_ROOT / "antibody_kb" / "sabdab_records.manifest.json"))
     parser.add_argument("--source", default="sabdab_summary_tsv")
     parser.add_argument("--max-rows", type=int, default=None)
     args = parser.parse_args()

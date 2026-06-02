@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 from urllib.parse import quote
 
@@ -9,6 +10,8 @@ from tqdm import tqdm
 
 
 REPO_ID = "rcalef/magneton-data"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA_ROOT = Path(os.environ.get("ASTEVOLVE_DATA_ROOT", PROJECT_ROOT / "data"))
 
 FILES = [
     "interpro_103.0/debug_subset/swissprot.with_ss.0.jsonl.gz",
@@ -71,7 +74,7 @@ def main() -> None:
     parser.add_argument(
         "--out",
         type=Path,
-        default=Path(r"D:\Downloads\data\magneton_raw"),
+        default=DATA_ROOT / "magneton_raw",
         help="Output directory for Magneton raw files.",
     )
     parser.add_argument(

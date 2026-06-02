@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from urllib.error import HTTPError, URLError
@@ -13,6 +14,8 @@ from build_sabdab_records_v0 import FIELD_ALIASES, _get, _norm_header, _split_ch
 
 SABDAB_PDB_URL = "https://opig.stats.ox.ac.uk/webapps/sabdab-sabpred/sabdab/pdb/{pdb}/"
 RCSB_PDB_URL = "https://files.rcsb.org/download/{pdb}.pdb"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA_ROOT = Path(os.environ.get("ASTEVOLVE_DATA_ROOT", PROJECT_ROOT / "data"))
 
 THREE_TO_ONE = {
     "ALA": "A", "ARG": "R", "ASN": "N", "ASP": "D", "CYS": "C",
@@ -267,10 +270,10 @@ def build_structure_records(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build sequence-bearing SAbDab records from Chothia-numbered PDB files.")
-    parser.add_argument("--summary", default="D:/Downloads/ast/data/sabdab_raw/sabdab_summary.tsv")
-    parser.add_argument("--pdb-dir", default="D:/Downloads/ast/data/sabdab_raw/pdb")
-    parser.add_argument("--out", default="D:/Downloads/ast/data/antibody_kb/sabdab_structure_records.jsonl")
-    parser.add_argument("--manifest", default="D:/Downloads/ast/data/antibody_kb/sabdab_structure_records.manifest.json")
+    parser.add_argument("--summary", default=str(DATA_ROOT / "sabdab_raw" / "sabdab_summary.tsv"))
+    parser.add_argument("--pdb-dir", default=str(DATA_ROOT / "sabdab_raw" / "pdb"))
+    parser.add_argument("--out", default=str(DATA_ROOT / "antibody_kb" / "sabdab_structure_records.jsonl"))
+    parser.add_argument("--manifest", default=str(DATA_ROOT / "antibody_kb" / "sabdab_structure_records.manifest.json"))
     parser.add_argument("--max-rows", type=int, default=500)
     parser.add_argument("--max-structures", type=int, default=100)
     args = parser.parse_args()

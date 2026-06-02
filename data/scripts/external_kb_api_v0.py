@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from collections import Counter
 from pathlib import Path
 from typing import Iterable
@@ -9,10 +10,12 @@ from typing import Iterable
 import numpy as np
 
 
-DEFAULT_MANIFEST = Path(r"D:\Downloads\data\external_kb\embedding_manifest_esm2_t6_8M_all.json")
-DEFAULT_RECORDS = Path(r"D:\Downloads\data\external_kb\substructure_records.jsonl")
-DEFAULT_EMBEDDINGS = Path(r"D:\Downloads\data\external_kb\embeddings_esm2_t6_8M_all.npy")
-DEFAULT_METADATA = Path(r"D:\Downloads\data\external_kb\embedding_metadata_esm2_t6_8M_all.jsonl")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA_ROOT = Path(os.environ.get("ASTEVOLVE_DATA_ROOT", PROJECT_ROOT / "data"))
+DEFAULT_MANIFEST = DATA_ROOT / "external_kb" / "embedding_manifest_esm2_t6_8M_all.json"
+DEFAULT_RECORDS = DATA_ROOT / "external_kb" / "substructure_records.jsonl"
+DEFAULT_EMBEDDINGS = DATA_ROOT / "external_kb" / "embeddings_esm2_t6_8M_all.npy"
+DEFAULT_METADATA = DATA_ROOT / "external_kb" / "embedding_metadata_esm2_t6_8M_all.jsonl"
 DEFAULT_MODEL = "facebook/esm2_t6_8M_UR50D"
 
 

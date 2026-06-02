@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 from urllib.request import urlopen
 
 
 SABDAB_CDR_URL = "https://opig.stats.ox.ac.uk/webapps/sabdab-sabpred/sabdab/cdrsearch/?CDRdef_all={cdr_def}"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA_ROOT = Path(os.environ.get("ASTEVOLVE_DATA_ROOT", PROJECT_ROOT / "data"))
 
 
 def download(url: str, out: Path, timeout: int = 120) -> None:
@@ -29,7 +32,7 @@ def download(url: str, out: Path, timeout: int = 120) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Download SAbDab all-CDR HTML result page.")
     parser.add_argument("--cdr-def", default="Chothia", choices=["Chothia", "Contact", "IMGT", "Kabat", "North"])
-    parser.add_argument("--out", default="D:/Downloads/ast/data/sabdab_raw/cdrs_chothia.html")
+    parser.add_argument("--out", default=str(DATA_ROOT / "sabdab_raw" / "cdrs_chothia.html"))
     parser.add_argument("--url", default=None)
     args = parser.parse_args()
 
