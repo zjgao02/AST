@@ -1,6 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Tuple, Optional, Callable
+import importlib
 import numpy as np
 import torch
 from protenix_api import run_protenix_plddt_multichain
@@ -40,6 +41,99 @@ def _segment_filter(seg, f: Optional[Dict[str, Any]]) -> bool:
 def _extract_frag(seg, seqs: Dict[str, str]) -> str:
     """通用提取：使用 seg.extract() 支持不连续 spans。"""
     return seg.extract(seqs.get(seg.chain_id, ""))
+
+
+def _default_pred_name(chain_ids: List[str]) -> str:
+    return "__".join(chain_ids) if chain_ids else "pred"
+
+
+def _ensure_struct_cache(compiled: Dict[str, Any]) -> Dict[str, Any]:
+    if "_struct_cache" not in compiled or compiled["_struct_cache"] is None:
+        compiled["_struct_cache"] = {}
+    return compiled["_struct_cache"]
+
+
+def _seq_signature(seqs: Dict[str, str], chain_ids: List[str]) -> Tuple[Tuple[str, str], ...]:
+    return tuple((cid, seqs.get(cid, "")) for cid in chain_ids)
+
+
+def _get_residue_plddt_from_compiled(
+    compiled: Dict[str, Any],
+    chain_id: str,
+) -> Optional[List[float]]:
+    struct_cache = compiled.get("_struct_cache", {}) or {}
+    key = ("residue_plddt", chain_id)
+    if key in struct_cache:
+        vals = struct_cache[key]
+        return [float(x) for x in vals] if vals is not None else None
+
+    legacy = compiled.get("_residue_plddt", {})
+    if isinstance(legacy, dict) and chain_id in legacy:
+        vals = legacy[chain_id]
+        return [float(x) for x in vals] if vals is not None else None
+
+    return None
+
+
+def _maybe_fetch_residue_confidence(
+    seqs: Dict[str, str],
+    chain_ids: List[str],
+    compiled: Dict[str, Any],
+    device: Optional[str],
+    model_name: str,
+    conda_env: str,
+    seed: int,
+) -> None:
+    """Populate compiled['_struct_cache'] with per-residue pLDDT when Protenix supports it."""
+    if not chain_ids:
+        return
+
+    struct_cache = _ensure_struct_cache(compiled)
+    signature = _seq_signature(seqs, chain_ids)
+    signature_key = ("residue_plddt_signature", tuple(chain_ids))
+    if struct_cache.get(signature_key) == signature and all(
+        ("residue_plddt", cid) in struct_cache for cid in chain_ids
+    ):
+        return
+
+    try:
+        protenix_api = importlib.import_module("protenix_api")
+        fn = getattr(protenix_api, "run_protenix_confidence_multichain", None)
+        if fn is None:
+            return
+
+        chains = []
+        for cid in chain_ids:
+            seq = seqs.get(cid, "")
+            if not seq:
+                return
+            chains.append((cid, seq))
+
+        out = fn(
+            pred_name=_default_pred_name(chain_ids),
+            chains=chains,
+            device=device,
+            seed=seed,
+            model_name=model_name,
+            conda_env=conda_env,
+        )
+        if not isinstance(out, dict):
+            return
+
+        metrics = out.get("metrics", {}) or {}
+        residue_plddt = out.get("residue_plddt", {}) or {}
+
+        for metric_name, value in metrics.items():
+            try:
+                struct_cache[("scalar", str(metric_name), tuple(chain_ids))] = float(value)
+            except (TypeError, ValueError):
+                continue
+
+        for cid, vals in residue_plddt.items():
+            struct_cache[("residue_plddt", str(cid))] = [float(x) for x in vals]
+        struct_cache[signature_key] = signature
+    except Exception:
+        return
 
 
 # ---------------------------------------------------------------------------
@@ -277,6 +371,7 @@ class ProtenixPlddtTerm(EnergyTerm):
                 plddt = self._cache[key]
             else:
                 plddt = run_protenix_plddt_multichain(
+                    pred_name=_default_pred_name(chain_ids),
                     chains=chains,
                     device=self.device,
                     seed=self.seed,
@@ -375,6 +470,97 @@ class ProtenixPlddtDeltaTerm(EnergyTerm):
 ChaiPlddtDeltaTerm = ProtenixPlddtDeltaTerm
 
 
+@dataclass
+class ResiduePlddtTerm(EnergyTerm):
+    """Penalize low/high Protenix pLDDT over selected residues or AST segments."""
+    kind: str = "residue_plddt"
+    chain_id: Optional[str] = None
+    segment_filter: Optional[Dict[str, Any]] = None
+    positions: Optional[List[int]] = None
+    mode: str = "high"
+    target: float = 70.0
+    scale: float = 100.0
+    aggregation: str = "mean"
+    softmin_temperature: float = 8.0
+    missing_penalty: float = 2.0
+    device: Optional[str] = None
+    model_name: str = "protenix_mini_esm_v0.5.0"
+    conda_env: str = "protenix_mini"
+    seed: int = 101
+
+    def _collect_positions(self, compiled: Dict[str, Any]) -> Dict[str, List[int]]:
+        out: Dict[str, List[int]] = {}
+
+        if self.positions is not None:
+            if not self.chain_id:
+                return out
+            out[self.chain_id] = sorted(set(int(i) for i in self.positions))
+            return out
+
+        for seg in compiled.get("segments", []):
+            if self.chain_id is not None and seg.chain_id != self.chain_id:
+                continue
+            if not _segment_filter(seg, self.segment_filter):
+                continue
+            out.setdefault(seg.chain_id, [])
+            out[seg.chain_id].extend(seg.indices())
+
+        for cid in list(out.keys()):
+            out[cid] = sorted(set(int(i) for i in out[cid]))
+        return out
+
+    def _aggregate(self, vals: List[float]) -> float:
+        arr = np.asarray(vals, dtype=float)
+        if arr.size == 0:
+            return float("nan")
+        if self.aggregation == "min":
+            return float(arr.min())
+        if self.aggregation == "max":
+            return float(arr.max())
+        if self.aggregation == "softmin":
+            temp = max(1e-6, float(self.softmin_temperature))
+            weights = np.exp(-arr / temp)
+            weights = weights / max(float(weights.sum()), 1e-12)
+            return float((weights * arr).sum())
+        return float(arr.mean())
+
+    def penalty(self, seqs: Dict[str, str], compiled: Dict[str, Any]) -> float:
+        pos_map = self._collect_positions(compiled)
+        if not pos_map:
+            return float(self.missing_penalty)
+
+        chain_ids = list(pos_map.keys())
+        _maybe_fetch_residue_confidence(
+            seqs=seqs,
+            chain_ids=chain_ids,
+            compiled=compiled,
+            device=self.device,
+            model_name=self.model_name,
+            conda_env=self.conda_env,
+            seed=self.seed,
+        )
+
+        residue_vals: List[float] = []
+        for cid, positions in pos_map.items():
+            per_res = _get_residue_plddt_from_compiled(compiled, cid)
+            if per_res is None:
+                continue
+            for i in positions:
+                if 0 <= i < len(per_res):
+                    residue_vals.append(float(per_res[i]))
+
+        if not residue_vals:
+            return float(self.missing_penalty)
+
+        agg_val = self._aggregate(residue_vals)
+        score = float(agg_val) / float(self.scale)
+        target_score = float(self.target) / float(self.scale)
+
+        if self.mode == "low":
+            return float(max(0.0, score - target_score))
+        return float(max(0.0, target_score - score))
+
+
 # ---------------------------------------------------------------------------
 # Term 注册表
 # ---------------------------------------------------------------------------
@@ -436,6 +622,23 @@ _TERM_REGISTRY: Dict[str, Callable[[Dict[str, Any]], EnergyTerm]] = {
         direction=str(p.get("direction", "B_gt_A")),        # ← 新增
         delta_threshold=float(p.get("delta_threshold", 0.4)),  # ← 新增
         scale=float(p.get("scale", 100.0)),
+        device=p.get("device", None),
+        model_name=str(p.get("model_name", "protenix_mini_esm_v0.5.0")),
+        conda_env=str(p.get("conda_env", "protenix_mini")),
+        seed=int(p.get("seed", 101)),
+    ),
+    "residue_plddt": lambda p: ResiduePlddtTerm(
+        chain_id=p.get("chain_id", None),
+        segment_filter=p.get("segment_filter", None),
+        positions=[int(x) for x in p.get("positions", [])]
+        if p.get("positions") is not None
+        else None,
+        mode=str(p.get("mode", "high")),
+        target=float(p.get("target", 70.0)),
+        scale=float(p.get("scale", 100.0)),
+        aggregation=str(p.get("aggregation", "mean")),
+        softmin_temperature=float(p.get("softmin_temperature", 8.0)),
+        missing_penalty=float(p.get("missing_penalty", 2.0)),
         device=p.get("device", None),
         model_name=str(p.get("model_name", "protenix_mini_esm_v0.5.0")),
         conda_env=str(p.get("conda_env", "protenix_mini")),

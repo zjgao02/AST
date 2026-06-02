@@ -1,246 +1,441 @@
 # EVOLVE-BLOCK-START
-import numpy as np
-from protein_lang import Node, Blueprint
+from __future__ import annotations
 
 
-def _hotspot_window(seq: str, motif: str = "GLGFNI", left: int = 3, right: int = 6):
-    idx = seq.index(motif)
-    start = max(0, idx - left)
-    end = min(len(seq), idx + len(motif) + right)
-    return start, end
+def propose_strategy():
+    """
+    OpenEvolve should mutate the design strategy tree here, not the CD25 case
+    identity. Fixed case data lives in design_state.json and engine/.
 
-
-def propose_blueprint_and_config():
-    # ---- Fixed Targets ----
-    target_A = (
-        "GSPEFLGEEDIPREPRRIVIHRGSTGLGFNIIGGEDGEGIFISFILAGGPADLSGELRKGDQILSVNGVDLRNASHEQAAIALKNAGQTVTIIAQYKPEEYSRFEANSRVNSSGRIVTN"
-    )
-    target_B = (
-        "EDIPREPRRIVIHRGSTGLGFNIVGGEDGEGIFISFILAGGPADLSGELRKGDQILSVNGVDLRNASHEQAAIALKNAGQTVTIIAQYKPEEYSRFEAK"
-    )
-
-    # ---- Hotspot windows ----
-    A_start, A_end = _hotspot_window(target_A, "GLGFNI", left=3, right=6)
-    B_start, B_end = _hotspot_window(target_B, "GLGFNI", left=3, right=6)
-
-    # ---- Target chains with epitope segment ----
-    # 这里仍使用 sequential 模式（叶节点无 residue_spans），完全向后兼容
-    def make_target_chain(seq: str, chain_id: str, ep_start: int, ep_end: int):
-        children = []
-        if ep_start > 0:
-            children.append(Node(kind="domain", name="nterm", length=ep_start))
-        children.append(Node(kind="epitope", name="epitope", length=ep_end - ep_start))
-        if ep_end < len(seq):
-            children.append(Node(kind="domain", name="cterm", length=len(seq) - ep_end))
-
-        return Node(
-            kind="chain", name=f"target_{chain_id}", props={"chain_id": chain_id},
-            children=children
-        )
-
-    chain_TA = make_target_chain(target_A, "TA", A_start, A_end)
-    chain_TB = make_target_chain(target_B, "TB", B_start, B_end)
-
-    # ---- Binder chain (A-selective only) ----
-    chain_BB = Node(
-        kind="chain", name="binder_BB", props={"chain_id": "BB"},
-        children=[Node(kind="iface", name="iface", length=5)]
-    )
-
-    bp = Blueprint(
-        root=Node(
-            kind="complex", name="complex",
-            children=[chain_TA, chain_TB, chain_BB]
-        )
-    )
-
-    # ---- Masks ----
-    masks = {
-        "TA": [False] * len(target_A),
-        "TB": [False] * len(target_B),
-        "BB": [True] * 5,
-    }
-
-    # ---- Constraints ----
-    no_cys = set("ADEFGHIKLMNPQRSTVWY")
-
-    constraint_specs = [
-        {"kind": "alphabet", "weight": 1.0, "params": {"allowed": no_cys}},
-        {"kind": "fixed_chain_sequence", "weight": 1.0, "params": {"chain_id": "TA", "sequence": target_A}},
-        {"kind": "fixed_chain_sequence", "weight": 1.0, "params": {"chain_id": "TB", "sequence": target_B}},
-        {"kind": "max_run", "weight": 1.0, "params": {
-            "aa_set": "AILMFWVY",
-            "max_run": 2,
-            "segment_filter": {"chain_id": "BB", "name": "iface"}
-        }},
-        {"kind": "max_run", "weight": 1.0, "params": {
-            "aa_set": "KRDE",
-            "max_run": 2,
-            "segment_filter": {"chain_id": "BB", "name": "iface"}
-        }},
-        {"kind": "segment_composition", "weight": 1.5, "params": {
-            "aa_set": "DE",
-            "min_frac": 0.20,
-            "max_frac": 0.40,
-            "segment_filter": {"chain_id": "BB", "name": "iface"}
-        }},
-        {"kind": "segment_composition", "weight": 1.0, "params": {
-            "aa_set": "AILMFWVY",
-            "min_frac": 0.10,
-            "max_frac": 0.30,
-            "segment_filter": {"chain_id": "BB", "name": "iface"}
-        }},
-        {"kind": "chai_plddt_delta", "weight": 10.0, "stage": "chai", "params": {
-            "chains_A": ["TA", "BB"],
-            "chains_B": ["TB", "BB"],
-            "metric": "iptm",               # ← 改为 iptm
-            "direction": "A_gt_B",           # ← 希望 A 的 iptm 更高
-            "delta_threshold": 0.15,         # ← iptm 范围 0-1，阈值要调小
-            "scale": 10,                     # ← 可根据需要调整
-            "device": None
-        }},
-    ]
-
-    # ---- Search config ----
-    sa_config = {
-        "iterations": 1000,
+    The tree mirrors the AST hierarchy. Internal nodes describe domains/modules;
+    leaf nodes describe concrete editable sequence segments. The engine will
+    translate this tree into:
+    - editable masks
+    - optional segment length changes
+    - node-specific mutation priors
+    - MCTS node priorities
+    """
+    return {
+        "strategy_tree": {
+            "name": "CD25_scFv_Design_Task",
+            "kind": "complex",
+            "mutable": False,
+            "children": [
+                {
+                    "name": "Binder_scFv",
+                    "kind": "chain",
+                    "chain_id": "BB",
+                    "mutable": True,
+                    "children": [
+                        {
+                            "name": "VH_domain",
+                            "kind": "domain",
+                            "mutable": True,
+                            "children": [
+                                {
+                                    "name": "VH_FR1",
+                                    "kind": "framework",
+                                    "mutable": False,
+                                    "target_length": 21,
+                                    "length_mutable": False,
+                                    "edit_policy": {
+                                        "edit_intent": "preserve heavy-chain framework entry stability",
+                                        "priority_boost": 0.05,
+                                    },
+                                },
+                                {
+                                    "name": "VH_CDR1",
+                                    "kind": "cdr",
+                                    "mutable": True,
+                                    "target_length": 14,
+                                    "length_range": [11, 15],
+                                    "length_mutable": True,
+                                    "edit_policy": {
+                                        "edit_intent": "tune polar/aromatic contacts while preserving loop plausibility",
+                                        "priority_boost": 1.15,
+                                        "mutation_rate": 0.05,
+                                        "max_mutations_per_step": 2,
+                                        "mutation_ops": {"point": 0.82, "block": 0.12, "segment_resample": 0.04, "swap": 0.02},
+                                        "favored_residues": ["Y", "S", "T", "N", "Q", "H", "R", "D"],
+                                        "favored_residue_classes": ["aromatic", "polar_uncharged"],
+                                        "disfavored_residues": ["C"],
+                                        "policy_weight": 0.65,
+                                    },
+                                },
+                                {
+                                    "name": "VH_FR2",
+                                    "kind": "framework",
+                                    "mutable": True,
+                                    "target_length": 13,
+                                    "length_mutable": False,
+                                    "edit_policy": {
+                                        "edit_intent": "allow sparse support mutations near heavy-chain CDR geometry",
+                                        "priority_boost": 0.40,
+                                        "mutation_rate": 0.015,
+                                        "max_mutations_per_step": 1,
+                                        "mutation_ops": {"point": 0.95, "block": 0.03, "segment_resample": 0.0, "swap": 0.02},
+                                        "favored_residues": ["S", "T", "N", "Q", "G"],
+                                        "disfavored_residues": ["C", "W", "F"],
+                                        "policy_weight": 0.30,
+                                    },
+                                },
+                                {
+                                    "name": "VH_CDR2",
+                                    "kind": "cdr",
+                                    "mutable": True,
+                                    "target_length": 16,
+                                    "length_range": [12, 18],
+                                    "length_mutable": True,
+                                    "edit_policy": {
+                                        "edit_intent": "shape secondary paratope contacts and electrostatic complementarity",
+                                        "priority_boost": 1.45,
+                                        "mutation_rate": 0.065,
+                                        "max_mutations_per_step": 3,
+                                        "mutation_ops": {"point": 0.72, "block": 0.18, "segment_resample": 0.07, "swap": 0.03},
+                                        "favored_residues": ["Y", "H", "S", "T", "N", "Q", "R", "D", "E"],
+                                        "favored_residue_classes": ["aromatic", "polar_uncharged", "contextual_charge"],
+                                        "disfavored_residues": ["C"],
+                                        "policy_weight": 0.75,
+                                    },
+                                },
+                                {
+                                    "name": "VH_FR3",
+                                    "kind": "framework",
+                                    "mutable": True,
+                                    "target_length": 33,
+                                    "length_mutable": False,
+                                    "edit_policy": {
+                                        "edit_intent": "permit sparse framework support mutations without destabilizing VH",
+                                        "priority_boost": 0.35,
+                                        "mutation_rate": 0.012,
+                                        "max_mutations_per_step": 1,
+                                        "mutation_ops": {"point": 0.96, "block": 0.02, "segment_resample": 0.0, "swap": 0.02},
+                                        "favored_residues": ["S", "T", "N", "Q", "G", "A"],
+                                        "disfavored_residues": ["C", "W"],
+                                        "policy_weight": 0.25,
+                                    },
+                                },
+                                {
+                                    "name": "VH_CDR3",
+                                    "kind": "cdr",
+                                    "mutable": True,
+                                    "target_length": 8,
+                                    "length_range": [6, 18],
+                                    "length_mutable": True,
+                                    "edit_policy": {
+                                        "edit_intent": "dominant hotspot-facing loop; optimize shape, charge, and aromatic packing",
+                                        "priority_boost": 2.80,
+                                        "mutation_rate": 0.11,
+                                        "max_mutations_per_step": 4,
+                                        "mutation_ops": {"point": 0.58, "block": 0.24, "segment_resample": 0.14, "swap": 0.04},
+                                        "favored_residues": ["Y", "W", "H", "R", "D", "E", "S", "T", "N", "Q", "G"],
+                                        "favored_residue_classes": ["aromatic", "polar_uncharged", "contextual_charge", "turn_loop"],
+                                        "disfavored_residues": ["C"],
+                                        "policy_weight": 0.95,
+                                    },
+                                },
+                                {
+                                    "name": "VH_FR4",
+                                    "kind": "framework",
+                                    "mutable": False,
+                                    "target_length": 10,
+                                    "length_mutable": False,
+                                    "edit_policy": {
+                                        "edit_intent": "preserve VH terminal framework",
+                                        "priority_boost": 0.05,
+                                    },
+                                },
+                            ],
+                        },
+                        {
+                            "name": "Linker_module",
+                            "kind": "linker",
+                            "mutable": True,
+                            "children": [
+                                {
+                                    "name": "Linker_head",
+                                    "kind": "linker",
+                                    "mutable": False,
+                                    "target_length": 5,
+                                    "length_mutable": False,
+                                    "edit_policy": {
+                                        "edit_intent": "preserve linker entry spacing",
+                                        "priority_boost": 0.05,
+                                    },
+                                },
+                                {
+                                    "name": "Linker_core",
+                                    "kind": "linker",
+                                    "mutable": True,
+                                    "target_length": 5,
+                                    "length_range": [5, 10],
+                                    "length_mutable": True,
+                                    "edit_policy": {
+                                        "edit_intent": "tune VH-VL spacing while staying glycine/serine rich",
+                                        "priority_boost": 0.65,
+                                        "mutation_rate": 0.04,
+                                        "max_mutations_per_step": 2,
+                                        "mutation_ops": {"point": 0.70, "block": 0.16, "segment_resample": 0.12, "swap": 0.02},
+                                        "favored_residues": ["G", "S", "A", "T"],
+                                        "favored_residue_classes": ["flexible_small"],
+                                        "disfavored_residue_classes": ["hydrophobic", "charged"],
+                                        "fill_residues": "GGGGS",
+                                        "policy_weight": 0.80,
+                                    },
+                                },
+                                {
+                                    "name": "Linker_tail",
+                                    "kind": "linker",
+                                    "mutable": False,
+                                    "target_length": 5,
+                                    "length_mutable": False,
+                                    "edit_policy": {
+                                        "edit_intent": "preserve linker exit spacing",
+                                        "priority_boost": 0.05,
+                                    },
+                                },
+                            ],
+                        },
+                        {
+                            "name": "VL_domain",
+                            "kind": "domain",
+                            "mutable": True,
+                            "children": [
+                                {
+                                    "name": "VL_FR1",
+                                    "kind": "framework",
+                                    "mutable": False,
+                                    "target_length": 23,
+                                    "length_mutable": False,
+                                    "edit_policy": {
+                                        "edit_intent": "preserve light-chain framework entry stability",
+                                        "priority_boost": 0.05,
+                                    },
+                                },
+                                {
+                                    "name": "VL_CDR1",
+                                    "kind": "cdr",
+                                    "mutable": True,
+                                    "target_length": 10,
+                                    "length_range": [8, 12],
+                                    "length_mutable": True,
+                                    "edit_policy": {
+                                        "edit_intent": "adjust light-chain polar contact support",
+                                        "priority_boost": 1.00,
+                                        "mutation_rate": 0.045,
+                                        "max_mutations_per_step": 2,
+                                        "mutation_ops": {"point": 0.80, "block": 0.14, "segment_resample": 0.04, "swap": 0.02},
+                                        "favored_residues": ["Y", "S", "T", "N", "Q", "H", "D"],
+                                        "favored_residue_classes": ["polar_uncharged"],
+                                        "disfavored_residues": ["C"],
+                                        "policy_weight": 0.60,
+                                    },
+                                },
+                                {
+                                    "name": "VL_FR2",
+                                    "kind": "framework",
+                                    "mutable": True,
+                                    "target_length": 15,
+                                    "length_mutable": False,
+                                    "edit_policy": {
+                                        "edit_intent": "allow sparse VL support changes near CDR2",
+                                        "priority_boost": 0.28,
+                                        "mutation_rate": 0.01,
+                                        "max_mutations_per_step": 1,
+                                        "mutation_ops": {"point": 0.96, "block": 0.02, "segment_resample": 0.0, "swap": 0.02},
+                                        "favored_residues": ["S", "T", "N", "Q", "G"],
+                                        "disfavored_residues": ["C", "W", "F"],
+                                        "policy_weight": 0.22,
+                                    },
+                                },
+                                {
+                                    "name": "VL_CDR2",
+                                    "kind": "cdr",
+                                    "mutable": True,
+                                    "target_length": 7,
+                                    "length_range": [7, 8],
+                                    "length_mutable": True,
+                                    "edit_policy": {
+                                        "edit_intent": "small light-chain contact loop; prefer sparse polar edits",
+                                        "priority_boost": 0.85,
+                                        "mutation_rate": 0.04,
+                                        "max_mutations_per_step": 1,
+                                        "mutation_ops": {"point": 0.88, "block": 0.08, "segment_resample": 0.02, "swap": 0.02},
+                                        "favored_residues": ["S", "T", "N", "Q", "Y", "D"],
+                                        "favored_residue_classes": ["polar_uncharged"],
+                                        "disfavored_residues": ["C"],
+                                        "policy_weight": 0.55,
+                                    },
+                                },
+                                {
+                                    "name": "VL_FR3",
+                                    "kind": "framework",
+                                    "mutable": True,
+                                    "target_length": 32,
+                                    "length_mutable": False,
+                                    "edit_policy": {
+                                        "edit_intent": "permit sparse VL framework support mutations",
+                                        "priority_boost": 0.30,
+                                        "mutation_rate": 0.01,
+                                        "max_mutations_per_step": 1,
+                                        "mutation_ops": {"point": 0.96, "block": 0.02, "segment_resample": 0.0, "swap": 0.02},
+                                        "favored_residues": ["S", "T", "N", "Q", "G", "A"],
+                                        "disfavored_residues": ["C", "W"],
+                                        "policy_weight": 0.22,
+                                    },
+                                },
+                                {
+                                    "name": "VL_CDR3",
+                                    "kind": "cdr",
+                                    "mutable": True,
+                                    "target_length": 9,
+                                    "length_range": [7, 12],
+                                    "length_mutable": True,
+                                    "edit_policy": {
+                                        "edit_intent": "light-chain partner loop for interface shape and polarity",
+                                        "priority_boost": 1.55,
+                                        "mutation_rate": 0.07,
+                                        "max_mutations_per_step": 3,
+                                        "mutation_ops": {"point": 0.68, "block": 0.20, "segment_resample": 0.08, "swap": 0.04},
+                                        "favored_residues": ["Y", "H", "S", "T", "N", "Q", "R", "D", "G"],
+                                        "favored_residue_classes": ["aromatic", "polar_uncharged", "turn_loop"],
+                                        "disfavored_residues": ["C"],
+                                        "policy_weight": 0.75,
+                                    },
+                                },
+                                {
+                                    "name": "VL_FR4",
+                                    "kind": "framework",
+                                    "mutable": False,
+                                    "target_length": 14,
+                                    "length_mutable": False,
+                                    "edit_policy": {
+                                        "edit_intent": "preserve VL terminal framework",
+                                        "priority_boost": 0.05,
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
+                {
+                    "name": "Target_CD25",
+                    "kind": "chain",
+                    "chain_id": "T",
+                    "mutable": False,
+                    "children": [
+                        {
+                            "name": "CD25_basiliximab_epitope",
+                            "kind": "epitope",
+                            "mutable": False,
+                            "edit_policy": {
+                                "edit_intent": "fixed target epitope prior; use for conditioning only",
+                                "priority_boost": 0.0,
+                            },
+                        }
+                    ],
+                },
+            ],
+        },
+        # Fallback for older engine versions. The current engine derives this
+        # from strategy_tree, so OpenEvolve should treat this as secondary.
+        "preferred_edit_order": [],
+        "iterations": 1200,
         "init_temp": 2.0,
         "cooling": 0.995,
-        "mutation_rate": 0.20,
-        "resample_segment_prob": 0.10,
-
-        "progen_weight": 1.0,
-        "progen_chains": ["BB"],
-        "progen_reduce": "length_weighted",
-
-        "chai1_enabled": True,
-        "chai1_top_frac": 0.02,
-        "chai1_min_candidates": 1,
-        "chai1_max_candidates": 2,
-        "chai1_num_trunk_recycles": 3,
-        "chai1_num_diffn_timesteps": 100,
-
+        "mutation_rate": 0.06,
+        "resample_segment_prob": 0.08,
         "mutation_ops": {
-            "point": 0.7,
+            "point": 0.75,
             "block": 0.15,
-            "segment_resample": 0.10,
-            "swap": 0.05,
+            "segment_resample": 0.07,
+            "swap": 0.03,
         },
-        "history_size": 30,
+        "search_method": "mcts",
+        "mcts_c_puct": 1.4,
+        "mcts_max_depth": 4,
+        "mcts_reward_scale": 1.0,
+        "mcts_output_dir": "inner_loop",
+        "mcts_save_tree": True,
+        "mcts_save_variants": True,
+        "mcts_memory_enabled": True,
+        "memory_auto_update_enabled": True,
+        "memory_update_max_recent_runs": 10,
+        "memory_update_max_residues_per_node": 8,
+        "external_kb_enabled": True,
+        "external_kb_path": "data/antibody_kb/sabdab_external_prior_cache.json",
+        "external_kb_weight": 0.7,
+        "external_kb_embedding_manifest": "data/antibody_kb/embedding_manifest_esm2_t6_8M_sabdab_cdr.json",
+        "external_kb_retrieval_enabled": True,
+        "external_kb_retrieval_top_k": 20,
+        "external_kb_retrieval_weight": 0.6,
+        "external_kb_device": "auto",
+        "external_kb_max_length": 128,
+        "progen_weight": 1.0,
+        "protenix_conda_env": "pytorch",
+        "chai1_enabled": True,
+        "chai1_top_frac": 0.01,
+        "chai1_min_candidates": 1,
+        "chai1_max_candidates": 3,
+        "history_size": 50,
+        "linker_gs_min": 0.60,
+        "linker_hydrophobic_max": 0.15,
+        "linker_charged_max": 0.20,
+        "cdr_favored_residues": ["Y", "W", "H", "N", "Q", "S", "T", "R", "D", "E"],
+        "cdr_hydrophobic_max": 0.40,
+        "cdr_charged_max": 0.45,
+        "desired_cdr3_hydro": 0.30,
+        "max_hydrophobic_run": 2,
+        "max_charged_run": 2,
+        "score_config": {
+            "weight_fast": 1.0,
+            "weight_plddt": 5.0,
+            "plddt_scale": 100.0,
+            "fast_loss_nonneg": True,
+        },
     }
 
-    score_config = {
-        "weight_fast": 1,
-        "weight_plddt": 5,
-        "plddt_scale": 1.0,
-        "fast_loss_nonneg": True,
-    }
 
-    templates = {
-        "TA": target_A,
-        "TB": target_B,
-        "BB": "AAAAV",
-    }
-    fixed_residues = {}
-
-    return bp, constraint_specs, sa_config, masks, templates, fixed_residues, score_config
 # EVOLVE-BLOCK-END
 
+from typing import Optional
 
-# ---------------------------------------------------------------------------
-# 不连续域示例
-# ---------------------------------------------------------------------------
-#
-def propose_discontinuous_example():
-    """
-    示例：一条 50 残基的链，包含一个不连续结构域和一个插入域。
+from engine.case_builder import build_case_inputs, run_design_search
 
-    序列布局:
-      [0, 15)  -> domain_A part 1
-      [15, 35) -> domain_B (插入)
-      [35, 50) -> domain_A part 2
 
-    结构上 domain_A 是一个整体，由 [0,15) 和 [35,50) 组成。
-    """
-    chain = Node(
-        kind="chain", name="my_chain", length=50,
-        props={"chain_id": "X"},
-        children=[
-            Node(kind="domain", name="domA",
-                 residue_spans=[(0, 15), (35, 50)]),   # 不连续！
-            Node(kind="domain", name="domB",
-                 residue_spans=[(15, 35)]),
-        ],
+def run_search(seed: Optional[int] = None):
+    return run_design_search(propose_strategy(), seed=seed)
+
+
+def preview_case():
+    bp, constraint_specs, sa_cfg, masks, templates, fixed_residues, score_cfg, state = build_case_inputs(
+        propose_strategy()
     )
-    bp = Blueprint(root=chain)
     compiled = bp.compile()
-
-    # 验证
-    for seg in compiled["segments"]:
-        print(f"{seg.name}: spans={seg.spans}, total_length={seg.total_length}, "
-              f"contiguous={seg.is_contiguous}")
-    # 输出:
-    # domA: spans=[(0, 15), (35, 50)], total_length=30, contiguous=False
-    # domB: spans=[(15, 35)], total_length=20, contiguous=True
-
-    # 测试 extract
-    test_seq = "A" * 15 + "B" * 20 + "C" * 15
-    for seg in compiled["segments"]:
-        print(f"{seg.name}: '{seg.extract(test_seq)}'")
-    # domA: 'AAAAAAAAAAAAAAACCCCCCCCCCCCCCC'  (15 A + 15 C)
-    # domB: 'BBBBBBBBBBBBBBBBBBBB'            (20 B)
-
-    return bp, compiled
-
-
-# ---- 固定部分 ----
-import numpy as np
-from inner_opt import optimize_multichain, SAConfig
-
-
-def run_search(seed: int | None = None):
-    bp, constraint_specs, sa_cfg, masks, templates, fixed_residues, score_cfg = (
-        propose_blueprint_and_config()
-    )
-    # bp, constraint_specs, sa_cfg, masks, templates, fixed_residues, score_cfg = (
-    #     propose_discontinuous_example()
-    # )
-    compiled = bp.compile()
-    masks_np = {k: np.array(v, dtype=bool) for k, v in masks.items()}
-    cfg = SAConfig(**sa_cfg, seed=seed)
-
-    out = optimize_multichain(
-        compiled,
-        constraint_specs,
-        cfg,
-        masks=masks_np,
-        template_seqs=templates,
-        fixed_residues=fixed_residues,
-    )
-    out["chain_lengths"] = compiled["chain_lengths"]
-    # ---- 更新：序列化 segment 时包含完整 spans 信息 ----
-    out["segments"] = [
-        {
-            "chain_id": s.chain_id,
-            "kind": s.kind,
-            "name": s.name,
-            "spans": s.spans,
-            "total_length": s.total_length,
-            "is_contiguous": s.is_contiguous,
-            "start": s.start,   # backward compat
-            "end": s.end,       # backward compat
-            "props": s.props,
-        }
-        for s in compiled["segments"]
-    ]
-    out["blueprint_summary"] = {
-        "chain_order": compiled["chain_order"],
+    return {
+        "task_name": state["task_name"],
         "chain_lengths": compiled["chain_lengths"],
+        "chain_order": compiled["chain_order"],
+        "segments": [
+            {
+                "chain_id": s.chain_id,
+                "kind": s.kind,
+                "name": s.name,
+                "spans": s.spans,
+                "total_length": s.total_length,
+            }
+            for s in compiled["segments"]
+        ],
+        "constraint_kinds": [x["kind"] for x in constraint_specs],
+        "sa_config": sa_cfg,
+        "mask_true_counts": {k: int(sum(v)) for k, v in masks.items()},
+        "template_lengths": {k: len(v) for k, v in templates.items()},
+        "fixed_residue_counts": {k: len(v) for k, v in fixed_residues.items()},
+        "score_config": score_cfg,
     }
-    out["score_config"] = score_cfg
-    return out
 
 
 if __name__ == "__main__":
-    r = run_search(seed=0)
-    print("Fast loss:", r["fast_loss"])
+    import json
+
+    print(json.dumps(preview_case(), ensure_ascii=False, indent=2))

@@ -1,13 +1,39 @@
 from __future__ import annotations
+import os
+from pathlib import Path
 from typing import Dict, Any, Optional, Tuple, List
 import torch
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from tokenizers import Tokenizer
 
+_DEFAULT_MODEL_DIR = Path(os.environ.get("ASTEVOLVE_PROGEN_MODEL_DIR", r"D:\Downloads\progen2-small"))
 _MODEL = None
 _TOKENIZER = None
 _CACHE: Dict[Tuple[str, str], Dict[str, float]] = {}  # key=(seq_with_prefix, device)
+
+
+def _patch_progen_transformer_compat(model) -> None:
+    transformer = getattr(model, "transformer", None)
+    if transformer is None or hasattr(transformer, "get_head_mask"):
+        return
+
+    def _get_head_mask(head_mask, num_hidden_layers, is_attention_chunked=False):
+        del is_attention_chunked
+        if head_mask is None:
+            return [None] * int(num_hidden_layers)
+        return head_mask
+
+    transformer.get_head_mask = _get_head_mask
+
+
+def _patch_progen_runtime_tensors(model, device: torch.device) -> None:
+    for module in model.modules():
+        if not hasattr(module, "scale_attn") or not hasattr(module, "head_dim"):
+            continue
+        module.scale_attn = torch.sqrt(
+            torch.tensor(module.head_dim, dtype=torch.float32, device=device)
+        )
 
 
 def _get_device(preferred: Optional[str] = None) -> torch.device:
@@ -20,17 +46,21 @@ def get_model_and_tokenizer(device: Optional[str] = None):
     global _MODEL, _TOKENIZER
     if _MODEL is None or _TOKENIZER is None:
         _MODEL = AutoModelForCausalLM.from_pretrained(
-            "hugohrban/progen2-small",
+            str(_DEFAULT_MODEL_DIR),
             trust_remote_code=True,
+            local_files_only=True,
         )
+        _patch_progen_transformer_compat(_MODEL)
         _TOKENIZER = AutoTokenizer.from_pretrained(
-            "hugohrban/progen2-small",
+            str(_DEFAULT_MODEL_DIR),
             trust_remote_code=True,
+            local_files_only=True,
 
         )
 
     dev = _get_device(device)
     _MODEL = _MODEL.to(dev)
+    _patch_progen_runtime_tensors(_MODEL, dev)
     _MODEL.eval()
     return _MODEL, _TOKENIZER
 

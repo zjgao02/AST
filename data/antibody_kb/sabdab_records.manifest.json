@@ -1,0 +1,26 @@
+{
+  "summary_tsv": "D:\\Downloads\\ast\\data\\sabdab_raw\\sabdab_summary.tsv",
+  "out": "D:\\Downloads\\ast\\data\\antibody_kb\\sabdab_records.jsonl",
+  "rows_read": 2001,
+  "records_written": 3736,
+  "class_counts": {
+    "Antibody_pair": 2000,
+    "Antigen_chain": 1736
+  },
+  "antigen_type_counts": {
+    "protein": 1203,
+    "protein | protein": 352,
+    "unknown": 264,
+    "peptide": 57,
+    "protein | nucleic-acid": 5,
+    "protein | protein | protein": 56,
+    "protein | protein | protein | protein | protein": 1,
+    "protein | peptide": 20,
+    "protein | protein | protein | protein": 4,
+    "carbohydrate": 7,
+    "peptide | protein | protein": 1,
+    "nucleic-acid": 29,
+    "protein | protein | peptide": 1
+  },
+  "source": "sabdab_summary_tsv"
+}

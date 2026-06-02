@@ -1,0 +1,25 @@
+{
+  "raw_root": "D:\\Downloads\\data\\magneton_raw",
+  "jsonl_path": "D:\\Downloads\\data\\magneton_raw\\interpro_103.0\\debug_subset\\swissprot.with_ss.0.jsonl.gz",
+  "seq_tsv": "D:\\Downloads\\data\\magneton_raw\\sequences\\swissprot_subset.tsv",
+  "fasta_gz": "D:\\Downloads\\data\\magneton_raw\\sequences\\uniprot_sprot.fasta.gz",
+  "out": "D:\\Downloads\\data\\external_kb\\substructure_records.jsonl",
+  "needed_ids": 9694,
+  "proteins_read": 9694,
+  "records_written": 43332,
+  "records_with_sequence": 43332,
+  "class_counts": {
+    "Homologous_superfamily": 20782,
+    "Domain": 18582,
+    "Binding_site": 298,
+    "Conserved_site": 3215,
+    "Active_site": 455
+  },
+  "kept_classes": [
+    "Active_site",
+    "Binding_site",
+    "Conserved_site",
+    "Domain",
+    "Homologous_superfamily"
+  ]
+}
