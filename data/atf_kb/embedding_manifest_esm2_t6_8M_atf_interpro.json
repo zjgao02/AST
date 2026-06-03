@@ -1,0 +1,18 @@
+{
+  "records": "atf_interpro_records.jsonl",
+  "embeddings": "embeddings_esm2_t6_8M_atf_interpro.npy",
+  "metadata": "embedding_metadata_esm2_t6_8M_atf_interpro.jsonl",
+  "model": "facebook/esm2_t6_8M_UR50D",
+  "device": "cuda",
+  "embedding_shape": [
+    15148,
+    320
+  ],
+  "pooling": "mean_residue_embedding",
+  "selected_records": 15148,
+  "skipped_no_sequence": 0,
+  "skipped_long": 0,
+  "max_length": 1022,
+  "max_records": 0,
+  "source": "atf_interpro_records"
+}

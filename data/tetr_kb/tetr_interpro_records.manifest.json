@@ -1,0 +1,46 @@
+{
+  "repository_scope": "TetR-family allosteric transcription factor scaffold KB",
+  "repository_intent": "Provide TetR-specific annotated sequence fragments and residue priors for ASTevolve external-KB guidance; evaluator metrics remain responsible for dopamine binding and allosteric switch selection.",
+  "source": "InterPro API",
+  "api_root": "https://www.ebi.ac.uk/interpro/api",
+  "seed_entries": [
+    {
+      "database": "pfam",
+      "accession": "PF00440",
+      "name": "TetR_N"
+    }
+  ],
+  "records": "D:\\Downloads\\ast\\data\\tetr_kb\\tetr_interpro_records.jsonl",
+  "prior": "D:\\Downloads\\ast\\data\\tetr_kb\\tetr_interpro_external_prior_cache.json",
+  "embedding_manifest_expected": "D:\\Downloads\\ast\\data\\tetr_kb\\embedding_manifest_esm2_t6_8M_tetr_interpro.json",
+  "max_proteins": 80,
+  "page_size": 40,
+  "min_length": 160,
+  "max_length": 280,
+  "reviewed_only": false,
+  "include_full": true,
+  "proteins_seen": 80,
+  "records_written": 626,
+  "class_counts": {
+    "TetR_HTH_domain": 77,
+    "TetR_connector": 77,
+    "TetR_C_domain": 77,
+    "TetR_pocket_context": 77,
+    "TetR_hinge_context": 77,
+    "TetR_relay_context": 77,
+    "TetR_dimer_context": 77,
+    "TetR_full_regulator": 77,
+    "TetR_C_terminal_support": 10
+  },
+  "node_kind_counts": {
+    "dna_contact": 77,
+    "hinge": 154,
+    "support": 164,
+    "pocket": 77,
+    "relay": 77,
+    "dimer_interface": 77
+  },
+  "skipped": {
+    "length_filter": 3
+  }
+}

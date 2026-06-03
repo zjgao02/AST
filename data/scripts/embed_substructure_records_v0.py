@@ -2,16 +2,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 import numpy as np
 from tqdm import tqdm
 
 
-DEFAULT_RECORDS = Path(r"D:\Downloads\data\external_kb\substructure_records.jsonl")
-DEFAULT_EMBEDDINGS = Path(r"D:\Downloads\data\external_kb\embeddings.npy")
-DEFAULT_METADATA = Path(r"D:\Downloads\data\external_kb\embedding_metadata.jsonl")
-DEFAULT_MANIFEST = Path(r"D:\Downloads\data\external_kb\embedding_manifest.json")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA_ROOT = Path(os.environ.get("ASTEVOLVE_DATA_ROOT", PROJECT_ROOT / "data"))
+DEFAULT_RECORDS = DATA_ROOT / "external_kb" / "substructure_records.jsonl"
+DEFAULT_EMBEDDINGS = DATA_ROOT / "external_kb" / "embeddings.npy"
+DEFAULT_METADATA = DATA_ROOT / "external_kb" / "embedding_metadata.jsonl"
+DEFAULT_MANIFEST = DATA_ROOT / "external_kb" / "embedding_manifest.json"
 
 
 def iter_records(path: Path):

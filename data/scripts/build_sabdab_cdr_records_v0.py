@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any, Dict, List
@@ -12,6 +13,8 @@ CDR_LINK_RE = re.compile(
     r"cdrviewer/\?pdb=(?P<pdb>[0-9a-zA-Z]{4})&loop=CDR(?P<chain_type>[HL])(?P<cdr_no>[123])&chain=(?P<chain>[^&'\"]+)&CDRdef=(?P<cdr_def>[^'\"]+)['\"][^>]*>(?P<seq>[A-Za-z]+)</a>",
     re.IGNORECASE,
 )
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA_ROOT = Path(os.environ.get("ASTEVOLVE_DATA_ROOT", PROJECT_ROOT / "data"))
 
 
 def _strip_tags(value: str) -> str:
@@ -142,9 +145,9 @@ def parse_cdr_html(html_path: Path, out_jsonl: Path, manifest_path: Path) -> Dic
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Parse SAbDab all-CDR HTML into ASTevolve Antibody_CDR records.")
-    parser.add_argument("--html", default="D:/Downloads/ast/data/sabdab_raw/cdrs_chothia.html")
-    parser.add_argument("--out", default="D:/Downloads/ast/data/antibody_kb/sabdab_cdr_records.jsonl")
-    parser.add_argument("--manifest", default="D:/Downloads/ast/data/antibody_kb/sabdab_cdr_records.manifest.json")
+    parser.add_argument("--html", default=str(DATA_ROOT / "sabdab_raw" / "cdrs_chothia.html"))
+    parser.add_argument("--out", default=str(DATA_ROOT / "antibody_kb" / "sabdab_cdr_records.jsonl"))
+    parser.add_argument("--manifest", default=str(DATA_ROOT / "antibody_kb" / "sabdab_cdr_records.manifest.json"))
     args = parser.parse_args()
 
     manifest = parse_cdr_html(Path(args.html), Path(args.out), Path(args.manifest))

@@ -1,0 +1,79 @@
+# ASTevolve model and asset placement manifest
+#
+# This file lists non-Git assets needed on a Linux/GPU machine.
+# Download or copy each asset into the target path relative to project root.
+# Large files under model_weights/ are intentionally ignored by Git.
+
+[required] ProGen2 small sequence prior
+target_dir: model_weights/progen2-small
+source: Hugging Face model repository hugohrban/progen2-small
+local_windows_source_if_available: D:\Downloads\progen2-small
+required_files:
+  config.json
+  configuration_progen.py
+  generation_config.json
+  modeling_progen.py
+  tokenizer.json
+  model.safetensors
+env:
+  ASTEVOLVE_PROGEN_MODEL_DIR=${ASTEVOLVE_MODEL_ROOT}/progen2-small
+notes:
+  ASTevolve loads this model with local_files_only=True.
+  The target directory must contain the files directly, not only a Hugging Face cache snapshot.
+
+[required] Protenix package/runtime weights
+target_dir: model_weights/protenix
+source: Protenix release/package documentation for the installed protenix version
+model_name_used_by_ast: protenix_mini_esm_v0.5.0
+env:
+  ASTEVOLVE_PROTENIX_ROOT=${ASTEVOLVE_MODEL_ROOT}/protenix
+  PROTENIX_ROOT_DIR=${ASTEVOLVE_PROTENIX_ROOT}
+notes:
+  The Python package is installed through environments/pytorch-linux.yml or requirements-gpu.txt.
+  Keep any downloaded Protenix checkpoints/cache under this directory on the Linux machine.
+  The exact checkpoint filenames are Protenix-version-specific; verify with:
+    protenix predict --help
+    python -c "import protenix, pathlib; print(pathlib.Path(protenix.__file__).parent)"
+
+[optional] Biohub ESMFold2-Fast local structure backend
+target_dir: model_weights/biohub/ESMFold2-Fast
+source: Biohub ESMFold2-Fast model distribution
+local_windows_source_if_available: D:\Downloads\ast\artifacts\shared\model_weights\biohub\ESMFold2-Fast
+required_files:
+  config.json
+  model.safetensors
+  README.md
+env:
+  ASTEVOLVE_STRUCTURE_MODEL=esmfold2
+  ASTEVOLVE_STRUCTURE_MODEL_NAME=${ASTEVOLVE_MODEL_ROOT}/biohub/ESMFold2-Fast
+  ASTEVOLVE_ESMFOLD2_MODE=local
+notes:
+  This is optional for current TetR/scFv Protenix runs.
+  Use only if you switch structure_model to esmfold2.
+
+[required] TetR external KB and embedding retrieval assets
+target_dir: data/atf_kb
+required_files:
+  atf_interpro_external_prior_cache.json
+  embedding_manifest_esm2_t6_8M_atf_interpro.json
+  embeddings_esm2_t6_8M_atf_interpro.npy
+notes:
+  These are already under data/ in the current workspace and are needed for
+  tetr_dopamine runs with --external-kb on or --external-retrieval on.
+
+[required] scFv external KB and embedding retrieval assets
+target_dir: data/antibody_kb
+required_files:
+  sabdab_external_prior_cache.json
+  embedding_manifest_esm2_t6_8M_sabdab_cdr.json
+  embeddings_esm2_t6_8M_sabdab_cdr.npy
+notes:
+  These are already under data/ in the current workspace and are needed for
+  cd25_scfv runs with --external-kb on or --external-retrieval on.
+
+[runtime cache] ESM-2 embedding model used for retrieval
+source: Hugging Face model repository facebook/esm2_t6_8M_UR50D
+target: Hugging Face cache on the Linux machine, or pre-populate via transformers cache
+notes:
+  Retrieval code can load this from the normal Hugging Face cache.
+  If the bastion has restricted network access, pre-download this model into the server cache.

@@ -1,0 +1,856 @@
+{
+  "metadata": {
+    "provider_schema": "astevolve_external_prior_v1",
+    "source": "downloaded_interpro_tetr_records",
+    "description": "Generated from InterPro/Pfam TetR protein matches and annotated domain fragments. Dopamine-specific terms are only a low-confidence chemical overlay on top of TetR C-terminal domain statistics.",
+    "do_not_copy_sequences": true,
+    "record_count": 626
+  },
+  "retrieval": {
+    "embedding_manifest": "embedding_manifest_esm2_t6_8M_tetr_interpro.json",
+    "match_node_name": false,
+    "node_kind_filters": {
+      "pocket": {
+        "class_filter": [
+          "TetR_C_domain"
+        ],
+        "match_node_name": false
+      },
+      "hinge": {
+        "class_filter": [
+          "TetR_connector",
+          "TetR_C_domain"
+        ],
+        "match_node_name": false
+      },
+      "relay": {
+        "class_filter": [
+          "TetR_C_domain"
+        ],
+        "match_node_name": false
+      },
+      "dna_contact": {
+        "class_filter": [
+          "TetR_HTH_domain",
+          "TetR_HTH_conserved_site"
+        ],
+        "match_node_name": false
+      },
+      "dimer_interface": {
+        "class_filter": [
+          "TetR_C_domain",
+          "TetR_full_regulator"
+        ],
+        "match_node_name": false
+      },
+      "support": {
+        "class_filter": [
+          "TetR_full_regulator"
+        ],
+        "match_node_name": false
+      }
+    },
+    "node_filters": {
+      "C_terminal_support": {
+        "class_filter": [
+          "TetR_C_terminal_support"
+        ],
+        "match_node_name": false
+      },
+      "HTH_recognition_helix": {
+        "class_filter": [
+          "TetR_HTH_domain"
+        ],
+        "match_node_name": false
+      },
+      "TetR_C_domain_context": {
+        "class_filter": [
+          "TetR_C_domain"
+        ],
+        "match_node_name": false
+      },
+      "TetR_full_regulator": {
+        "class_filter": [
+          "TetR_full_regulator"
+        ],
+        "match_node_name": false
+      },
+      "allosteric_hinge": {
+        "class_filter": [
+          "TetR_hinge_context"
+        ],
+        "match_node_name": false
+      },
+      "dimerization_interface": {
+        "class_filter": [
+          "TetR_dimer_context"
+        ],
+        "match_node_name": false
+      },
+      "domain_connector": {
+        "class_filter": [
+          "TetR_connector"
+        ],
+        "match_node_name": false
+      },
+      "ligand_pocket_core": {
+        "class_filter": [
+          "TetR_pocket_context"
+        ],
+        "match_node_name": false
+      },
+      "relay_helix": {
+        "class_filter": [
+          "TetR_relay_context"
+        ],
+        "match_node_name": false
+      }
+    }
+  },
+  "defaults": {
+    "priority_boost": 1.0,
+    "confidence": 0.25,
+    "disfavored_residues": [
+      "C"
+    ]
+  },
+  "by_kind": {
+    "dimer_interface": {
+      "priority_boost": 0.72,
+      "confidence": 0.65,
+      "aa_weights": {
+        "A": 0.06053935057787562,
+        "C": 0.01100715465052284,
+        "D": 0.06274078150798018,
+        "E": 0.08970831040176115,
+        "F": 0.04788112272977435,
+        "G": 0.0341221794166208,
+        "H": 0.02146395156851954,
+        "I": 0.07044578976334617,
+        "K": 0.06329113924050633,
+        "L": 0.12603192074848651,
+        "M": 0.029168959823885527,
+        "N": 0.03962575674188222,
+        "P": 0.023115024766097964,
+        "Q": 0.053384700055035775,
+        "R": 0.06714364336818933,
+        "S": 0.059988992845349476,
+        "T": 0.04237754540451293,
+        "V": 0.05228398458998349,
+        "W": 0.012107870115575124,
+        "Y": 0.033571821684094665
+      },
+      "favored_residues": [
+        "L",
+        "E",
+        "I",
+        "R",
+        "K",
+        "D",
+        "A",
+        "S",
+        "Q",
+        "V"
+      ],
+      "favored_residue_classes": [
+        "aromatic",
+        "polar_uncharged",
+        "contextual_charge",
+        "helix_compatible"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "interpro_tetr_records:dimer_interface",
+      "support_count": 77
+    },
+    "dna_contact": {
+      "priority_boost": 0.68,
+      "confidence": 0.65,
+      "aa_weights": {
+        "A": 0.09165687426556991,
+        "C": 0.006169212690951821,
+        "D": 0.04289071680376028,
+        "E": 0.07109283196239718,
+        "F": 0.0672737955346651,
+        "G": 0.06316098707403055,
+        "H": 0.03965922444183314,
+        "I": 0.08901292596944771,
+        "K": 0.07608695652173914,
+        "L": 0.095475910693302,
+        "M": 0.011163337250293772,
+        "N": 0.03789659224441833,
+        "P": 0.010282021151586369,
+        "Q": 0.027614571092831962,
+        "R": 0.035840188014101056,
+        "S": 0.06756756756756757,
+        "T": 0.06433607520564043,
+        "V": 0.05199764982373678,
+        "W": 0.0011750881316098707,
+        "Y": 0.04964747356051704
+      },
+      "favored_residues": [
+        "L",
+        "A",
+        "I",
+        "K",
+        "E",
+        "S",
+        "F",
+        "T",
+        "G",
+        "V"
+      ],
+      "favored_residue_classes": [
+        "aromatic",
+        "polar_uncharged",
+        "contextual_charge",
+        "helix_compatible"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "interpro_tetr_records:dna_contact",
+      "support_count": 77
+    },
+    "hinge": {
+      "priority_boost": 1.05,
+      "confidence": 0.65,
+      "aa_weights": {
+        "A": 0.05714285714285714,
+        "C": 0.02207792207792208,
+        "D": 0.04025974025974026,
+        "E": 0.08571428571428572,
+        "F": 0.0367965367965368,
+        "G": 0.01471861471861472,
+        "H": 0.01948051948051948,
+        "I": 0.08917748917748917,
+        "K": 0.0722943722943723,
+        "L": 0.1497835497835498,
+        "M": 0.030735930735930735,
+        "N": 0.03939393939393939,
+        "P": 0.009956709956709957,
+        "Q": 0.08354978354978355,
+        "R": 0.06493506493506493,
+        "S": 0.04199134199134199,
+        "T": 0.03852813852813853,
+        "V": 0.050216450216450215,
+        "W": 0.016883116883116882,
+        "Y": 0.03636363636363636
+      },
+      "favored_residues": [
+        "L",
+        "I",
+        "E",
+        "Q",
+        "K",
+        "R",
+        "A",
+        "V",
+        "S",
+        "D"
+      ],
+      "favored_residue_classes": [
+        "aromatic",
+        "polar_uncharged",
+        "contextual_charge",
+        "helix_compatible"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "interpro_tetr_records:hinge",
+      "support_count": 154
+    },
+    "pocket": {
+      "priority_boost": 1.12,
+      "confidence": 0.65,
+      "aa_weights": {
+        "A": 0.07892107892107893,
+        "C": 0.00924075924075924,
+        "D": 0.047702297702297704,
+        "E": 0.07942057942057942,
+        "F": 0.051698301698301696,
+        "G": 0.027972027972027972,
+        "H": 0.029970029970029972,
+        "I": 0.07367632367632368,
+        "K": 0.06968031968031968,
+        "L": 0.12287712287712288,
+        "M": 0.017232767232767232,
+        "N": 0.03671328671328671,
+        "P": 0.035464535464535464,
+        "Q": 0.051698301698301696,
+        "R": 0.03796203796203796,
+        "S": 0.059940059940059943,
+        "T": 0.04520479520479521,
+        "V": 0.051698301698301696,
+        "W": 0.013236763236763236,
+        "Y": 0.05969030969030969
+      },
+      "favored_residues": [
+        "L",
+        "E",
+        "A",
+        "I",
+        "K",
+        "S",
+        "Y",
+        "F",
+        "Q",
+        "V"
+      ],
+      "favored_residue_classes": [
+        "aromatic",
+        "polar_uncharged",
+        "contextual_charge",
+        "helix_compatible"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "interpro_tetr_records:pocket",
+      "support_count": 77
+    },
+    "relay": {
+      "priority_boost": 1.04,
+      "confidence": 0.65,
+      "aa_weights": {
+        "A": 0.09601113172541743,
+        "C": 0.006029684601113173,
+        "D": 0.0640074211502783,
+        "E": 0.0575139146567718,
+        "F": 0.04452690166975881,
+        "G": 0.04962894248608534,
+        "H": 0.016697588126159554,
+        "I": 0.08534322820037106,
+        "K": 0.04220779220779221,
+        "L": 0.14888682745825602,
+        "M": 0.03525046382189239,
+        "N": 0.03896103896103896,
+        "P": 0.02504638218923933,
+        "Q": 0.04267161410018553,
+        "R": 0.02736549165120594,
+        "S": 0.06910946196660482,
+        "T": 0.054267161410018555,
+        "V": 0.059369202226345084,
+        "W": 0.01020408163265306,
+        "Y": 0.026901669758812616
+      },
+      "favored_residues": [
+        "L",
+        "A",
+        "I",
+        "S",
+        "D",
+        "V",
+        "E",
+        "T",
+        "G",
+        "F"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "contextual_charge",
+        "helix_compatible"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "interpro_tetr_records:relay",
+      "support_count": 77
+    },
+    "support": {
+      "priority_boost": 0.42,
+      "confidence": 0.65,
+      "aa_weights": {
+        "A": 0.07545330473776565,
+        "C": 0.010567362058880873,
+        "D": 0.05053616689413141,
+        "E": 0.07689608110742835,
+        "F": 0.047728602066679664,
+        "G": 0.03419769935659973,
+        "H": 0.025658023006434,
+        "I": 0.07755897835835446,
+        "K": 0.06796646519789433,
+        "L": 0.12739325404562293,
+        "M": 0.025891986742054982,
+        "N": 0.03985182296744005,
+        "P": 0.02433222850458179,
+        "Q": 0.05365568336907779,
+        "R": 0.048469487229479434,
+        "S": 0.060128680054591536,
+        "T": 0.047845583934490156,
+        "V": 0.0528758042503412,
+        "W": 0.010879313706375512,
+        "Y": 0.042113472411776175
+      },
+      "favored_residues": [
+        "L",
+        "I",
+        "E",
+        "A",
+        "K",
+        "S",
+        "Q",
+        "V",
+        "D",
+        "R"
+      ],
+      "favored_residue_classes": [
+        "aromatic",
+        "polar_uncharged",
+        "contextual_charge",
+        "helix_compatible"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "interpro_tetr_records:support",
+      "support_count": 164
+    }
+  },
+  "nodes": {
+    "C_terminal_support": {
+      "priority_boost": 1.0,
+      "confidence": 0.4,
+      "aa_weights": {
+        "A": 0.06363636363636363,
+        "C": 0.0,
+        "D": 0.07272727272727272,
+        "E": 0.1,
+        "F": 0.045454545454545456,
+        "G": 0.01818181818181818,
+        "H": 0.01818181818181818,
+        "I": 0.07272727272727272,
+        "K": 0.09090909090909091,
+        "L": 0.11818181818181818,
+        "M": 0.0,
+        "N": 0.15454545454545454,
+        "P": 0.01818181818181818,
+        "Q": 0.08181818181818182,
+        "R": 0.06363636363636363,
+        "S": 0.045454545454545456,
+        "T": 0.0,
+        "V": 0.00909090909090909,
+        "W": 0.00909090909090909,
+        "Y": 0.01818181818181818
+      },
+      "favored_residues": [
+        "N",
+        "L",
+        "E",
+        "K",
+        "Q",
+        "D",
+        "I",
+        "A",
+        "R",
+        "F"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "contextual_charge"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "interpro_tetr_records:C_terminal_support",
+      "support_count": 10
+    },
+    "HTH_recognition_helix": {
+      "priority_boost": 0.55,
+      "confidence": 0.7,
+      "aa_weights": {
+        "A": 0.09165687426556991,
+        "C": 0.006169212690951821,
+        "D": 0.04289071680376028,
+        "E": 0.07109283196239718,
+        "F": 0.0672737955346651,
+        "G": 0.06316098707403055,
+        "H": 0.03965922444183314,
+        "I": 0.08901292596944771,
+        "K": 0.07608695652173914,
+        "L": 0.095475910693302,
+        "M": 0.011163337250293772,
+        "N": 0.03789659224441833,
+        "P": 0.010282021151586369,
+        "Q": 0.027614571092831962,
+        "R": 0.035840188014101056,
+        "S": 0.06756756756756757,
+        "T": 0.06433607520564043,
+        "V": 0.05199764982373678,
+        "W": 0.0011750881316098707,
+        "Y": 0.04964747356051704
+      },
+      "favored_residues": [
+        "L",
+        "A",
+        "I",
+        "K",
+        "E",
+        "S",
+        "F",
+        "T",
+        "G",
+        "V"
+      ],
+      "favored_residue_classes": [
+        "aromatic",
+        "polar_uncharged",
+        "contextual_charge",
+        "helix_compatible"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "interpro_tetr_records:HTH_recognition_helix",
+      "support_count": 77
+    },
+    "TetR_C_domain_context": {
+      "priority_boost": 1.0,
+      "confidence": 0.7,
+      "aa_weights": {
+        "A": 0.07412000381570161,
+        "C": 0.01163788991700849,
+        "D": 0.05217971954593151,
+        "E": 0.07841266812935228,
+        "F": 0.046169989506820566,
+        "G": 0.03052561289707145,
+        "H": 0.023561957454927025,
+        "I": 0.07841266812935228,
+        "K": 0.06391300200324335,
+        "L": 0.1353620146904512,
+        "M": 0.025660593341600688,
+        "N": 0.03920633406467614,
+        "P": 0.025374415720690643,
+        "Q": 0.05733091672231232,
+        "R": 0.0472193074501574,
+        "S": 0.057903271964132405,
+        "T": 0.0442621387007536,
+        "V": 0.052847467328054946,
+        "W": 0.013068778021558715,
+        "Y": 0.04283125059620338
+      },
+      "favored_residues": [
+        "L",
+        "E",
+        "I",
+        "A",
+        "K",
+        "S",
+        "Q",
+        "V",
+        "D",
+        "R"
+      ],
+      "favored_residue_classes": [
+        "aromatic",
+        "polar_uncharged",
+        "contextual_charge",
+        "helix_compatible"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "interpro_tetr_records:TetR_C_domain_context",
+      "support_count": 77
+    },
+    "TetR_full_regulator": {
+      "priority_boost": 1.0,
+      "confidence": 0.7,
+      "aa_weights": {
+        "A": 0.07646824342280095,
+        "C": 0.009899016741961201,
+        "D": 0.04922933829391443,
+        "E": 0.07567100717512623,
+        "F": 0.048830720170077065,
+        "G": 0.03687217645495615,
+        "H": 0.02717246877491363,
+        "I": 0.0769997342545841,
+        "K": 0.07062184427318628,
+        "L": 0.12191070954026043,
+        "M": 0.026242359819293116,
+        "N": 0.03946319425989902,
+        "P": 0.023651342014350252,
+        "Q": 0.050890247143236776,
+        "R": 0.04922933829391443,
+        "S": 0.06178580919479139,
+        "T": 0.050690938081318096,
+        "V": 0.05321551953228807,
+        "W": 0.009367525910178049,
+        "Y": 0.041788466648950306
+      },
+      "favored_residues": [
+        "L",
+        "I",
+        "A",
+        "E",
+        "K",
+        "S",
+        "V",
+        "Q",
+        "T",
+        "D"
+      ],
+      "favored_residue_classes": [
+        "aromatic",
+        "polar_uncharged",
+        "contextual_charge",
+        "helix_compatible"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "interpro_tetr_records:TetR_full_regulator",
+      "support_count": 77
+    },
+    "allosteric_hinge": {
+      "priority_boost": 1.1,
+      "confidence": 0.7,
+      "aa_weights": {
+        "A": 0.05339105339105339,
+        "C": 0.010822510822510822,
+        "D": 0.03823953823953824,
+        "E": 0.08441558441558442,
+        "F": 0.04112554112554113,
+        "G": 0.013708513708513708,
+        "H": 0.020923520923520924,
+        "I": 0.09740259740259741,
+        "K": 0.06926406926406926,
+        "L": 0.1370851370851371,
+        "M": 0.020202020202020204,
+        "N": 0.047619047619047616,
+        "P": 0.012265512265512266,
+        "Q": 0.0772005772005772,
+        "R": 0.07864357864357864,
+        "S": 0.04040404040404041,
+        "T": 0.0367965367965368,
+        "V": 0.051226551226551224,
+        "W": 0.025252525252525252,
+        "Y": 0.04401154401154401
+      },
+      "favored_residues": [
+        "L",
+        "I",
+        "E",
+        "R",
+        "Q",
+        "K",
+        "A",
+        "V",
+        "N",
+        "Y"
+      ],
+      "favored_residue_classes": [
+        "aromatic",
+        "polar_uncharged",
+        "contextual_charge",
+        "helix_compatible"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "interpro_tetr_records:allosteric_hinge",
+      "support_count": 77
+    },
+    "dimerization_interface": {
+      "priority_boost": 0.62,
+      "confidence": 0.7,
+      "aa_weights": {
+        "A": 0.06053935057787562,
+        "C": 0.01100715465052284,
+        "D": 0.06274078150798018,
+        "E": 0.08970831040176115,
+        "F": 0.04788112272977435,
+        "G": 0.0341221794166208,
+        "H": 0.02146395156851954,
+        "I": 0.07044578976334617,
+        "K": 0.06329113924050633,
+        "L": 0.12603192074848651,
+        "M": 0.029168959823885527,
+        "N": 0.03962575674188222,
+        "P": 0.023115024766097964,
+        "Q": 0.053384700055035775,
+        "R": 0.06714364336818933,
+        "S": 0.059988992845349476,
+        "T": 0.04237754540451293,
+        "V": 0.05228398458998349,
+        "W": 0.012107870115575124,
+        "Y": 0.033571821684094665
+      },
+      "favored_residues": [
+        "L",
+        "E",
+        "I",
+        "R",
+        "K",
+        "D",
+        "A",
+        "S",
+        "Q",
+        "V"
+      ],
+      "favored_residue_classes": [
+        "aromatic",
+        "polar_uncharged",
+        "contextual_charge",
+        "helix_compatible"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "interpro_tetr_records:dimerization_interface",
+      "support_count": 77
+    },
+    "domain_connector": {
+      "priority_boost": 1.04,
+      "confidence": 0.7,
+      "aa_weights": {
+        "A": 0.06277056277056277,
+        "C": 0.03896103896103896,
+        "D": 0.04329004329004329,
+        "E": 0.08766233766233766,
+        "F": 0.030303030303030304,
+        "G": 0.016233766233766232,
+        "H": 0.017316017316017316,
+        "I": 0.07683982683982683,
+        "K": 0.07683982683982683,
+        "L": 0.16883116883116883,
+        "M": 0.046536796536796536,
+        "N": 0.027056277056277056,
+        "P": 0.006493506493506494,
+        "Q": 0.09307359307359307,
+        "R": 0.044372294372294376,
+        "S": 0.044372294372294376,
+        "T": 0.04112554112554113,
+        "V": 0.048701298701298704,
+        "W": 0.004329004329004329,
+        "Y": 0.024891774891774892
+      },
+      "favored_residues": [
+        "L",
+        "Q",
+        "E",
+        "I",
+        "K",
+        "A",
+        "V",
+        "M",
+        "R",
+        "S"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "contextual_charge",
+        "helix_compatible"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "interpro_tetr_records:domain_connector",
+      "support_count": 77
+    },
+    "ligand_pocket_core": {
+      "priority_boost": 1.22,
+      "confidence": 0.55,
+      "aa_weights": {
+        "A": 0.07892107892107893,
+        "C": 0.00924075924075924,
+        "D": 0.047702297702297704,
+        "E": 0.07942057942057942,
+        "F": 0.051698301698301696,
+        "G": 0.027972027972027972,
+        "H": 0.029970029970029972,
+        "I": 0.07367632367632368,
+        "K": 0.06968031968031968,
+        "L": 0.12287712287712288,
+        "M": 0.017232767232767232,
+        "N": 0.03671328671328671,
+        "P": 0.035464535464535464,
+        "Q": 0.051698301698301696,
+        "R": 0.03796203796203796,
+        "S": 0.059940059940059943,
+        "T": 0.04520479520479521,
+        "V": 0.051698301698301696,
+        "W": 0.013236763236763236,
+        "Y": 0.05969030969030969
+      },
+      "favored_residues": [
+        "A",
+        "D",
+        "E",
+        "F",
+        "H",
+        "I",
+        "K",
+        "L",
+        "N",
+        "Q",
+        "S",
+        "T",
+        "V",
+        "W",
+        "Y"
+      ],
+      "favored_residue_classes": [
+        "aromatic",
+        "contextual_charge",
+        "helix_compatible",
+        "polar_uncharged"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "interpro_tetr_c_domain_records_plus_dopamine_chemical_overlay",
+      "support_count": 77
+    },
+    "relay_helix": {
+      "priority_boost": 1.06,
+      "confidence": 0.7,
+      "aa_weights": {
+        "A": 0.09601113172541743,
+        "C": 0.006029684601113173,
+        "D": 0.0640074211502783,
+        "E": 0.0575139146567718,
+        "F": 0.04452690166975881,
+        "G": 0.04962894248608534,
+        "H": 0.016697588126159554,
+        "I": 0.08534322820037106,
+        "K": 0.04220779220779221,
+        "L": 0.14888682745825602,
+        "M": 0.03525046382189239,
+        "N": 0.03896103896103896,
+        "P": 0.02504638218923933,
+        "Q": 0.04267161410018553,
+        "R": 0.02736549165120594,
+        "S": 0.06910946196660482,
+        "T": 0.054267161410018555,
+        "V": 0.059369202226345084,
+        "W": 0.01020408163265306,
+        "Y": 0.026901669758812616
+      },
+      "favored_residues": [
+        "L",
+        "A",
+        "I",
+        "S",
+        "D",
+        "V",
+        "E",
+        "T",
+        "G",
+        "F"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "contextual_charge",
+        "helix_compatible"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "interpro_tetr_records:relay_helix",
+      "support_count": 77
+    }
+  }
+}

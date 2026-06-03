@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -14,6 +15,8 @@ HYDROPHOBIC = set("AILMFWVY")
 CHARGED = set("KRDE")
 POLAR = set("STNQY")
 AROMATIC = set("FWYH")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA_ROOT = Path(os.environ.get("ASTEVOLVE_DATA_ROOT", PROJECT_ROOT / "data"))
 
 
 def iter_records(path: Path):
@@ -63,12 +66,12 @@ def main() -> None:
     parser.add_argument(
         "--records",
         type=Path,
-        default=Path(r"D:\Downloads\data\external_kb\substructure_records.jsonl"),
+        default=DATA_ROOT / "external_kb" / "substructure_records.jsonl",
     )
     parser.add_argument(
         "--out",
         type=Path,
-        default=Path(r"D:\Downloads\data\external_kb\substructure_summary.json"),
+        default=DATA_ROOT / "external_kb" / "substructure_summary.json",
     )
     args = parser.parse_args()
 

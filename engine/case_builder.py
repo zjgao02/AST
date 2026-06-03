@@ -6,20 +6,33 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from protein_lang import Blueprint, Node
-from inner_opt import SAConfig, optimize_multichain
-from external_kb import load_external_knowledge_provider
+from astevolve.core.protein_lang import Blueprint, Node
+from astevolve.search.inner_opt import SAConfig, optimize_multichain
+from astevolve.knowledge.registry import load_external_knowledge_provider
 from .memory_update import update_internal_memory
 
 from .design_state import (
     PROJECT_ROOT,
+    binder_domain_order,
     binder_sequence,
     flatten_binder_parts,
     load_design_state,
     segment_spans,
+    state_domain_aliases,
+    state_domain_segment_keys,
 )
-
 AA_CANONICAL = set("ACDEFGHIKLMNPQRSTVWY")
+AA_NO_CYS = set("ADEFGHIKLMNPQRSTVWY")
+MUTATION_OPS = {"point", "block", "segment_resample", "swap"}
+MAX_DESIGN_REGIONS = 8
+MAX_REGION_TARGETS = 6
+MAX_REGION_RESIDUES = 16
+
+KIND_LENGTH_RANGES: Dict[str, Tuple[int, int]] = {
+    "cdr": (4, 24),
+    "linker": (1, 20),
+    "framework": (1, 80),
+}
 
 
 def _safe_import_yaml():
@@ -67,9 +80,10 @@ def resolve_memory_path(memory_path: Optional[str] = None) -> Path:
 
 def extract_memory_bias(memory: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:
     policy = state["mutation_policy"]
+    linker_parts = state.get("binder", {}).get("linker_segments", [])
     out: Dict[str, Any] = {
         "preferred_edit_order": list(policy.get("preferred_edit_order", [])),
-        "linker_default_sequence": "".join(p[2] for p in state["binder"]["linker_segments"]),
+        "linker_default_sequence": "".join(p[2] for p in linker_parts if len(p) >= 3),
         "linker_gs_min": 0.60,
         "linker_hydrophobic_max": 0.15,
         "linker_charged_max": 0.20,
@@ -144,6 +158,258 @@ def _strategy_tree(strategy: Dict[str, Any]) -> Dict[str, Any]:
     return {}
 
 
+def _layout_plan(strategy: Dict[str, Any]) -> Dict[str, Any]:
+    for key in ("layout_plan", "domain_layout", "node_layout"):
+        plan = strategy.get(key)
+        if isinstance(plan, dict):
+            return plan
+    return {}
+
+
+def _clamp_float(value: Any, default: float, lo: float, hi: float) -> float:
+    return max(lo, min(hi, _safe_float(value, default)))
+
+
+def _clamp_int(value: Any, default: int, lo: int, hi: int) -> int:
+    return max(lo, min(hi, _safe_int(value, default)))
+
+
+def _canonical_residue_list(value: Any, *, allow_cys: bool = False) -> List[str]:
+    allowed = AA_CANONICAL if allow_cys else AA_NO_CYS
+    out: List[str] = []
+    for aa in _name_list(value):
+        aa = aa.upper()
+        if len(aa) == 1 and aa in allowed and aa not in out:
+            out.append(aa)
+        if len(out) >= MAX_REGION_RESIDUES:
+            break
+    return out
+
+
+def _canonical_domain_order(value: Any, state: Dict[str, Any]) -> List[str]:
+    allowed = list(state_domain_segment_keys(state).keys())
+    fallback = binder_domain_order(state)
+    aliases = state_domain_aliases(state)
+    if not isinstance(value, list):
+        return fallback
+
+    out: List[str] = []
+    for item in value:
+        text = str(item)
+        canonical = aliases.get(text, text)
+        if canonical in allowed and canonical not in out:
+            out.append(canonical)
+    for item in fallback:
+        if item not in out:
+            out.append(item)
+    return out or fallback
+
+
+def _node_length_range(node_name: str, kind: str) -> Tuple[int, int]:
+    return KIND_LENGTH_RANGES.get(kind, (1, 80))
+
+
+def _sanitize_length_range(value: Any, node_name: str, kind: str) -> Optional[List[int]]:
+    if not (isinstance(value, list) and len(value) == 2):
+        return None
+    lo_bound, hi_bound = _node_length_range(node_name, kind)
+    lo = _clamp_int(value[0], lo_bound, lo_bound, hi_bound)
+    hi = _clamp_int(value[1], hi_bound, lo_bound, hi_bound)
+    if lo > hi:
+        lo, hi = hi, lo
+    return [lo, hi]
+
+
+def _sanitize_mutation_ops(value: Any) -> Optional[Dict[str, float]]:
+    if not isinstance(value, dict):
+        return None
+    out: Dict[str, float] = {}
+    for op, weight in value.items():
+        op = str(op)
+        if op in MUTATION_OPS:
+            out[op] = _clamp_float(weight, 0.0, 0.0, 1.0)
+    if not out or sum(out.values()) <= 0:
+        return None
+    return out
+
+
+def _ss_code(value: Any) -> Optional[str]:
+    text = str(value).strip().lower()
+    if text in {"h", "helix", "alpha", "alpha_helix"}:
+        return "H"
+    if text in {"e", "beta", "strand", "sheet", "beta_strand"}:
+        return "E"
+    if text in {"l", "loop", "coil", "turn", "flexible_loop"}:
+        return "L"
+    return None
+
+
+def _sanitize_site_anchor(value: Any, node_name: str, kind: str) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    out: Dict[str, Any] = {}
+    rel_positions = []
+    for item in value.get("relative_positions", value.get("positions", [])) or []:
+        pos = _safe_int(item, -1)
+        if 0 <= pos < _node_length_range(node_name, kind)[1] and pos not in rel_positions:
+            rel_positions.append(pos)
+    if rel_positions:
+        out["relative_positions"] = rel_positions[:8]
+
+    if isinstance(value.get("relative_ranges"), list):
+        ranges = []
+        for raw in value["relative_ranges"]:
+            if isinstance(raw, list) and len(raw) == 2:
+                start = _clamp_int(raw[0], 0, 0, _node_length_range(node_name, kind)[1])
+                end = _clamp_int(raw[1], start + 1, start + 1, _node_length_range(node_name, kind)[1])
+                ranges.append([start, end])
+        if ranges:
+            out["relative_ranges"] = ranges[:4]
+
+    out["weight"] = _clamp_float(value.get("weight", value.get("priority_boost", 2.0)), 2.0, 0.25, 6.0)
+    residues = _canonical_residue_list(value.get("favored_residues", []))
+    if residues:
+        out["favored_residues"] = residues
+    classes = _name_list(value.get("favored_residue_classes", []))[:8]
+    if classes:
+        out["favored_residue_classes"] = classes
+    return out
+
+
+def sanitize_strategy_for_ast(state: Dict[str, Any], strategy: Dict[str, Any]) -> Dict[str, Any]:
+    """Constrain LLM output to ASTevolve's protein-design strategy language."""
+    if not isinstance(strategy, dict):
+        strategy = {}
+    cleaned = deepcopy(strategy)
+    plan = dict(_layout_plan(cleaned))
+    segment_meta = _segment_metadata(state)
+
+    plan["binder_domain_order"] = _canonical_domain_order(plan.get("binder_domain_order"), state)
+    regions = plan.get("design_regions", plan.get("regions", []))
+    if not isinstance(regions, list):
+        regions = []
+
+    clean_regions: List[Dict[str, Any]] = []
+    rejected: List[Dict[str, Any]] = []
+    for idx, region in enumerate(regions[:MAX_DESIGN_REGIONS], start=1):
+        if not isinstance(region, dict):
+            continue
+
+        targets = _region_targets(state, region, segment_meta)[:MAX_REGION_TARGETS]
+        if not targets:
+            rejected.append({"name": str(region.get("name", f"region_{idx}")), "reason": "no valid target nodes"})
+            continue
+
+        out: Dict[str, Any] = {
+            "name": str(region.get("name") or f"design_region_{idx}")[:80],
+            "role": str(region.get("role") or region.get("intent") or "")[:240],
+            "position": _clamp_int(region.get("position"), idx, 1, MAX_DESIGN_REGIONS),
+            "bind_to": targets,
+            "enabled": _as_bool(region.get("enabled"), True),
+            "mutable": _as_bool(region.get("mutable"), True),
+            "priority_boost": _clamp_float(region.get("priority_boost", 1.0), 1.0, 0.01, 5.0),
+            "mutation_rate": _clamp_float(region.get("mutation_rate", 0.05), 0.05, 0.0, 0.30),
+            "max_mutations_per_step": _clamp_int(region.get("max_mutations_per_step"), 2, 1, 8),
+            "policy_weight": _clamp_float(region.get("policy_weight", 0.7), 0.7, 0.0, 1.0),
+        }
+
+        mut_ops = _sanitize_mutation_ops(region.get("mutation_ops"))
+        if mut_ops is not None:
+            out["mutation_ops"] = mut_ops
+
+        favored = _canonical_residue_list(region.get("favored_residues", []))
+        if favored:
+            out["favored_residues"] = favored
+        disfavored = _canonical_residue_list(region.get("disfavored_residues", []), allow_cys=True)
+        if "C" not in disfavored:
+            disfavored.append("C")
+        out["disfavored_residues"] = disfavored[:MAX_REGION_RESIDUES]
+
+        for field in ("favored_residue_classes", "disfavored_residue_classes"):
+            values = _name_list(region.get(field, []))[:8]
+            if values:
+                out[field] = values
+
+        length_budget = region.get("length_budget")
+        if length_budget is not None:
+            out["length_budget"] = _clamp_int(length_budget, 0, 1, 72)
+
+        for field in ("target_lengths", "length_deltas", "length_ranges", "node_weights"):
+            raw = region.get(field)
+            if not isinstance(raw, dict):
+                continue
+            vals: Dict[str, Any] = {}
+            for node_name in targets:
+                if node_name not in raw:
+                    continue
+                kind = segment_meta[node_name]["kind"]
+                if field == "length_ranges":
+                    sanitized = _sanitize_length_range(raw[node_name], node_name, kind)
+                    if sanitized is not None:
+                        vals[node_name] = sanitized
+                elif field == "target_lengths":
+                    lo, hi = _node_length_range(node_name, kind)
+                    vals[node_name] = _clamp_int(raw[node_name], segment_meta[node_name]["length"], lo, hi)
+                elif field == "length_deltas":
+                    vals[node_name] = _clamp_int(raw[node_name], 0, -8, 8)
+                elif field == "node_weights":
+                    vals[node_name] = _clamp_float(raw[node_name], 1.0, 0.05, 5.0)
+            if vals:
+                out[field] = vals
+
+        if "length_range" in region and len(targets) == 1:
+            sanitized = _sanitize_length_range(region["length_range"], targets[0], segment_meta[targets[0]]["kind"])
+            if sanitized is not None:
+                out["length_range"] = sanitized
+        if "target_length" in region and len(targets) == 1:
+            lo, hi = _node_length_range(targets[0], segment_meta[targets[0]]["kind"])
+            out["target_length"] = _clamp_int(region["target_length"], segment_meta[targets[0]]["length"], lo, hi)
+        if "length_mutable" in region:
+            out["length_mutable"] = _as_bool(region.get("length_mutable"), False)
+        if "allow_framework_length_change" in region:
+            out["allow_framework_length_change"] = False
+
+        ss = _ss_code(region.get("secondary_structure", region.get("ss", None)))
+        if ss is not None:
+            out["secondary_structure"] = ss
+
+        site_anchors = region.get("site_anchors", {})
+        if isinstance(site_anchors, dict):
+            clean_anchors = {}
+            for node_name in targets:
+                anchor = _sanitize_site_anchor(site_anchors.get(node_name), node_name, segment_meta[node_name]["kind"])
+                if anchor:
+                    clean_anchors[node_name] = anchor
+            if clean_anchors:
+                out["site_anchors"] = clean_anchors
+
+        clean_regions.append(out)
+
+    plan["design_regions"] = clean_regions
+    plan.pop("regions", None)
+
+    ss_priors = plan.get("secondary_structure_priors", {})
+    if isinstance(ss_priors, dict):
+        clean_ss = {}
+        for node_name, ss_value in ss_priors.items():
+            if node_name in segment_meta:
+                code = _ss_code(ss_value)
+                if code:
+                    clean_ss[node_name] = code
+        plan["secondary_structure_priors"] = clean_ss
+    else:
+        plan["secondary_structure_priors"] = {}
+
+    cleaned["layout_plan"] = plan
+    cleaned["strategy_schema_report"] = {
+        "active_region_count": len(clean_regions),
+        "rejected_regions": rejected,
+        "allowed_nodes": list(segment_meta.keys()),
+        "domain_order": plan["binder_domain_order"],
+    }
+    return cleaned
+
+
 def _iter_strategy_nodes(
     node: Dict[str, Any],
     inherited_mutable: bool = True,
@@ -185,6 +451,271 @@ def _segment_metadata(state: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
 def _copy_node_field(policy: Dict[str, Any], node: Dict[str, Any], field: str) -> None:
     if field in node and field not in policy:
         policy[field] = node[field]
+
+
+def _name_list(value: Any) -> List[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [str(x) for x in value if str(x)]
+    return []
+
+
+def _segment_names_by_domain(state: Dict[str, Any], domain_name: str) -> List[str]:
+    key = state_domain_segment_keys(state).get(str(domain_name), "")
+    if not key:
+        return []
+    return [str(x[0]) for x in state["binder"].get(key, []) if len(x) >= 3]
+
+
+def _region_targets(
+    state: Dict[str, Any],
+    region: Dict[str, Any],
+    segment_meta: Dict[str, Dict[str, Any]],
+) -> List[str]:
+    explicit: List[str] = []
+    for key in ("bind_to", "nodes", "segments", "target_nodes", "covers"):
+        explicit.extend(_name_list(region.get(key)))
+
+    targets: List[str] = []
+    for name in explicit:
+        if name in segment_meta and name not in targets:
+            targets.append(name)
+
+    if not targets:
+        domain = region.get("domain") or region.get("parent_domain")
+        kind_filter = region.get("kind_filter") or region.get("node_kind") or region.get("kind")
+        domain_names = _segment_names_by_domain(state, str(domain)) if domain else list(segment_meta)
+        for name in domain_names:
+            if name not in segment_meta:
+                continue
+            if kind_filter and segment_meta[name]["kind"] != str(kind_filter):
+                continue
+            targets.append(name)
+
+    max_nodes = _safe_int(region.get("max_nodes"), 0)
+    if max_nodes > 0:
+        targets = targets[:max_nodes]
+    return targets
+
+
+def _combine_unique(old: Any, new: Any) -> List[str]:
+    out: List[str] = []
+    for value in _name_list(old) + _name_list(new):
+        if value not in out:
+            out.append(value)
+    return out
+
+
+def _merge_region_policy(
+    base: Dict[str, Any],
+    region: Dict[str, Any],
+    node_name: str,
+    node_weight: float,
+    region_order: int,
+) -> None:
+    region_name = str(region.get("name") or f"layout_region_{region_order}")
+    role = region.get("role") or region.get("edit_intent") or region.get("intent")
+    base["enabled"] = _as_bool(region.get("enabled"), _as_bool(base.get("enabled"), True))
+    base["mutable"] = _as_bool(region.get("mutable"), _as_bool(base.get("mutable"), True))
+    base["layout_position"] = min(_safe_int(base.get("layout_position"), region_order), region_order)
+
+    old_priority = _safe_float(base.get("priority_boost", base.get("priority", 1.0)), 1.0)
+    region_priority = _safe_float(region.get("priority_boost", region.get("priority", 1.0)), 1.0)
+    base["priority_boost"] = max(0.01, old_priority * region_priority * max(0.05, node_weight))
+
+    if role and "edit_intent" not in base:
+        base["edit_intent"] = str(role)
+
+    for field in (
+        "target_length",
+        "length",
+        "length_delta",
+        "length_range",
+        "min_length",
+        "max_length",
+        "length_mutable",
+        "mutation_rate",
+        "mutation_ops",
+        "max_mutations_per_step",
+        "aa_weights",
+        "fill_residues",
+        "policy_weight",
+        "confidence",
+        "allow_framework_length_change",
+        "secondary_structure",
+        "position_weights",
+        "hotspot_positions",
+    ):
+        if field in region:
+            base[field] = region[field]
+
+    for field in (
+        "favored_residues",
+        "disfavored_residues",
+        "favored_residue_classes",
+        "disfavored_residue_classes",
+    ):
+        if field in region:
+            base[field] = _combine_unique(base.get(field, []), region.get(field, []))
+
+    target_lengths = region.get("target_lengths")
+    if isinstance(target_lengths, dict) and node_name in target_lengths:
+        base["target_length"] = target_lengths[node_name]
+        base["length_mutable"] = True
+
+    length_deltas = region.get("length_deltas")
+    if isinstance(length_deltas, dict) and node_name in length_deltas:
+        base["length_delta"] = length_deltas[node_name]
+        base["length_mutable"] = True
+
+    node_ranges = region.get("length_ranges")
+    if isinstance(node_ranges, dict) and node_name in node_ranges:
+        base["length_range"] = node_ranges[node_name]
+        base["length_mutable"] = True
+
+    if "length_bias" in region:
+        base["length_bias"] = region["length_bias"]
+
+    site_anchors = region.get("site_anchors")
+    if isinstance(site_anchors, dict):
+        node_anchor = site_anchors.get(node_name)
+        if isinstance(node_anchor, dict):
+            base["site_anchors"] = node_anchor
+            base["favored_residues"] = _combine_unique(
+                base.get("favored_residues", []),
+                node_anchor.get("favored_residues", []),
+            )
+            base["favored_residue_classes"] = _combine_unique(
+                base.get("favored_residue_classes", []),
+                node_anchor.get("favored_residue_classes", []),
+            )
+
+    regions = list(base.get("layout_regions", []))
+    if region_name not in regions:
+        regions.append(region_name)
+    base["layout_regions"] = regions
+
+
+def _apply_region_length_budget(
+    region: Dict[str, Any],
+    targets: List[str],
+    policies: Dict[str, Dict[str, Any]],
+    segment_meta: Dict[str, Dict[str, Any]],
+) -> None:
+    if not targets or "length_budget" not in region:
+        return
+    budget = _safe_int(region.get("length_budget"), 0)
+    if budget <= 0:
+        return
+
+    node_weights = region.get("node_weights", {})
+    if not isinstance(node_weights, dict):
+        node_weights = {}
+    raw_weights = []
+    for name in targets:
+        raw_weights.append(max(0.01, _safe_float(node_weights.get(name), segment_meta[name]["length"])))
+    total_weight = sum(raw_weights) or 1.0
+
+    assigned: Dict[str, int] = {}
+    remaining = int(budget)
+    for idx, name in enumerate(targets):
+        if idx == len(targets) - 1:
+            target_len = max(1, remaining)
+        else:
+            target_len = max(1, int(round(budget * raw_weights[idx] / total_weight)))
+            remaining -= target_len
+        assigned[name] = target_len
+
+    node_ranges = region.get("length_ranges", {})
+    if not isinstance(node_ranges, dict):
+        node_ranges = {}
+
+    for name, target_len in assigned.items():
+        kind = segment_meta[name]["kind"]
+        lo, hi = _node_length_range(name, kind)
+        if name in node_ranges:
+            sanitized_range = _sanitize_length_range(node_ranges[name], name, kind)
+            if sanitized_range is not None:
+                lo, hi = sanitized_range
+        target_len = max(lo, min(hi, int(target_len)))
+        policies.setdefault(name, {})["target_length"] = target_len
+        policies[name]["length_mutable"] = True
+
+
+def _apply_layout_plan_to_policies(
+    state: Dict[str, Any],
+    strategy: Dict[str, Any],
+    policies: Dict[str, Dict[str, Any]],
+    memory_bias: Dict[str, Any],
+) -> Tuple[Dict[str, Any], List[str]]:
+    plan = _layout_plan(strategy)
+    regions = plan.get("design_regions", plan.get("regions", [])) if plan else []
+    if not isinstance(regions, list):
+        regions = []
+
+    segment_meta = _segment_metadata(state)
+    active_regions: List[Dict[str, Any]] = []
+
+    for order, region in enumerate(regions, start=1):
+        if not isinstance(region, dict) or not _as_bool(region.get("enabled"), True):
+            continue
+        targets = _region_targets(state, region, segment_meta)
+        if not targets:
+            continue
+
+        node_weights = region.get("node_weights", {})
+        if not isinstance(node_weights, dict):
+            node_weights = {}
+
+        _apply_region_length_budget(region, targets, policies, segment_meta)
+        for name in targets:
+            base = policies.setdefault(
+                name,
+                {
+                    "node_name": name,
+                    "kind": segment_meta[name]["kind"],
+                    "current_length": segment_meta[name]["length"],
+                    "mutable": True,
+                    "enabled": True,
+                    "priority_boost": 1.0,
+                },
+            )
+            _merge_region_policy(
+                base,
+                region,
+                name,
+                _safe_float(node_weights.get(name), 1.0),
+                _safe_int(region.get("position"), order),
+            )
+
+        active_regions.append(
+            {
+                "name": str(region.get("name") or f"layout_region_{order}"),
+                "role": region.get("role", ""),
+                "targets": targets,
+                "position": _safe_int(region.get("position"), order),
+            }
+        )
+
+    if policies:
+        edit_entries = []
+        for name, policy in policies.items():
+            if not _as_bool(policy.get("enabled"), _as_bool(policy.get("mutable"), False)):
+                continue
+            edit_entries.append(
+                (
+                    _safe_int(policy.get("layout_position", policy.get("tree_order", 9999)), 9999),
+                    -_safe_float(policy.get("priority_boost", 1.0), 1.0),
+                    name,
+                )
+            )
+        edit_entries.sort()
+        edit_order = [name for _pos, _priority, name in edit_entries]
+    else:
+        edit_order = list(memory_bias.get("preferred_edit_order", []))
+
+    return {"active_regions": active_regions}, edit_order
 
 
 def _collect_strategy_tree_policies(
@@ -233,6 +764,10 @@ def _collect_strategy_tree_policies(
             "confidence",
             "edit_intent",
             "allow_framework_length_change",
+            "secondary_structure",
+            "position_weights",
+            "hotspot_positions",
+            "site_anchors",
         ):
             _copy_node_field(policy, node, field)
 
@@ -276,11 +811,21 @@ def normalize_strategy_tree(
 ) -> Dict[str, Any]:
     normalized = dict(strategy)
     policies, edit_order = _collect_strategy_tree_policies(state, strategy, memory_bias)
+    layout_summary, layout_edit_order = _apply_layout_plan_to_policies(
+        state,
+        strategy,
+        policies,
+        memory_bias,
+    )
+    if layout_edit_order:
+        edit_order = layout_edit_order
     if not policies:
         normalized.setdefault("node_edit_policies", {})
         return normalized
 
     normalized["_tree_policy_active"] = True
+    normalized["_layout_plan_active"] = bool(layout_summary.get("active_regions"))
+    normalized["layout_summary"] = layout_summary
     normalized["node_edit_policies"] = policies
     if not normalized.get("preferred_edit_order"):
         normalized["preferred_edit_order"] = edit_order
@@ -359,20 +904,40 @@ def _target_length(kind: str, current_len: int, policy: Dict[str, Any]) -> int:
         raw_target = _safe_int(policy.get("length"), current_len)
     elif "length_delta" in policy:
         raw_target = current_len + _safe_int(policy.get("length_delta"), 0)
+    elif str(policy.get("length_bias", "")).lower() in {"extend", "longer", "expand"}:
+        raw_target = current_len + 1
+    elif str(policy.get("length_bias", "")).lower() in {"compact", "shorter", "shrink"}:
+        raw_target = current_len - 1
     else:
         raw_target = current_len
     lo, hi = _length_bounds(kind, current_len, policy)
     return max(lo, min(hi, raw_target))
 
 
+def _apply_layout_domain_order(state: Dict[str, Any], strategy: Dict[str, Any]) -> None:
+    plan = _layout_plan(strategy)
+    order = None
+    for key in ("binder_domain_order", "domain_order", "binder_order"):
+        if isinstance(plan.get(key), list):
+            order = plan[key]
+            break
+        if isinstance(strategy.get(key), list):
+            order = strategy[key]
+            break
+    if order is not None:
+        state["binder"]["domain_order"] = order
+
+
 def apply_strategy_tree_to_state(state: Dict[str, Any], strategy: Dict[str, Any]) -> Dict[str, Any]:
     policies = strategy.get("node_edit_policies", {})
-    if not isinstance(policies, dict) or not policies:
-        return state
-
     updated = deepcopy(state)
+    _apply_layout_domain_order(updated, strategy)
+
+    if not isinstance(policies, dict) or not policies:
+        return updated
+
     fixed_linker = set(updated["mutation_policy"].get("fixed_linker_segments", []))
-    for group in ("vh_segments", "linker_segments", "vl_segments"):
+    for group in state_domain_segment_keys(updated).values():
         for segment in updated["binder"].get(group, []):
             if len(segment) < 3:
                 continue
@@ -396,9 +961,11 @@ def apply_strategy_tree_to_state(state: Dict[str, Any], strategy: Dict[str, Any]
     return updated
 
 
-def _make_domain_node(name: str, children: List[List[str]]) -> Node:
+def _make_group_node(name: str, children: List[List[str]]) -> Node:
+    child_kinds = {str(segment[1]) for segment in children if len(segment) >= 2}
+    group_kind = "linker" if child_kinds == {"linker"} or "linker" in name.lower() else "domain"
     return Node(
-        kind="domain",
+        kind=group_kind,
         name=name,
         children=[
             Node(kind=kind, name=segment_name, length=len(seq))
@@ -409,22 +976,18 @@ def _make_domain_node(name: str, children: List[List[str]]) -> Node:
 
 def make_binder_chain(state: Dict[str, Any]) -> Node:
     binder = state["binder"]
+    children: List[Node] = []
+    segment_keys = state_domain_segment_keys(state)
+    for domain_name in binder_domain_order(state):
+        key = segment_keys.get(domain_name)
+        if key:
+            children.append(_make_group_node(domain_name, binder[key]))
+
     return Node(
         kind="chain",
-        name="Binder_scFv",
+        name=binder.get("name", "Binder"),
         props={"chain_id": binder.get("chain_id", "BB")},
-        children=[
-            _make_domain_node("VH_domain", binder["vh_segments"]),
-            Node(
-                kind="linker",
-                name="Linker_module",
-                children=[
-                    Node(kind=kind, name=segment_name, length=len(seq))
-                    for segment_name, kind, seq in binder["linker_segments"]
-                ],
-            ),
-            _make_domain_node("VL_domain", binder["vl_segments"]),
-        ],
+        children=children,
     )
 
 
@@ -432,13 +995,13 @@ def make_target_chain(state: Dict[str, Any]) -> Node:
     target = state["target"]
     return Node(
         kind="chain",
-        name="Target_CD25",
+        name=target.get("name", "Target"),
         length=len(target["sequence"]),
         props={"chain_id": target.get("chain_id", "T")},
         children=[
             Node(
-                kind="epitope",
-                name=target.get("epitope_name", "CD25_basiliximab_epitope"),
+                kind=target.get("feature_kind", "epitope"),
+                name=target.get("epitope_name", "target_feature"),
                 residue_spans=[tuple(x) for x in target.get("epitope_spans", [])],
                 props={
                     "source": target.get("epitope_source", ""),
@@ -453,7 +1016,7 @@ def build_blueprint(state: Dict[str, Any]) -> Blueprint:
     return Blueprint(
         root=Node(
             kind="complex",
-            name=state.get("task_name", "CD25_scFv_Design_Task"),
+            name=state.get("task_name", "ASTevolve_Task"),
             children=[make_binder_chain(state), make_target_chain(state)],
         )
     )
@@ -521,6 +1084,89 @@ def build_fixed_residues(state: Dict[str, Any], memory_bias: Dict[str, Any]) -> 
     return fixed
 
 
+def _secondary_structure_constraint_specs(
+    state: Dict[str, Any],
+    strategy: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    plan = _layout_plan(strategy)
+    binder_chain = state["binder"].get("chain_id", "BB")
+    segment_meta = _segment_metadata(state)
+    target_map: Dict[str, str] = {}
+
+    ss_priors = plan.get("secondary_structure_priors", {})
+    if isinstance(ss_priors, dict):
+        for node_name, ss_value in ss_priors.items():
+            if node_name in segment_meta:
+                code = _ss_code(ss_value)
+                if code:
+                    target_map[f"{binder_chain}:{node_name}"] = code
+
+    regions = plan.get("design_regions", [])
+    if isinstance(regions, list):
+        for region in regions:
+            if not isinstance(region, dict):
+                continue
+            code = _ss_code(region.get("secondary_structure", region.get("ss", None)))
+            if not code:
+                continue
+            for node_name in _region_targets(state, region, segment_meta):
+                target_map[f"{binder_chain}:{node_name}"] = code
+
+    if not target_map:
+        return []
+    return [
+        {
+            "kind": "ss_proxy",
+            "weight": float(strategy.get("secondary_structure_weight", 0.35)),
+            "params": {"target_map": target_map},
+        }
+    ]
+
+
+def _site_anchor_constraint_specs(
+    state: Dict[str, Any],
+    strategy: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    plan = _layout_plan(strategy)
+    binder_chain = state["binder"].get("chain_id", "BB")
+    segment_meta = _segment_metadata(state)
+    specs: List[Dict[str, Any]] = []
+
+    regions = plan.get("design_regions", [])
+    if not isinstance(regions, list):
+        return specs
+
+    for region in regions:
+        if not isinstance(region, dict):
+            continue
+        site_anchors = region.get("site_anchors", {})
+        if not isinstance(site_anchors, dict):
+            continue
+        for node_name in _region_targets(state, region, segment_meta):
+            anchor = site_anchors.get(node_name)
+            if not isinstance(anchor, dict):
+                continue
+            favored = _canonical_residue_list(anchor.get("favored_residues", []))
+            if not favored:
+                continue
+            specs.append(
+                {
+                    "kind": "segment_composition",
+                    "weight": _clamp_float(anchor.get("constraint_weight", 0.25), 0.25, 0.0, 1.0),
+                    "params": {
+                        "aa_set": "".join(favored),
+                        "min_frac": 0.05,
+                        "max_frac": 0.90,
+                        "segment_filter": {
+                            "chain_id": binder_chain,
+                            "name": node_name,
+                        },
+                    },
+                }
+            )
+    return specs
+
+
 def build_constraint_specs(
     state: Dict[str, Any],
     memory_bias: Dict[str, Any],
@@ -528,8 +1174,25 @@ def build_constraint_specs(
 ) -> List[Dict[str, Any]]:
     target_chain = state["target"].get("chain_id", "T")
     binder_chain = state["binder"].get("chain_id", "BB")
-    epitope_name = state["target"].get("epitope_name", "CD25_basiliximab_epitope")
+    task_type = str(state.get("task_type") or state.get("binder", {}).get("architecture", "")).lower()
+    epitope_name = state["target"].get("epitope_name", "target_feature")
     no_cys = set("ADEFGHIKLMNPQRSTVWY")
+
+    if "scfv" not in task_type and "antibody" not in task_type and "cd25" not in task_type:
+        specs: List[Dict[str, Any]] = [
+            {"kind": "alphabet", "weight": 1.0, "params": {"allowed": no_cys, "chain_ids": [binder_chain]}},
+            {"kind": "fixed_chain_sequence", "weight": 1.0, "params": {"chain_id": target_chain, "sequence": state["target"]["sequence"]}},
+            {"kind": "hydrophobic_pattern", "weight": 0.8, "params": {"domain_min_hydro": 0.20, "linker_max_hydro": 0.35}},
+            {"kind": "max_run", "weight": 1.2, "params": {"aa_set": "AILMFWVY", "max_run": int(strategy.get("max_hydrophobic_run", 3)), "segment_filter": {"chain_id": binder_chain}}},
+            {"kind": "max_run", "weight": 0.8, "params": {"aa_set": "KRDE", "max_run": int(strategy.get("max_charged_run", 3)), "segment_filter": {"chain_id": binder_chain}}},
+            {"kind": "segment_composition", "weight": 0.7, "params": {"aa_set": "C", "min_frac": 0.0, "max_frac": 0.0, "segment_filter": {"chain_id": binder_chain}}},
+            {"kind": "segment_composition", "weight": 0.7, "params": {"aa_set": "AILMFWVY", "min_frac": 0.05, "max_frac": float(strategy.get("pocket_hydrophobic_max", 0.55)), "segment_filter": {"chain_id": binder_chain, "kind": "pocket"}}},
+            {"kind": "segment_composition", "weight": 0.6, "params": {"aa_set": "YHSTNQDEKR", "min_frac": 0.15, "max_frac": 0.90, "segment_filter": {"chain_id": binder_chain, "kind": "pocket"}}},
+            {"kind": "segment_composition", "weight": 0.5, "params": {"aa_set": "GSTNQAP", "min_frac": 0.12, "max_frac": 0.85, "segment_filter": {"chain_id": binder_chain, "kind": "hinge"}}},
+        ]
+        specs.extend(_secondary_structure_constraint_specs(state, strategy))
+        specs.extend(_site_anchor_constraint_specs(state, strategy))
+        return specs
 
     cdr_favored = set(strategy.get("cdr_favored_residues") or memory_bias.get("cdr_favored_sparse", []))
     if not cdr_favored:
@@ -540,8 +1203,8 @@ def build_constraint_specs(
     linker_charged_max = float(strategy.get("linker_charged_max", memory_bias.get("linker_charged_max", 0.20)))
     desired_cdr3_hydro = float(strategy.get("desired_cdr3_hydro", 0.30))
 
-    return [
-        {"kind": "alphabet", "weight": 1.0, "params": {"allowed": no_cys}},
+    specs = [
+        {"kind": "alphabet", "weight": 1.0, "params": {"allowed": no_cys, "chain_ids": [binder_chain]}},
         {"kind": "fixed_chain_sequence", "weight": 1.0, "params": {"chain_id": target_chain, "sequence": state["target"]["sequence"]}},
         {"kind": "hydrophobic_pattern", "weight": 1.2, "params": {"domain_min_hydro": 0.22, "linker_max_hydro": linker_hydrophobic_max}},
         {"kind": "segment_composition", "weight": 2.0, "params": {"aa_set": "GSAT", "min_frac": linker_gs_min, "max_frac": 1.0, "segment_filter": {"chain_id": binder_chain, "kind": "linker"}}},
@@ -556,6 +1219,9 @@ def build_constraint_specs(
         {"kind": "segment_composition", "weight": 0.8, "params": {"aa_set": "KRDE", "min_frac": 0.05, "max_frac": 0.35, "segment_filter": {"chain_id": binder_chain, "kind": "framework"}}},
         {"kind": "interface_proxy", "weight": 0.8, "params": {"binder_chain": binder_chain, "binder_segment": "VH_CDR3", "target_chain": target_chain, "target_segment": epitope_name, "desired_binder_hydro": desired_cdr3_hydro}},
     ]
+    specs.extend(_secondary_structure_constraint_specs(state, strategy))
+    specs.extend(_site_anchor_constraint_specs(state, strategy))
+    return specs
 
 
 def build_sa_config(strategy: Dict[str, Any]) -> Dict[str, Any]:
@@ -563,18 +1229,16 @@ def build_sa_config(strategy: Dict[str, Any]) -> Dict[str, Any]:
     if not mcts_output_dir.is_absolute():
         mcts_output_dir = PROJECT_ROOT / mcts_output_dir
 
-    external_kb_path = Path(str(strategy.get("external_kb_path", "data/external_kb/external_prior_cache.json")))
-    if not external_kb_path.is_absolute():
-        external_kb_path = PROJECT_ROOT / external_kb_path
+    def resolve_optional_project_path(value: Any) -> Optional[str]:
+        if value is None or value == "":
+            return None
+        path = Path(str(value))
+        if not path.is_absolute():
+            path = PROJECT_ROOT / path
+        return str(path)
 
-    raw_embedding_manifest = strategy.get("external_kb_embedding_manifest", "")
-    if raw_embedding_manifest:
-        external_kb_embedding_manifest = Path(str(raw_embedding_manifest))
-        if not external_kb_embedding_manifest.is_absolute():
-            external_kb_embedding_manifest = PROJECT_ROOT / external_kb_embedding_manifest
-        external_kb_embedding_manifest_value = str(external_kb_embedding_manifest)
-    else:
-        external_kb_embedding_manifest_value = None
+    external_kb_path = resolve_optional_project_path(strategy.get("external_kb_path"))
+    external_kb_embedding_manifest_value = resolve_optional_project_path(strategy.get("external_kb_embedding_manifest"))
 
     return {
         "iterations": int(strategy.get("iterations", 1200)),
@@ -585,6 +1249,7 @@ def build_sa_config(strategy: Dict[str, Any]) -> Dict[str, Any]:
         "progen_weight": float(strategy.get("progen_weight", 1.0)),
         "progen_chains": ["BB"],
         "progen_reduce": "length_weighted",
+        "sequence_prior_model": str(strategy.get("sequence_prior_model", "progen")),
         "chai1_enabled": bool(strategy.get("chai1_enabled", True)),
         "chai1_top_frac": float(strategy.get("chai1_top_frac", 0.01)),
         "chai1_min_candidates": int(strategy.get("chai1_min_candidates", 1)),
@@ -594,6 +1259,21 @@ def build_sa_config(strategy: Dict[str, Any]) -> Dict[str, Any]:
         "protenix_model_name": str(strategy.get("protenix_model_name", "protenix_mini_esm_v0.5.0")),
         "protenix_conda_env": str(strategy.get("protenix_conda_env", "pytorch")),
         "protenix_seed": int(strategy.get("protenix_seed", 101)),
+        "protenix_complex_use_msa": strategy.get("protenix_complex_use_msa"),
+        "protenix_complex_cycle": strategy.get("protenix_complex_cycle"),
+        "protenix_complex_step": strategy.get("protenix_complex_step"),
+        "protenix_complex_sample": strategy.get("protenix_complex_sample"),
+        "protenix_complex_use_default_params": strategy.get("protenix_complex_use_default_params"),
+        "protenix_complex_timeout": strategy.get("protenix_complex_timeout"),
+        "structure_model": str(strategy.get("structure_model", "protenix")),
+        "structure_model_name": strategy.get("structure_model_name", strategy.get("esmfold2_model_name")),
+        "esmfold2_mode": str(strategy.get("esmfold2_mode", "local")),
+        "esmfold2_conda_env": strategy.get("esmfold2_conda_env"),
+        "esmfold2_num_loops": int(strategy.get("esmfold2_num_loops", 3)),
+        "esmfold2_num_sampling_steps": int(strategy.get("esmfold2_num_sampling_steps", 32)),
+        "esmfold2_num_diffusion_samples": int(strategy.get("esmfold2_num_diffusion_samples", 1)),
+        "multistate_objectives_enabled": bool(strategy.get("multistate_objectives_enabled", True)),
+        "multistate_objective_weight": float(strategy.get("multistate_objective_weight", 1.0)),
         "mutation_ops": dict(strategy.get("mutation_ops", {
             "point": 0.75,
             "block": 0.15,
@@ -610,7 +1290,7 @@ def build_sa_config(strategy: Dict[str, Any]) -> Dict[str, Any]:
         "mcts_save_variants": bool(strategy.get("mcts_save_variants", True)),
         "mcts_memory_enabled": bool(strategy.get("mcts_memory_enabled", True)),
         "external_kb_enabled": bool(strategy.get("external_kb_enabled", True)),
-        "external_kb_path": str(external_kb_path),
+        "external_kb_path": external_kb_path,
         "external_kb_weight": float(strategy.get("external_kb_weight", 0.7)),
         "external_kb_embedding_manifest": external_kb_embedding_manifest_value,
         "external_kb_retrieval_enabled": bool(strategy.get("external_kb_retrieval_enabled", True)),
@@ -627,7 +1307,15 @@ def build_score_config(strategy: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "weight_fast": float(score.get("weight_fast", 1.0)),
         "weight_plddt": float(score.get("weight_plddt", 5.0)),
+        "weight_iptm": float(score.get("weight_iptm", 1.0)),
+        "weight_ptm": float(score.get("weight_ptm", 0.5)),
+        "weight_ranking_score": float(score.get("weight_ranking_score", 0.0)),
+        "weight_interface_plddt": float(score.get("weight_interface_plddt", 1.0)),
+        "weight_node_plddt_min": float(score.get("weight_node_plddt_min", 0.5)),
+        "weight_clash": float(score.get("weight_clash", 1.0)),
+        "weight_multistate": float(score.get("weight_multistate", 1.0)),
         "plddt_scale": float(score.get("plddt_scale", 100.0)),
+        "clash_scale": float(score.get("clash_scale", 10.0)),
         "fast_loss_nonneg": bool(score.get("fast_loss_nonneg", True)),
     }
 
@@ -640,8 +1328,12 @@ def build_case_inputs(
     state = load_design_state(design_state_path)
     memory = load_memory_yaml(memory_path or state.get("memory_path"))
     memory_bias = extract_memory_bias(memory, state)
+    strategy = sanitize_strategy_for_ast(state, strategy)
     strategy = normalize_strategy_tree(state, strategy, memory_bias)
     state = apply_strategy_tree_to_state(state, strategy)
+    state["_layout_summary"] = strategy.get("layout_summary", {})
+    state["_node_edit_policies"] = strategy.get("node_edit_policies", {})
+    state["_strategy_schema_report"] = strategy.get("strategy_schema_report", {})
 
     bp = build_blueprint(state)
     masks = build_masks(state, memory_bias, strategy)
@@ -668,6 +1360,7 @@ def run_design_search(
         memory_path=memory_path,
     )
     compiled = bp.compile()
+    compiled["_design_state"] = state
     masks_np = {k: np.array(v, dtype=bool) for k, v in masks.items()}
     cfg = SAConfig(**sa_cfg, seed=seed)
     memory = load_memory_yaml(memory_path or state.get("memory_path"))
@@ -708,14 +1401,17 @@ def run_design_search(
         for s in compiled["segments"]
     ]
     out["blueprint_summary"] = {
-        "task_name": state.get("task_name", "CD25_scFv_Design_Task"),
+        "task_name": state.get("task_name", "ASTevolve_Task"),
         "chain_order": compiled["chain_order"],
         "chain_lengths": compiled["chain_lengths"],
         "binder_architecture": state["binder"].get("architecture", "VH-Linker-VL"),
-        "target_name": state["target"].get("name", "CD25"),
+        "binder_domain_order": binder_domain_order(state),
+        "target_name": state["target"].get("name", state["target"].get("chain_id", "target")),
         "epitope_name": state["target"].get("epitope_name"),
         "epitope_spans": state["target"].get("epitope_spans", []),
     }
+    out["layout_summary"] = state.get("_layout_summary", {})
+    out["strategy_schema_report"] = state.get("_strategy_schema_report", {})
     out["score_config"] = score_cfg
     out["design_state_version"] = state.get("version")
     if bool(strategy.get("memory_auto_update_enabled", True)) and cfg.mcts_memory_enabled:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -9,6 +10,8 @@ SABDAB_SUMMARY_URLS = [
     "https://opig.stats.ox.ac.uk/webapps/sabdab-sabpred/sabdab/summary/?all=true",
     "https://opig.stats.ox.ac.uk/webapps/newsabdab/sabdab/summary/all/",
 ]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA_ROOT = Path(os.environ.get("ASTEVOLVE_DATA_ROOT", PROJECT_ROOT / "data"))
 
 
 def download(url: str, out: Path, timeout: int = 60) -> None:
@@ -70,7 +73,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--out",
-        default="D:/Downloads/ast/data/sabdab_raw/sabdab_summary.tsv",
+        default=str(DATA_ROOT / "sabdab_raw" / "sabdab_summary.tsv"),
         help="Output TSV path.",
     )
     parser.add_argument(

@@ -1,0 +1,124 @@
+stable_priors:
+  tetr_prior:
+    general:
+      preferred_edit_order:
+      - ligand_pocket_core
+      - allosteric_hinge
+      - relay_helix
+      - domain_connector
+      - HTH_exit_loop
+      - dimerization_interface
+      - HTH_recognition_helix
+    ligand_pocket_design:
+      dopamine_chemistry:
+        expected_features:
+        - cationic amine recognition
+        - catechol hydrogen bonding
+        - aromatic packing without hydrophobic collapse
+        favored_residues:
+        - D
+        - E
+        - Y
+        - H
+        - S
+        - T
+        - N
+        - Q
+        - W
+        - F
+        disfavored_residues:
+        - C
+        hydrophobic_fraction_max: 0.55
+    allosteric_coupling:
+      mutable_relay_nodes:
+      - allosteric_hinge
+      - relay_helix
+      - HTH_exit_loop
+      preserve_nodes:
+      - HTH_helix1
+      - HTH_turn
+      - N_term_support
+adaptive_memory:
+  recent_runs: []
+  node_bias: {}
+  motif_memory:
+    HTH_recognition_helix:
+      enriched_motifs: []
+      depleted_patterns: []
+      enriched_residues:
+      - D
+      favored_classes:
+      - contextual_charge
+      - turn_loop
+      support_count: 1
+      confidence: 0.0775
+      last_update: '2026-06-02T13:36:36+00:00'
+  node_level_statistics:
+    HTH_recognition_helix:
+      evaluated_total: 7
+      improved_total: 1
+      last_success_rate: 0.0
+      last_mean_reward: -0.026402
+      last_best_fast_loss: 19.577618
+      priority_multiplier: 0.9868
+      last_update: '2026-06-02T13:36:36+00:00'
+      top_residue_frequency:
+        D: 1
+      top_class_frequency:
+        contextual_charge: 1
+        turn_loop: 1
+      mean_mutation_count: 1.0
+metadata:
+  last_auto_update: '2026-06-02T13:36:36+00:00'
+candidate_statistics:
+  recent_inner_loop_runs:
+  - run_id: inner
+    updated_at: '2026-06-02T13:36:36+00:00'
+    search_method: mcts
+    best_node_id: root
+    best_path:
+    - root
+    seq_hash: 8f67613fe7f2740f
+    fast_loss: 19.577618
+    constraint_penalty: 18.094488
+    progen_loglik_avg: -2.966261
+    chai_plddt: 88.1118
+    effective_mutations: []
+  - run_id: inner_loop
+    updated_at: '2026-06-01T08:37:25+00:00'
+    search_method: mcts
+    best_node_id: n2
+    best_path:
+    - root
+    - n1
+    - n2
+    seq_hash: a8b374477b179535
+    fast_loss: 17.175946
+    constraint_penalty: 17.175946
+    progen_loglik_avg: 0.0
+    chai_plddt: null
+    effective_mutations:
+    - node: HTH_recognition_helix
+      chain_id: BB
+      position: 41
+      from: Y
+      to: D
+      reward: 0.833655
+      fast_loss: 17.175946
+  max_recent_inner_loop_runs: 10
+  max_residues_per_node: 8
+  best_seen:
+    run_id: inner_loop
+    updated_at: '2026-06-01T08:37:25+00:00'
+    seq_hash: a8b374477b179535
+    combined_loss: 17.175946
+    fast_loss: 17.175946
+    chai_plddt: null
+run_state:
+  last_inner_loop_run:
+    run_id: inner
+    updated_at: '2026-06-02T13:36:36+00:00'
+    touched_nodes:
+    - HTH_recognition_helix
+    num_effective_mutations: 0
+    memory_policy: bounded_summary_only

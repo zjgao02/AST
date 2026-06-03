@@ -1,0 +1,80 @@
+﻿# General settings
+max_iterations: 200                   # Let's run for more iterations to explore the parameter space
+checkpoint_interval: 10               # Save checkpoints every 10 iterations
+log_level: "INFO"
+random_seed: 42
+
+# Evolution settings
+diff_based_evolution: true             # Use targeted SEARCH/REPLACE diffs for the strategy program
+max_code_length: 30000
+
+# LLM configuration for OpenAI-compatible relay
+llm:
+  models:
+    - name: "qwen3.7-max"
+      weight: 1.0 # We'll stick to the best model for this task
+
+  # API configuration for OpenAI-compatible relay
+  api_base: "${ASTEVOLVE_LLM_API_BASE}"
+  api_key: "${ASTEVOLVE_LLM_API_KEY}"
+
+  # Generation parameters
+  temperature: 0.8                    # Slightly higher temperature for more creative exploration of parameters
+  top_p: 0.95
+  max_tokens: 4096
+  # Request parameters
+  timeout: 180                        # Timeout for the LLM API call itself
+  retries: 1
+  retry_delay: 5
+
+# Prompt configuration
+prompt:
+  system_message: |
+    You are ASTevolve's outer-loop strategy designer for a fixed CD25-targeting scFv task.
+
+    Modify only the EVOLVE-BLOCK in cases/cd25_scfv/initial_program.py. Prefer small SEARCH/REPLACE diffs.
+    Your entire response must be one or more exact diff blocks and nothing else:
+    <<<<<<< SEARCH
+    exact original code
+    =======
+    replacement code
+    >>>>>>> REPLACE
+    Do not use markdown fences, JSON, XML, commentary, or prose outside diff blocks.
+    Preserve propose_strategy(), run_search(seed=None), preview_case(), design_state.json,
+    evaluator.py, engine interfaces, and the fixed CD25 target/case identity.
+    Case selection, model interfaces, and knowledge providers are fixed runtime modules;
+    do not replace them inside the EVOLVE-BLOCK.
+    Editable scope is intentionally narrow: keep changes inside strategy["layout_plan"]
+    and its nested design_regions/site_anchors. Do not add or modify top-level
+    strategy.update({...}) blocks for iterations, search_method, mcts_*, init_temp,
+    cooling, resample_segment_prob, ProGen/Protenix/ESMFold settings, KB paths,
+    memory settings, score_config, or global CDR/linker composition thresholds.
+    Those fields are locked outside the EVOLVE-BLOCK and will be overwritten
+    before evaluation.
+
+    Your main editable object is layout_plan:
+    - binder_domain_order: choose VH/linker/VL ordering only when justified.
+    - design_regions: create, remove, split, merge, reorder, or reweight optimization regions.
+    - bind_to: map each region to concrete nodes such as VH_CDR3, VH_CDR2, VL_CDR3,
+      VL_CDR1, VL_CDR2, Linker_core, or sparse framework support nodes.
+    - length_budget, target_lengths, length_deltas, length_ranges: decide node sizes.
+    - secondary_structure or secondary_structure_priors: express loop/beta/helix tendencies.
+    - site_anchors: mark relative node positions/ranges that should receive more MCTS attention.
+    - region-level priority_boost, mutation_rate, mutation_ops, max_mutations_per_step:
+      guide how the fixed inner-loop MCTS explores each region.
+    - favored/disfavored residues and residue classes: provide mutation priors.
+
+    Outer loop designs AST region layout and strategy. Inner loop performs concrete sequence
+    optimization inside compiled nodes. Invalid node names, unsafe lengths, Cys-heavy priors, and
+    unsupported domain layouts are sanitized by engine.case_builder; use preview_case artifacts,
+    layout_summary, and strategy_schema_report as feedback. Do not hard-code final antibody
+    sequences, copy retrieved antibodies, edit CD25 sequence, or bypass evaluation.
+# Evaluator configuration
+evaluator:
+  # Your script can be slow. Set a generous timeout (e.g., 30 minutes).
+  timeout: 180000
+  parallel_evaluations: 1             # Run 2 evaluations in parallel if your machine can handle it
+  enable_artifacts: true      # Error feedback to LLM
+  cascade_evaluation: false    # Multi-stage testing
+  use_llm_feedback: false      # AI code quality assessment
+

@@ -1,0 +1,248 @@
+{
+  "metadata": {
+    "provider_schema": "astevolve_external_prior_v1",
+    "source": "interpro_tetr_scaffold_v1_plus_dopamine_chemical_prior",
+    "description": "TetR dopamine redesign search priors built from InterPro/Pfam TetR scaffold annotations plus low-confidence dopamine chemistry priors. This file guides MCTS sampling only; functional selection should come from the TetR evaluator.",
+    "do_not_copy_sequences": true,
+    "interpro_release_context": "local Magneton/InterPro 103.0 substructure resources under data/external_kb and data/magneton_raw",
+    "evidence_policy": {
+      "tetR_scaffold_guardrails": "medium confidence: TetR_N/HTH and TetR C-terminal domain annotations define protected or conservative-edit regions",
+      "dopamine_chemistry": "low-to-medium confidence: catechol/amine recognition priors without claiming a known natural dopamine TetR subfamily",
+      "embedding_retrieval": "optional broad InterPro substructure retrieval; use as a residue-distribution prior, not as a functional objective"
+    },
+    "interpro_entries": [
+      {
+        "database": "Pfam",
+        "accession": "PF00440",
+        "name": "TetR_N",
+        "role": "N-terminal TetR-family HTH DNA-binding domain"
+      },
+      {
+        "database": "InterPro",
+        "accession": "IPR001647",
+        "name": "HTH_TetR",
+        "role": "TetR-type HTH domain annotation"
+      },
+      {
+        "database": "InterPro",
+        "accession": "IPR023772",
+        "name": "DNA-bd_HTH_TetR-type_CS",
+        "role": "TetR-type DNA-binding conserved signature"
+      },
+      {
+        "database": "InterPro",
+        "accession": "IPR009057",
+        "name": "Homeodomain-like_sf",
+        "role": "HTH fold superfamily support"
+      },
+      {
+        "database": "InterPro",
+        "accession": "IPR050109",
+        "name": "HTH-type_TetR-like_transc_reg",
+        "role": "TetR-like transcriptional regulator family context"
+      },
+      {
+        "database": "Pfam",
+        "accession": "PF02909",
+        "name": "TetR_C_1",
+        "role": "C-terminal TetR ligand/dimerization domain context"
+      },
+      {
+        "database": "InterPro",
+        "accession": "IPR004111",
+        "name": "Repressor_TetR_C",
+        "role": "TetR C-terminal repressor domain context"
+      }
+    ]
+  },
+  "retrieval": {
+    "embedding_manifest": "embedding_manifest_interpro_substructures.json",
+    "match_node_name": false,
+    "node_kind_filters": {
+      "pocket": {
+        "class_filter": ["Binding_site", "Active_site", "Domain"],
+        "match_node_name": false
+      },
+      "hinge": {
+        "class_filter": ["Domain", "Conserved_site", "Homologous_superfamily"],
+        "match_node_name": false
+      },
+      "relay": {
+        "class_filter": ["Domain", "Conserved_site", "Homologous_superfamily"],
+        "match_node_name": false
+      },
+      "dna_contact": {
+        "class_filter": ["Conserved_site", "Domain"],
+        "match_node_name": false
+      },
+      "dimer_interface": {
+        "class_filter": ["Domain", "Homologous_superfamily"],
+        "match_node_name": false
+      },
+      "helix": {
+        "class_filter": ["Domain", "Homologous_superfamily"],
+        "match_node_name": false
+      },
+      "support": {
+        "class_filter": ["Domain", "Homologous_superfamily"],
+        "match_node_name": false
+      }
+    },
+    "node_filters": {
+      "ligand_pocket_core": {
+        "class_filter": ["Binding_site", "Active_site", "Domain"],
+        "match_node_name": false
+      },
+      "allosteric_hinge": {
+        "class_filter": ["Domain", "Conserved_site", "Homologous_superfamily"],
+        "match_node_name": false
+      },
+      "relay_helix": {
+        "class_filter": ["Domain", "Conserved_site", "Homologous_superfamily"],
+        "match_node_name": false
+      },
+      "HTH_recognition_helix": {
+        "class_filter": ["Conserved_site", "Domain"],
+        "match_node_name": false
+      },
+      "dimerization_interface": {
+        "class_filter": ["Domain", "Homologous_superfamily"],
+        "match_node_name": false
+      }
+    }
+  },
+  "defaults": {
+    "priority_boost": 1.0,
+    "confidence": 0.25,
+    "disfavored_residues": ["C"]
+  },
+  "by_kind": {
+    "pocket": {
+      "priority_boost": 1.18,
+      "confidence": 0.38,
+      "favored_residues": ["D", "E", "Y", "H", "S", "T", "N", "Q", "W", "F"],
+      "favored_residue_classes": ["polar_uncharged", "aromatic", "contextual_charge"],
+      "disfavored_residues": ["C", "P"],
+      "source": "interpro_tetr_c_domain_context_plus_dopamine_catechol_amine_prior"
+    },
+    "hinge": {
+      "priority_boost": 1.08,
+      "confidence": 0.42,
+      "favored_residues": ["G", "S", "T", "N", "Q", "A", "D", "E", "K", "R"],
+      "favored_residue_classes": ["turn_loop", "polar_uncharged", "contextual_charge"],
+      "disfavored_residues": ["C", "W"],
+      "source": "interpro_tetr_domain_boundary_and_allosteric_linker_prior"
+    },
+    "relay": {
+      "priority_boost": 1.05,
+      "confidence": 0.40,
+      "favored_residues": ["A", "L", "S", "T", "N", "Q", "E", "K", "R"],
+      "favored_residue_classes": ["helix_compatible", "polar_uncharged", "contextual_charge"],
+      "disfavored_residues": ["C", "P"],
+      "source": "interpro_tetr_c_domain_helical_relay_prior"
+    },
+    "dna_contact": {
+      "priority_boost": 0.72,
+      "confidence": 0.55,
+      "favored_residues": ["K", "R", "Q", "N", "S", "T", "Y", "H"],
+      "favored_residue_classes": ["contextual_charge", "polar_uncharged", "helix_compatible"],
+      "disfavored_residues": ["C", "P", "G"],
+      "source": "PF00440_IPR001647_HTH_DNA_binding_guardrail"
+    },
+    "dimer_interface": {
+      "priority_boost": 0.75,
+      "confidence": 0.50,
+      "favored_residues": ["A", "L", "I", "V", "S", "T", "Q", "N", "E", "K"],
+      "favored_residue_classes": ["helix_compatible", "hydrophobic", "polar_uncharged"],
+      "disfavored_residues": ["C", "P", "W", "G"],
+      "source": "interpro_tetr_c_terminal_dimerization_guardrail"
+    },
+    "helix": {
+      "priority_boost": 0.55,
+      "confidence": 0.45,
+      "favored_residue_classes": ["helix_compatible"],
+      "disfavored_residues": ["C", "P", "G"],
+      "source": "interpro_tetr_scaffold_helix_guardrail"
+    },
+    "support": {
+      "priority_boost": 0.40,
+      "confidence": 0.45,
+      "favored_residue_classes": ["helix_compatible"],
+      "disfavored_residues": ["C", "P"],
+      "source": "interpro_tetr_scaffold_support_guardrail"
+    }
+  },
+  "nodes": {
+    "ligand_pocket_core": {
+      "priority_boost": 1.30,
+      "confidence": 0.42,
+      "favored_residues": ["D", "E", "Y", "H", "S", "T", "N", "Q", "W", "F"],
+      "favored_residue_classes": ["polar_uncharged", "aromatic", "contextual_charge"],
+      "source": "dopamine_specificity_focus_inside_TetR_C_domain",
+      "notes": "InterPro localizes this region to the TetR C-terminal ligand/dimer domain; dopamine-specific residue bias remains a chemical prior until evaluator metrics validate binding."
+    },
+    "allosteric_hinge": {
+      "priority_boost": 1.15,
+      "confidence": 0.45,
+      "favored_residues": ["G", "S", "T", "N", "Q", "A", "D", "E"],
+      "favored_residue_classes": ["turn_loop", "polar_uncharged", "contextual_charge"],
+      "source": "TetR_C_to_HTH_domain_boundary_prior"
+    },
+    "relay_helix": {
+      "priority_boost": 1.08,
+      "confidence": 0.42,
+      "favored_residues": ["A", "L", "S", "T", "N", "Q", "E", "K"],
+      "favored_residue_classes": ["helix_compatible", "polar_uncharged"],
+      "source": "TetR_C_allosteric_relay_prior"
+    },
+    "domain_connector": {
+      "priority_boost": 1.05,
+      "confidence": 0.40,
+      "favored_residues": ["G", "S", "T", "N", "Q", "A", "D", "E"],
+      "favored_residue_classes": ["turn_loop", "polar_uncharged"],
+      "source": "HTH_to_TetR_C_connector_prior"
+    },
+    "HTH_exit_loop": {
+      "priority_boost": 0.88,
+      "confidence": 0.45,
+      "favored_residues": ["A", "L", "S", "T", "N", "Q", "D", "E", "K", "R"],
+      "favored_residue_classes": ["helix_compatible", "polar_uncharged", "contextual_charge"],
+      "source": "PF00440_exit_region_guarded_allosteric_tuning_prior"
+    },
+    "HTH_recognition_helix": {
+      "priority_boost": 0.55,
+      "confidence": 0.58,
+      "favored_residues": ["K", "R", "Q", "N", "S", "T", "Y", "H"],
+      "disfavored_residues": ["C", "P", "G", "W"],
+      "source": "PF00440_IPR001647_DNA_recognition_helix_guardrail"
+    },
+    "dimerization_interface": {
+      "priority_boost": 0.62,
+      "confidence": 0.52,
+      "favored_residues": ["A", "L", "I", "V", "S", "T", "Q", "N", "E", "K"],
+      "disfavored_residues": ["C", "P", "W", "G"],
+      "source": "TetR_C_dimerization_interface_guardrail"
+    },
+    "N_term_support": {
+      "priority_boost": 0.35,
+      "confidence": 0.45,
+      "source": "PF00440_N_terminal_scaffold_guardrail"
+    },
+    "HTH_helix1": {
+      "priority_boost": 0.40,
+      "confidence": 0.50,
+      "source": "PF00440_HTH_scaffold_guardrail"
+    },
+    "HTH_turn": {
+      "priority_boost": 0.45,
+      "confidence": 0.45,
+      "favored_residues": ["G", "S", "T", "N", "Q", "K", "R"],
+      "source": "PF00440_HTH_turn_guardrail"
+    },
+    "C_terminal_support": {
+      "priority_boost": 0.45,
+      "confidence": 0.42,
+      "source": "TetR_C_terminal_scaffold_guardrail"
+    }
+  }
+}

@@ -3,10 +3,13 @@ from __future__ import annotations
 import csv
 import gzip
 import json
+import os
 from pathlib import Path
 
 
-ROOT = Path(r"D:\Downloads\data\magneton_raw")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA_ROOT = Path(os.environ.get("ASTEVOLVE_DATA_ROOT", PROJECT_ROOT / "data"))
+ROOT = DATA_ROOT / "magneton_raw"
 JSONL = ROOT / "interpro_103.0" / "debug_subset" / "swissprot.with_ss.0.jsonl.gz"
 SEQ_TSV = ROOT / "sequences" / "swissprot_subset.tsv"
 

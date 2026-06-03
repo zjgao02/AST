@@ -1,0 +1,20 @@
+# GPU/model runtime dependencies.
+# Prefer installing PyTorch with the CUDA version recommended for the server, then
+# install this file. Protenix may require site-specific CUDA/PyTorch compatibility.
+
+-r requirements.txt
+
+torch>=2.6
+transformers>=4.28,<5
+tokenizers>=0.13
+fair-esm>=2.0
+esm>=2.0
+protenix
+
+ml-collections
+optree
+biopython>=1.83
+modelcif>=0.7
+biotite>=1.0
+rdkit
+scikit-learn

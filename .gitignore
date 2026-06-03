@@ -1,8 +1,31 @@
 __pycache__/
 *.py[cod]
+.env
+.env.*
+!.env.example
+
+# Runtime outputs and local experiment artifacts.
+best_sequences/
+outputs/
+inner_loop*/
+protenix_*_tmp/
+esm_embeddings/
+runs/
+logs/
+tmp/
 
 # Local model weights and binary checkpoint caches.
+models/
 *.pt
 *.pth
 *.ckpt
 *.safetensors
+model_weights/**
+!model_weights/
+!model_weights/**/
+!model_weights/WEIGHTS_MANIFEST.txt
+!model_weights/**/.gitkeep
+
+# Case outputs and local caches after project modularization.
+artifacts/
+

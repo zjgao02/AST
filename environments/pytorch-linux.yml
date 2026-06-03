@@ -1,0 +1,30 @@
+name: pytorch
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - numpy>=1.26,<2.0
+  - pyyaml>=6.0
+  - requests>=2.31
+  - tqdm>=4.66
+  - scikit-learn
+  - biopython
+  - rdkit
+  - pytorch
+  - pytorch-cuda=12.4
+  - pip:
+      - openai>=1.0
+      - dacite>=1.8
+      - transformers>=4.28,<5
+      - tokenizers>=0.13
+      - fair-esm>=2.0
+      - esm>=2.0
+      - protenix
+      - ml-collections
+      - optree
+      - modelcif>=0.7
+      - biotite>=1.0
