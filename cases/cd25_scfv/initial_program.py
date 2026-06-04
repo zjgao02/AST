@@ -311,6 +311,9 @@ def _apply_runtime_overrides(strategy):
         strategy["structure_model"] = os.environ["ASTEVOLVE_STRUCTURE_MODEL"]
     if "ASTEVOLVE_STRUCTURE_MODEL_NAME" in os.environ:
         strategy["structure_model_name"] = os.environ["ASTEVOLVE_STRUCTURE_MODEL_NAME"]
+    protenix_conda_env = os.environ.get("ASTEVOLVE_PROTENIX_CONDA_ENV") or os.environ.get("ASTEVOLVE_CONDA_ENV")
+    if protenix_conda_env:
+        strategy["protenix_conda_env"] = protenix_conda_env
     if "ASTEVOLVE_ESMFOLD2_MODE" in os.environ:
         strategy["esmfold2_mode"] = os.environ["ASTEVOLVE_ESMFOLD2_MODE"]
     if "ASTEVOLVE_ESMFOLD2_CONDA_ENV" in os.environ:
