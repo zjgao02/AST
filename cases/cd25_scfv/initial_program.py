@@ -1,10 +1,25 @@
 # EVOLVE-BLOCK-START
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+def _resolve_project_root() -> Path:
+    env_root = os.environ.get("ASTEVOLVE_PROJECT_ROOT")
+    if env_root:
+        return Path(env_root).expanduser().resolve()
+
+    here = Path(__file__).resolve()
+    candidates = [Path.cwd().resolve(), here.parent, *here.parents]
+    for candidate in candidates:
+        if (candidate / "astevolve").is_dir() and (candidate / "engine").is_dir():
+            return candidate
+    return Path.cwd().resolve()
+
+
+PROJECT_ROOT = _resolve_project_root()
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
