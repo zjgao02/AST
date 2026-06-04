@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
@@ -203,6 +204,23 @@ def _resolve_manifest_file(manifest_path: Optional[Path], value: Any) -> Path:
     return path
 
 
+def _resolve_embedding_model_path(model_name: str) -> str:
+    for env_name in ("ASTEVOLVE_ESM_EMBEDDING_MODEL_DIR", "ASTEVOLVE_ESM_MODEL_DIR"):
+        raw = os.environ.get(env_name)
+        if raw:
+            path = Path(raw).expanduser().resolve()
+            if path.exists():
+                return str(path)
+
+    model_root = os.environ.get("ASTEVOLVE_MODEL_ROOT")
+    if model_root:
+        local = Path(model_root).expanduser().resolve() / "esm2_t6_8M_UR50D"
+        if local.exists():
+            return str(local)
+
+    return model_name
+
+
 def _matches_any(value: Any, allowed: List[str]) -> bool:
     if not allowed:
         return True
@@ -318,13 +336,14 @@ class ExternalKnowledgeProvider:
             return
 
         model_name = self._embedding_manifest.get("model", "facebook/esm2_t6_8M_UR50D")
+        model_path = _resolve_embedding_model_path(str(model_name))
         if self.device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
         else:
             device = self.device
 
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        model = AutoModel.from_pretrained(model_name)
+        tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+        model = AutoModel.from_pretrained(model_path, local_files_only=True)
         model.to(device)
         model.eval()
 
