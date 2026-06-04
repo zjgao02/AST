@@ -3,6 +3,7 @@ max_iterations: 200                   # Let's run for more iterations to explore
 checkpoint_interval: 10               # Save checkpoints every 10 iterations
 log_level: "INFO"
 random_seed: 42
+max_tasks_per_child: 1                # Force spawn workers on Python 3.10 so CUDA is not reused after fork.
 
 # Evolution settings
 diff_based_evolution: true             # Use targeted SEARCH/REPLACE diffs for the strategy program
@@ -77,4 +78,3 @@ evaluator:
   enable_artifacts: true      # Error feedback to LLM
   cascade_evaluation: false    # Multi-stage testing
   use_llm_feedback: false      # AI code quality assessment
-
