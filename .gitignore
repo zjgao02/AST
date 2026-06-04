@@ -15,7 +15,7 @@ logs/
 tmp/
 
 # Local model weights and binary checkpoint caches.
-models/
+/models/
 *.pt
 *.pth
 *.ckpt
