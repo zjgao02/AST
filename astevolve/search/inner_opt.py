@@ -349,6 +349,51 @@ def compute_node_plddt(
     return out
 
 
+def _mean_indexed_plddt(copies: List[List[float]]) -> List[float]:
+    if not copies:
+        return []
+    max_len = max((len(copy) for copy in copies), default=0)
+    out: List[float] = []
+    for idx in range(max_len):
+        vals = [float(copy[idx]) for copy in copies if idx < len(copy)]
+        if vals:
+            out.append(float(sum(vals) / len(vals)))
+    return out
+
+
+def _residue_plddt_by_source_chain(
+    confidence: Dict[str, Any],
+    entity_units: List[Dict[str, Any]],
+) -> Dict[str, List[float]]:
+    residue_plddt = confidence.get("residue_plddt", {}) or {}
+    if not residue_plddt or not entity_units:
+        return {}
+
+    by_source: Dict[str, List[List[float]]] = {}
+    for unit in entity_units:
+        source_chain = unit.get("source_chain")
+        label = unit.get("label")
+        if not source_chain or not label:
+            continue
+        vals = residue_plddt.get(str(label))
+        if not vals:
+            continue
+        cleaned: List[float] = []
+        for value in vals:
+            try:
+                cleaned.append(float(value))
+            except (TypeError, ValueError):
+                continue
+        if cleaned:
+            by_source.setdefault(str(source_chain), []).append(cleaned)
+
+    return {
+        source_chain: _mean_indexed_plddt(copies)
+        for source_chain, copies in by_source.items()
+        if copies
+    }
+
+
 def _resolve_complex_entities(
     raw_entities: List[Dict[str, Any]],
     seqs: Dict[str, str],
@@ -419,6 +464,57 @@ def _mean_numeric(values: List[Any]) -> Optional[float]:
     return float(sum(vals) / len(vals))
 
 
+def _float_or_none(value: Any) -> Optional[float]:
+    try:
+        if value is None:
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _aggregate_state_node_plddt(state_results: List[Dict[str, Any]]) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
+    node_items: Dict[str, Dict[str, Any]] = {}
+    means: List[float] = []
+    mins: List[float] = []
+    low_nodes: List[Dict[str, Any]] = []
+
+    for state_result in state_results:
+        state_name = str(state_result.get("name") or "state")
+        summary = state_result.get("structure_metrics", {}) or {}
+        for node_name, item in (summary.get("node_plddt", {}) or {}).items():
+            if not isinstance(item, dict):
+                continue
+            key = f"{state_name}:{node_name}"
+            record = dict(item)
+            record["state"] = state_name
+            node_items[key] = record
+
+            mean_val = _float_or_none(record.get("plddt_mean"))
+            min_val = _float_or_none(record.get("plddt_min"))
+            if mean_val is not None:
+                means.append(mean_val)
+                if mean_val < 70.0:
+                    low_nodes.append(
+                        {
+                            "state": state_name,
+                            "node": str(node_name),
+                            "plddt_mean": mean_val,
+                            "plddt_min": min_val,
+                        }
+                    )
+            if min_val is not None:
+                mins.append(min_val)
+
+    low_nodes = sorted(low_nodes, key=lambda x: float(x.get("plddt_mean", 0.0)))[:10]
+    return node_items, {
+        "node_count": len(node_items),
+        "node_plddt_mean": _mean_numeric(means),
+        "node_plddt_min": min(mins) if mins else None,
+        "low_confidence_nodes": low_nodes,
+    }
+
+
 def _aggregate_complex_state_metrics(state_results: List[Dict[str, Any]]) -> Dict[str, Any]:
     scalars: Dict[str, List[float]] = {}
     interface_contact_count = 0.0
@@ -443,6 +539,7 @@ def _aggregate_complex_state_metrics(state_results: List[Dict[str, Any]]) -> Dic
             except (TypeError, ValueError):
                 pass
 
+    node_plddt, node_summary = _aggregate_state_node_plddt(state_results)
     scalar_mean = {
         key: float(sum(vals) / len(vals))
         for key, vals in scalars.items()
@@ -459,8 +556,8 @@ def _aggregate_complex_state_metrics(state_results: List[Dict[str, Any]]) -> Dic
     return {
         "scalar": scalar_mean,
         "chain_plddt": {},
-        "node_plddt": {},
-        "node_summary": {},
+        "node_plddt": node_plddt,
+        "node_summary": node_summary,
         "interface": interface_summary,
         "dockq": {
             "available": False,
@@ -514,13 +611,16 @@ def _evaluate_complex_states(
             use_default_params=cfg.protenix_complex_use_default_params,
             timeout=cfg.protenix_complex_timeout,
         )
-        summary = summarize_structure_metrics(confidence, node_plddt={})
+        entity_units = _infer_complex_entity_units(raw_entities, confidence.get("entities", []))
+        source_residue_plddt = _residue_plddt_by_source_chain(confidence, entity_units)
+        node_plddt = compute_node_plddt(compiled, source_residue_plddt)
+        summary = summarize_structure_metrics(confidence, node_plddt=node_plddt)
         state_result = {
             "name": name,
             "role": raw_state.get("role"),
             "objective": raw_state.get("objective"),
             "entities": confidence.get("entities", []),
-            "entity_units": _infer_complex_entity_units(raw_entities, confidence.get("entities", [])),
+            "entity_units": entity_units,
             "polymer_units": confidence.get("polymer_units", []),
             "metric_units": confidence.get("metric_units", []),
             "confidence_metrics": dict(confidence.get("metrics", {}) or {}),

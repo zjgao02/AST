@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import time
 import numpy as np
 import traceback
@@ -90,6 +91,225 @@ def _structure_value(out, key, default=0.0):
     if key == "plddt" and not summary:
         return float(out.get("chai_plddt") or default)
     return metric_value(summary, key, default=default)
+
+
+def _safe_float_or_none(value):
+    try:
+        if value is None:
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _compact_scalar(summary):
+    scalar = (summary or {}).get("scalar", {}) or {}
+    keep = ("plddt", "ptm", "iptm", "gpde", "ranking_score", "has_clash", "disorder", "num_recycles")
+    return {
+        key: _safe_float_or_none(scalar.get(key))
+        for key in keep
+        if _safe_float_or_none(scalar.get(key)) is not None
+    }
+
+
+def _compact_interface(summary, pair_limit=8):
+    interface = (summary or {}).get("interface", {}) or {}
+    pairs = interface.get("pairs", {}) or {}
+    top_pairs = []
+    if isinstance(pairs, dict):
+        pair_items = sorted(
+            pairs.items(),
+            key=lambda item: float((item[1] or {}).get("contact_count") or 0.0),
+            reverse=True,
+        )[:pair_limit]
+        for name, item in pair_items:
+            if not isinstance(item, dict):
+                continue
+            top_pairs.append(
+                {
+                    "pair": str(name),
+                    "contact_count": item.get("contact_count"),
+                    "residue_pair_count": item.get("residue_pair_count"),
+                    "clash_count": item.get("clash_count"),
+                    "interface_plddt_mean": item.get("interface_plddt_mean"),
+                    "interface_plddt_min": item.get("interface_plddt_min"),
+                }
+            )
+
+    return {
+        "available": bool(interface.get("available", False)),
+        "reason": interface.get("reason"),
+        "total_contact_count": interface.get("total_contact_count"),
+        "total_residue_pair_count": interface.get("total_residue_pair_count"),
+        "clash_count": interface.get("clash_count"),
+        "interface_plddt_mean": interface.get("interface_plddt_mean"),
+        "interface_plddt_min": interface.get("interface_plddt_min"),
+        "top_pairs": top_pairs,
+    }
+
+
+def _compact_node_summary(summary):
+    node_summary = (summary or {}).get("node_summary", {}) or {}
+    return {
+        "node_count": node_summary.get("node_count", 0),
+        "node_plddt_mean": node_summary.get("node_plddt_mean"),
+        "node_plddt_min": node_summary.get("node_plddt_min"),
+        "low_confidence_nodes": list(node_summary.get("low_confidence_nodes", []) or [])[:10],
+    }
+
+
+def _compact_chain_plddt(summary):
+    chain_plddt = (summary or {}).get("chain_plddt", {}) or {}
+    out = {}
+    if isinstance(chain_plddt, dict):
+        for chain_id, value in list(chain_plddt.items())[:12]:
+            out[str(chain_id)] = value
+    return out
+
+
+def _compact_node_plddt(node_plddt, limit=24):
+    items = []
+    if isinstance(node_plddt, dict):
+        for key, item in node_plddt.items():
+            if not isinstance(item, dict):
+                continue
+            items.append(
+                {
+                    "key": str(key),
+                    "state": item.get("state"),
+                    "chain_id": item.get("chain_id"),
+                    "kind": item.get("kind"),
+                    "name": item.get("name"),
+                    "residue_count": item.get("residue_count"),
+                    "plddt_mean": item.get("plddt_mean"),
+                    "plddt_min": item.get("plddt_min"),
+                    "plddt_max": item.get("plddt_max"),
+                }
+            )
+    items.sort(
+        key=lambda item: (
+            _safe_float_or_none(item.get("plddt_mean")) is None,
+            _safe_float_or_none(item.get("plddt_mean")) or 999.0,
+        )
+    )
+    return items[:limit]
+
+
+def _compact_objectives(multistate_pack):
+    compact = {}
+    warnings = list((multistate_pack or {}).get("warnings", []) or [])
+    objectives = (multistate_pack or {}).get("objectives", {}) or {}
+    if not isinstance(objectives, dict):
+        return compact, warnings
+
+    detail_keys = (
+        "state",
+        "states",
+        "available",
+        "contact_count",
+        "residue_pair_count",
+        "clash_count",
+        "interface_plddt_mean",
+        "interface_strength",
+        "contact_count_delta",
+        "region_rmsd",
+        "apo_path",
+        "holo_path",
+    )
+    for name, item in objectives.items():
+        if not isinstance(item, dict):
+            continue
+        details = item.get("details", {}) or {}
+        obj_warnings = list(item.get("warnings", []) or [])
+        warnings.extend(f"{name}: {warning}" for warning in obj_warnings)
+        compact[str(name)] = {
+            "type": item.get("type"),
+            "weight": item.get("weight"),
+            "score": item.get("score"),
+            "details": {key: details.get(key) for key in detail_keys if key in details},
+            "warnings": obj_warnings,
+        }
+    return compact, warnings
+
+
+def _build_llm_feedback_summary(out, metrics):
+    out = out or {}
+    metrics = metrics or {}
+    structure = out.get("structure_metrics", {}) or {}
+    multistate_pack = out.get("multistate_objectives", {}) or structure.get("multistate_objectives", {}) or {}
+    objectives, objective_warnings = _compact_objectives(multistate_pack)
+
+    states = {}
+    runtime_warnings = []
+    for state in structure.get("states", []) or []:
+        if not isinstance(state, dict):
+            continue
+        name = str(state.get("name") or f"state_{len(states) + 1}")
+        summary = state.get("structure_metrics", {}) or {}
+        cif_path = summary.get("cif_path") or state.get("cif_path")
+        state_available = bool(cif_path or state.get("out_dir") or (summary.get("scalar") or {}))
+        if not cif_path:
+            runtime_warnings.append(f"{name}: no CIF path; state prediction may have failed")
+        states[name] = {
+            "role": state.get("role"),
+            "objective": state.get("objective"),
+            "state_available": state_available,
+            "cif_available": bool(cif_path),
+            "summary_available": bool(state.get("summary_json")),
+            "confidence": _compact_scalar(summary),
+            "interface": _compact_interface(summary),
+            "chain_plddt": _compact_chain_plddt(summary),
+            "node_summary": _compact_node_summary(summary),
+        }
+
+    aggregate_node_plddt = structure.get("node_plddt", {}) or out.get("node_plddt", {}) or {}
+    feedback = {
+        "purpose": "Compact ASTevolve feedback for outer-loop edits to layout_plan nodes/domains/motifs only.",
+        "score_summary": {
+            "combined_score": metrics.get("combined_score"),
+            "struct_score": metrics.get("structure_score", metrics.get("struct_score")),
+            "total_loss": out.get("fast_loss"),
+            "progen_loglik_avg": out.get("progen_loglik_avg"),
+            "plddt": metrics.get("plddt"),
+            "ptm": metrics.get("ptm"),
+            "iptm": metrics.get("iptm"),
+            "ranking_score": metrics.get("ranking_score"),
+            "multistate_score": metrics.get("multistate_score"),
+            "multistate_loss": out.get("multistate_loss"),
+        },
+        "aggregate_structure": {
+            "confidence": _compact_scalar(structure),
+            "interface": _compact_interface(structure, pair_limit=0),
+            "node_summary": _compact_node_summary(structure),
+        },
+        "states": states,
+        "nodes_lowest_confidence": _compact_node_plddt(aggregate_node_plddt),
+        "objectives": {
+            "enabled": multistate_pack.get("enabled"),
+            "weighted_score": multistate_pack.get("weighted_score"),
+            "weight_sum": multistate_pack.get("weight_sum"),
+            "normalized_score": multistate_pack.get("normalized_score"),
+            "loss": multistate_pack.get("loss"),
+            "items": objectives,
+        },
+        "objective_warnings": sorted(set(str(w) for w in objective_warnings if w)),
+        "runtime_warnings": sorted(set(runtime_warnings)),
+    }
+    search_artifacts = out.get("search_artifacts", {}) or {}
+    round_summary = search_artifacts.get("round_summary", {}) or {}
+    retrieval = (round_summary.get("external_context", {}) or {}).get("embedding_retrieval")
+    if retrieval:
+        feedback["embedding_retrieval"] = {
+            "enabled": retrieval.get("enabled"),
+            "loaded": retrieval.get("loaded"),
+            "shape": retrieval.get("shape"),
+            "model": retrieval.get("model"),
+        }
+    return feedback
+
+
+def _json_artifact(value):
+    return json.dumps(value, ensure_ascii=False, indent=2, default=str)
 
 
 def _compute_combined_score(total_loss, out, score_cfg):
@@ -248,6 +468,12 @@ def evaluate(program_path: str):
                 best_trial_out.get("structure_metrics"),
             )
 
+        llm_feedback_summary = (
+            _json_artifact(_build_llm_feedback_summary(best_trial_out, avg_scores))
+            if best_trial_out is not None
+            else None
+        )
+
         return EvaluationResult(
             metrics={
                 "combined_score": combined,
@@ -271,6 +497,7 @@ def evaluate(program_path: str):
                 "multistate_loss": float(best_trial_out.get("multistate_loss", 0.0) if best_trial_out else 0.0),
             },
             artifacts={
+                "llm_feedback_summary": llm_feedback_summary,
                 "best_seqs": best_trial_out.get("seqs") if best_trial_out else None,
                 "segment_scores": best_trial_out.get("segment_scores") if best_trial_out else None,
                 "mutation_history": best_trial_out.get("mutation_history") if best_trial_out else None,
