@@ -463,6 +463,43 @@ def _state_cif_path(state: Optional[Dict[str, Any]]) -> Optional[str]:
     return summary.get("cif_path") or state.get("cif_path")
 
 
+def _canonical_source_chain(unit: Dict[str, Any]) -> Optional[str]:
+    source_chain = str(unit.get("source_chain") or "").strip()
+    asym_id = str(unit.get("asym_id") or "").strip()
+    if not source_chain or not asym_id:
+        return None
+    try:
+        copy_index = int(unit.get("copy_index") or 1)
+    except (TypeError, ValueError):
+        copy_index = 1
+    return f"{source_chain}:{max(1, copy_index)}"
+
+
+def _transition_chain_map(state: Optional[Dict[str, Any]]) -> Dict[str, str]:
+    out: Dict[str, str] = {}
+    if not state:
+        return out
+    for unit in _expand_entity_units(state):
+        if not isinstance(unit, dict):
+            continue
+        asym_id = str(unit.get("asym_id") or "").strip()
+        canonical = _canonical_source_chain(unit)
+        if asym_id and canonical:
+            out[asym_id] = canonical
+    return out
+
+
+def _transition_structure_input(state: Dict[str, Any], path: str) -> Any:
+    chain_map = _transition_chain_map(state)
+    if not chain_map:
+        return path
+    return {
+        "path": path,
+        "chain_map": chain_map,
+        "source": str(state.get("name") or path),
+    }
+
+
 def _score_mechanistic_transition(
     by_state: Dict[str, Dict[str, Any]],
     spec: Dict[str, Any],
@@ -487,9 +524,11 @@ def _score_mechanistic_transition(
     preserved_value = spec.get("preserved_regions", spec.get("preserved_region"))
     moving_regions = _ast_region_specs(moving_value, compiled, design_state)
     preserved_regions = _ast_region_specs(preserved_value, compiled, design_state)
+    apo_structure = _transition_structure_input(apo_state, apo_path)
+    holo_structure = _transition_structure_input(holo_state, holo_path)
     report = evaluate_mechanistic_transition(
-        apo_path,
-        holo_path,
+        apo_structure,
+        holo_structure,
         moving_regions=moving_regions,
         preserved_regions=preserved_regions,
         forbid=spec.get("forbid", ["chain_break", "severe_clash", "complete_unfolding"]),
@@ -500,6 +539,8 @@ def _score_mechanistic_transition(
         "states": states,
         "moving_region_count": len(moving_regions),
         "preserved_region_count": len(preserved_regions),
+        "apo_chain_map": _transition_chain_map(apo_state),
+        "holo_chain_map": _transition_chain_map(holo_state),
         "kinetic_path_score": report.get("kinetic_path_score", 0.0),
         "interpretability_report": report.get("interpretability_report", {}),
         "region_scores": report.get("region_scores", {}),

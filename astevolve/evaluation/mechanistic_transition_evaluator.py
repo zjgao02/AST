@@ -20,6 +20,35 @@ class StructureView:
     source: str = "unknown"
 
 
+def _normalize_chain_map(value: Any) -> Dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    out: Dict[str, str] = {}
+    for key, mapped in value.items():
+        if key is None or mapped is None:
+            continue
+        out[str(key)] = str(mapped)
+    return out
+
+
+def _mapped_chain(chain: Any, chain_map: Optional[Dict[str, str]]) -> str:
+    chain_id = str(chain or "A")
+    if not chain_map:
+        return chain_id
+    return str(chain_map.get(chain_id, chain_id))
+
+
+def _map_atom_chains(atoms: Sequence[Dict[str, Any]], chain_map: Optional[Dict[str, str]]) -> List[Dict[str, Any]]:
+    if not chain_map:
+        return [dict(atom) for atom in atoms]
+    mapped: List[Dict[str, Any]] = []
+    for atom in atoms:
+        item = dict(atom)
+        item["asym"] = _mapped_chain(item.get("asym"), chain_map)
+        mapped.append(item)
+    return mapped
+
+
 def _safe_float(value: Any, default: Optional[float] = None) -> Optional[float]:
     try:
         if value is None:
@@ -89,13 +118,16 @@ def _parse_pdb_atoms(path: Path) -> List[Dict[str, Any]]:
     return atoms
 
 
-def _coords_from_atoms(atoms: Sequence[Dict[str, Any]]) -> Dict[CoordKey, np.ndarray]:
+def _coords_from_atoms(
+    atoms: Sequence[Dict[str, Any]],
+    chain_map: Optional[Dict[str, str]] = None,
+) -> Dict[CoordKey, np.ndarray]:
     coords: Dict[CoordKey, np.ndarray] = {}
     for atom in atoms:
         name = str(atom.get("atom") or "").strip("'\"")
         if name != "CA":
             continue
-        chain = str(atom.get("asym") or "A")
+        chain = _mapped_chain(atom.get("asym"), chain_map)
         # Internal region coordinates are zero-based sequence indices.
         index = int(atom.get("seq_id") or 1) - 1
         coords[(chain, index)] = np.asarray(atom.get("xyz"), dtype=float)
@@ -118,10 +150,13 @@ def _coords_from_array(value: Any) -> Dict[CoordKey, np.ndarray]:
     return coords
 
 
-def _coords_from_dict(value: Dict[str, Any]) -> Dict[CoordKey, np.ndarray]:
+def _coords_from_dict(
+    value: Dict[str, Any],
+    chain_map: Optional[Dict[str, str]] = None,
+) -> Dict[CoordKey, np.ndarray]:
     for path_key in ("path", "pdb_path", "cif_path", "structure_path"):
         if value.get(path_key):
-            return load_structure(value[path_key]).ca_coords
+            return load_structure({"path": value[path_key], "chain_map": chain_map or {}}).ca_coords
     for coord_key in ("ca_coords", "coords", "coordinates"):
         if coord_key in value:
             raw = value[coord_key]
@@ -131,10 +166,17 @@ def _coords_from_dict(value: Dict[str, Any]) -> Dict[CoordKey, np.ndarray]:
                     for idx, xyz in enumerate(chain_coords):
                         arr = np.asarray(xyz, dtype=float)
                         if arr.shape == (3,) and np.all(np.isfinite(arr)):
-                            coords[(str(chain), int(idx))] = arr
+                            coords[(_mapped_chain(chain, chain_map), int(idx))] = arr
                 return coords
             return _coords_from_array(raw)
     return {}
+
+
+def _load_path_structure(path: Path, chain_map: Optional[Dict[str, str]] = None) -> StructureView:
+    suffix = path.suffix.lower()
+    raw_atoms = _parse_pdb_atoms(path) if suffix in {".pdb", ".ent"} else _load_atoms(str(path))
+    atoms = _map_atom_chains(raw_atoms, chain_map)
+    return StructureView(ca_coords=_coords_from_atoms(atoms), atoms=atoms, source=str(path))
 
 
 def load_structure(structure: Any) -> StructureView:
@@ -142,14 +184,22 @@ def load_structure(structure: Any) -> StructureView:
     if isinstance(structure, StructureView):
         return structure
     if isinstance(structure, dict):
+        chain_map = _normalize_chain_map(
+            structure.get("chain_map")
+            or structure.get("asym_to_chain")
+            or structure.get("asym_id_map")
+            or structure.get("chain_aliases")
+        )
+        for path_key in ("path", "pdb_path", "cif_path", "structure_path"):
+            if structure.get(path_key):
+                return _load_path_structure(Path(str(structure[path_key])), chain_map)
         atoms = list(structure.get("atoms", []) or [])
-        coords = _coords_from_atoms(atoms) if atoms else _coords_from_dict(structure)
-        return StructureView(ca_coords=coords, atoms=atoms, source=str(structure.get("source", "dict")))
+        mapped_atoms = _map_atom_chains(atoms, chain_map)
+        coords = _coords_from_atoms(mapped_atoms) if mapped_atoms else _coords_from_dict(structure, chain_map)
+        return StructureView(ca_coords=coords, atoms=mapped_atoms, source=str(structure.get("source", "dict")))
     if isinstance(structure, (str, Path)):
         path = Path(str(structure))
-        suffix = path.suffix.lower()
-        atoms = _parse_pdb_atoms(path) if suffix in {".pdb", ".ent"} else _load_atoms(str(path))
-        return StructureView(ca_coords=_coords_from_atoms(atoms), atoms=atoms, source=str(path))
+        return _load_path_structure(path)
     return StructureView(ca_coords=_coords_from_array(structure), atoms=[], source="array")
 
 
@@ -200,6 +250,17 @@ def _range_indices(region: Dict[str, Any]) -> Optional[set[int]]:
     return out
 
 
+def _chain_matches(chain: str, wanted_chains: Optional[set[str]]) -> bool:
+    if wanted_chains is None:
+        return True
+    if chain in wanted_chains:
+        return True
+    for wanted in wanted_chains:
+        if chain.startswith(f"{wanted}:"):
+            return True
+    return False
+
+
 def _select_keys(coords: Dict[CoordKey, np.ndarray], region: Optional[Dict[str, Any]]) -> List[CoordKey]:
     if not region:
         return sorted(coords)
@@ -208,7 +269,7 @@ def _select_keys(coords: Dict[CoordKey, np.ndarray], region: Optional[Dict[str, 
     selected = []
     for key in sorted(coords):
         chain, idx = key
-        if chains is not None and chain not in chains:
+        if not _chain_matches(chain, chains):
             continue
         if indices is not None and idx not in indices:
             continue
@@ -297,7 +358,12 @@ def _chain_break_report(view: StructureView, threshold: float) -> Dict[str, Any]
     return {"triggered": bool(breaks), "count": len(breaks), "examples": breaks[:10]}
 
 
-def _severe_clash_report(view: StructureView, threshold: float) -> Dict[str, Any]:
+def _severe_clash_report(
+    view: StructureView,
+    threshold: float,
+    local_sequence_gap: int = 3,
+    allowed_count: int = 2,
+) -> Dict[str, Any]:
     if view.atoms:
         particles = [
             (str(a.get("asym") or "A"), int(a.get("seq_id") or 1) - 1, str(a.get("atom") or ""), np.asarray(a.get("xyz"), dtype=float))
@@ -306,14 +372,17 @@ def _severe_clash_report(view: StructureView, threshold: float) -> Dict[str, Any
     else:
         particles = [(chain, idx, "CA", xyz) for (chain, idx), xyz in view.ca_coords.items()]
     clashes: List[Dict[str, Any]] = []
+    ignored_local_pairs = 0
     threshold2 = float(threshold) ** 2
     for i in range(len(particles)):
         chain_i, idx_i, atom_i, xyz_i = particles[i]
         for j in range(i + 1, len(particles)):
             chain_j, idx_j, atom_j, xyz_j = particles[j]
-            if chain_i == chain_j and abs(idx_i - idx_j) <= 1:
-                continue
             d2 = float(np.sum((xyz_i - xyz_j) ** 2))
+            if chain_i == chain_j and abs(idx_i - idx_j) <= int(local_sequence_gap):
+                if d2 <= threshold2:
+                    ignored_local_pairs += 1
+                continue
             if d2 <= threshold2:
                 clashes.append(
                     {
@@ -323,8 +392,24 @@ def _severe_clash_report(view: StructureView, threshold: float) -> Dict[str, Any
                     }
                 )
                 if len(clashes) >= 20:
-                    return {"triggered": True, "count": len(clashes), "examples": clashes}
-    return {"triggered": bool(clashes), "count": len(clashes), "examples": clashes}
+                    triggered = len(clashes) > int(allowed_count)
+                    return {
+                        "triggered": triggered,
+                        "count": len(clashes),
+                        "allowed_count": int(allowed_count),
+                        "ignored_local_pairs": int(ignored_local_pairs),
+                        "local_sequence_gap": int(local_sequence_gap),
+                        "examples": clashes,
+                    }
+    triggered = len(clashes) > int(allowed_count)
+    return {
+        "triggered": triggered,
+        "count": len(clashes),
+        "allowed_count": int(allowed_count),
+        "ignored_local_pairs": int(ignored_local_pairs),
+        "local_sequence_gap": int(local_sequence_gap),
+        "examples": clashes,
+    }
 
 
 def _path_continuity_score(
@@ -529,8 +614,20 @@ def evaluate_mechanistic_transition(
 
     if "severe_clash" in forbidden:
         clash_threshold = float(cfg.get("severe_clash_distance", 1.8 if apo.atoms or holo.atoms else 2.2))
-        apo_clash = _severe_clash_report(apo, clash_threshold)
-        holo_clash = _severe_clash_report(holo, clash_threshold)
+        clash_local_gap = int(cfg.get("severe_clash_ignore_sequence_separation", 3))
+        clash_allowed_count = int(cfg.get("severe_clash_allowed_count", 2))
+        apo_clash = _severe_clash_report(
+            apo,
+            clash_threshold,
+            local_sequence_gap=clash_local_gap,
+            allowed_count=clash_allowed_count,
+        )
+        holo_clash = _severe_clash_report(
+            holo,
+            clash_threshold,
+            local_sequence_gap=clash_local_gap,
+            allowed_count=clash_allowed_count,
+        )
         triggered = bool(apo_clash["triggered"] or holo_clash["triggered"])
         if triggered:
             penalty += float(cfg.get("severe_clash_penalty", 0.35))
@@ -538,6 +635,8 @@ def evaluate_mechanistic_transition(
             "checked": True,
             "triggered": triggered,
             "threshold": clash_threshold,
+            "local_sequence_gap": clash_local_gap,
+            "allowed_count": clash_allowed_count,
             "apo": apo_clash,
             "holo": holo_clash,
         }
