@@ -55,6 +55,36 @@ PROGEN2_SMALL_FILES = [
     "model.safetensors",
 ]
 
+PROTENIX_CCD_CACHE_FILES = [
+    "release_data/ccd_cache/components.v20240608.cif",
+    "release_data/ccd_cache/components.v20240608.cif.rdkit_mol.pkl",
+    "release_data/ccd_cache/clusters-by-entity-40.txt",
+]
+
+PROTENIX_MODEL_FILES = {
+    "protenix_mini_esm_v0.5.0": [
+        "release_data/checkpoint/protenix_mini_esm_v0.5.0.pt",
+        "release_data/checkpoint/esm2_t36_3B_UR50D.pt",
+        "release_data/checkpoint/esm2_t36_3B_UR50D-contact-regression.pt",
+    ],
+    "protenix_mini_ism_v0.5.0": [
+        "release_data/checkpoint/protenix_mini_ism_v0.5.0.pt",
+        "release_data/checkpoint/esm2_t36_3B_UR50D_ism.pt",
+        "release_data/checkpoint/esm2_t36_3B_UR50D_ism-contact-regression.pt",
+    ],
+    "protenix_mini_default_v0.5.0": [
+        "release_data/checkpoint/protenix_mini_default_v0.5.0.pt",
+    ],
+    "protenix_tiny_default_v0.5.0": [
+        "release_data/checkpoint/protenix_tiny_default_v0.5.0.pt",
+    ],
+}
+
+PROTENIX_OPTIONAL_FALLBACK_FILES = [
+    "release_data/checkpoint/protenix_mini_default_v0.5.0.pt",
+    "release_data/checkpoint/protenix_tiny_default_v0.5.0.pt",
+]
+
 
 def _status(path: Path) -> Dict[str, Any]:
     return {
@@ -74,6 +104,14 @@ def main() -> int:
     cases = [args.case] if args.case else sorted(case_assets)
     progen_dir = Path(os.environ.get("ASTEVOLVE_PROGEN_MODEL_DIR", model_path("progen2-small")))
     protenix_dir = Path(os.environ.get("ASTEVOLVE_PROTENIX_ROOT", model_path("protenix")))
+    protenix_model_name = os.environ.get(
+        "ASTEVOLVE_PROTENIX_MODEL_NAME",
+        "protenix_mini_esm_v0.5.0",
+    )
+    protenix_required_rel = PROTENIX_MODEL_FILES.get(
+        protenix_model_name,
+        [f"release_data/checkpoint/{protenix_model_name}.pt"],
+    )
     report: Dict[str, Any] = {
         "project_root": str(project_root()),
         "cases": {},
@@ -84,7 +122,18 @@ def main() -> int:
             },
             "protenix": {
                 "directory": _status(protenix_dir),
-                "note": "Protenix checkpoint filenames are version-specific; see model_weights/WEIGHTS_MANIFEST.txt.",
+                "model_name": protenix_model_name,
+                "required_files": [_status(protenix_dir / name) for name in protenix_required_rel],
+                "ccd_cache_files": [_status(protenix_dir / name) for name in PROTENIX_CCD_CACHE_FILES],
+                "optional_fallback_files": [
+                    _status(protenix_dir / name)
+                    for name in PROTENIX_OPTIONAL_FALLBACK_FILES
+                ],
+                "note": (
+                    "Protenix package 0.5.x also expects site-packages/release_data. "
+                    "Link that directory to ASTEVOLVE_PROTENIX_ROOT/release_data, or let "
+                    "Protenix download the same files there."
+                ),
             },
         },
     }
@@ -96,6 +145,16 @@ def main() -> int:
     missing.extend(
         entry["path"]
         for entry in report["models"]["progen"]["required_files"]
+        if not entry["exists"]
+    )
+    missing.extend(
+        entry["path"]
+        for entry in report["models"]["protenix"]["required_files"]
+        if not entry["exists"]
+    )
+    missing.extend(
+        entry["path"]
+        for entry in report["models"]["protenix"]["ccd_cache_files"]
         if not entry["exists"]
     )
 
@@ -119,6 +178,22 @@ def main() -> int:
         protenix = report["models"]["protenix"]
         marker = "ok" if protenix["directory"]["exists"] else "missing"
         print(f"- protenix: {marker}: {protenix['directory']['path']}")
+        print(f"  - model_name: {protenix['model_name']}")
+        print("  - required checkpoint/cache:")
+        for entry in protenix["required_files"]:
+            marker = "ok" if entry["exists"] else "missing"
+            size = f" ({entry['bytes']} bytes)" if entry["bytes"] is not None else ""
+            print(f"    - {marker}: {Path(entry['path']).name}{size}")
+        print("  - required ccd_cache:")
+        for entry in protenix["ccd_cache_files"]:
+            marker = "ok" if entry["exists"] else "missing"
+            size = f" ({entry['bytes']} bytes)" if entry["bytes"] is not None else ""
+            print(f"    - {marker}: {Path(entry['path']).name}{size}")
+        print("  - optional fallback checkpoints:")
+        for entry in protenix["optional_fallback_files"]:
+            marker = "ok" if entry["exists"] else "missing"
+            size = f" ({entry['bytes']} bytes)" if entry["bytes"] is not None else ""
+            print(f"    - {marker}: {Path(entry['path']).name}{size}")
         print(f"  - note: {protenix['note']}")
 
     return 1 if missing else 0

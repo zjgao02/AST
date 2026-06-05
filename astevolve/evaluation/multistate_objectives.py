@@ -449,7 +449,15 @@ def _sum_pair_metrics(
                 filtered.append(filtered_item)
         selected = filtered
         if not selected:
-            return {"available": False, "left_region_resolved": bool(left_filters), "right_region_resolved": bool(right_filters)}, warnings
+            warnings.append("no contacts remained after interface region filters")
+            return {
+                "available": False,
+                "reason": "no_region_filtered_contacts",
+                "left_region_required": bool(left_region_specs),
+                "right_region_required": bool(right_region_specs),
+                "left_region_resolved": (not left_region_specs) or bool(left_filters),
+                "right_region_resolved": (not right_region_specs) or bool(right_filters),
+            }, warnings
 
     plddt_values = [
         float(item["interface_plddt_mean"])
