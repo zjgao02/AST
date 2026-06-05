@@ -44,6 +44,21 @@
       "target": 72
     }
   },
+  "benchmark_start": {
+    "schema_version": "ast_benchmark_start_v1",
+    "case_id": "calcium_efhand_switch",
+    "start_type": "efhand_loop_chemistry_neutralized_seed",
+    "initial_seed_sequence": "MADQLTEEQIAEFKEAFSLSQNQGQGTATTNELGTVMRSLGQNPTEAELQDMINEVQAQGNGTAQSPQFLTMMARKMKDTDSEEEIREAFRVSQNQGNGSASAAELRHVMTNLGEKLTDEEVDEMIREAQAQGQGQANSQQFVQMMTAK",
+    "reference_oracle_sequence": "MADQLTEEQIAEFKEAFSLFDKDGDGTITTKELGTVMRSLGQNPTEAELQDMINEVDADGNGTIDFPEFLTMMARKMKDTDSEEEIREAFRVFDKDGNGYISAAELRHVMTNLGEKLTDEEVDEMIREADIDGDGQVNYEEFVQMMTAK",
+    "changed_nodes": [
+      "EFhand_loop_1",
+      "EFhand_loop_2",
+      "EFhand_loop_3",
+      "EFhand_loop_4"
+    ],
+    "rationale": "Native calmodulin is already a calcium-gated peptide binder; the executable start neutralizes EF-hand loop chemistry so recovery of calcium/peptide behavior is measurable.",
+    "interpretation": "The executable binder segments are intentionally degraded relative to the reference/oracle sequence so evolution has measurable room to improve. The reference sequence is metadata only and is not used as the starting template."
+  },
   "information_gaps": [
     "Exact target peptide or protein readout for the calcium sensor.",
     "Allowed edits in EF-loop acidic residues versus scaffold helices.",

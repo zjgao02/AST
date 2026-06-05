@@ -20,6 +20,7 @@ variables.
 
 Full run standard: `docs/RUN_QUICK_START.md`.
 Linux migration guide: `docs/LINUX_MIGRATION.md`.
+Case starting seeds: `docs/CASE_STARTING_SEEDS.md`.
 Weight/download manifest: `model_weights/WEIGHTS_MANIFEST.txt`.
 
 ## Quick Commands

@@ -35,7 +35,7 @@
       [
         "VH_CDR1",
         "cdr",
-        "CKASGYTFTSYRMH"
+        "CKASGSSGGSSGMH"
       ],
       [
         "VH_FR2",
@@ -45,7 +45,7 @@
       [
         "VH_CDR2",
         "cdr",
-        "GYINPSTGYTEYNQKF"
+        "GSSGSGTGSSTGNQGS"
       ],
       [
         "VH_FR3",
@@ -55,7 +55,7 @@
       [
         "VH_CDR3",
         "cdr",
-        "RGGGVFDY"
+        "GGGSGGSY"
       ],
       [
         "VH_FR4",
@@ -89,7 +89,7 @@
       [
         "VL_CDR1",
         "cdr",
-        "SASSSISYMH"
+        "SASSSGSGMH"
       ],
       [
         "VL_FR2",
@@ -99,7 +99,7 @@
       [
         "VL_CDR2",
         "cdr",
-        "TTSNLAS"
+        "SGSGTAS"
       ],
       [
         "VL_FR3",
@@ -109,7 +109,7 @@
       [
         "VL_CDR3",
         "cdr",
-        "HQRSTYPLT"
+        "QGSGGSTLT"
       ],
       [
         "VL_FR4",
@@ -225,7 +225,8 @@
         "point",
         "swap"
       ]
-    }
+    },
+    "initial_seed_policy": "CDRs are neutralized from the previous CD25 template; framework/linker are preserved. This avoids starting from a likely strong CD25 binder."
   },
   "complex_states": [
     {
@@ -441,5 +442,22 @@
       "sequence": "AVNGTSQFTCFYNSRANISCVWSQDGALQDTSCQVHAWPDRRRWNQTCELLPVSQASWACNLILGAPDSQKLTTVDIVTLRVLCREGVRWRVMAIQDFKPFENLRLMAPISLQVVHVETHRCNISWEISQASHYFERHLEFEARTLSPGHTWEEAPLLTLKQKQEWICLETLTPDTQYEFQVRVKPLQGEFTTWSPWSQPLAFRTKPAALGKDTIPWLGHLLVGLSGAFGFIILVYLLINCRNTGPWLKKVLKCNTPDPSKFFSQLSSEHGGDVQKWLSSPFPSSSFSPG",
       "biological_reason": "CD122 is an IL-2 receptor-family off-target decoy; selectivity should favor CD25 over CD122-like receptor surfaces."
     }
+  },
+  "benchmark_start": {
+    "schema_version": "ast_benchmark_start_v1",
+    "case_id": "cd25_scfv_selectivity",
+    "start_type": "degraded_neutral_cdr_seed",
+    "initial_seed_sequence": "QVQLVQSGAEVKKPGSSVKVSCKASGSSGGSSGMHWVRQAPGQGLEWIGSSGSGTGSSTGNQGSKDKATITADESTNTAYMELSSLRSEDTAVYYCAGGGSGGSYWGQGTLVTVSGGGGSGGGGSGGGGSDIQMTQSPSTLSASVGDRVTITCSASSSGSGMHWYQQKPGKAPKLLIYSGSGTASGVPARFSGSGSGTEFTLTISSLQPDDFATYYCQGSGGSTLTFGQGTKVEVKRTVA",
+    "reference_oracle_sequence": "QVQLVQSGAEVKKPGSSVKVSCKASGYTFTSYRMHWVRQAPGQGLEWIGYINPSTGYTEYNQKFKDKATITADESTNTAYMELSSLRSEDTAVYYCARGGGVFDYWGQGTLVTVSGGGGSGGGGSGGGGSDIQMTQSPSTLSASVGDRVTITCSASSSISYMHWYQQKPGKAPKLLIYTTSNLASGVPARFSGSGSGTEFTLTISSLQPDDFATYYCHQRSTYPLTFGQGTKVEVKRTVA",
+    "changed_nodes": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3"
+    ],
+    "rationale": "CD25 selectivity should be measured from a weak generic CDR seed, not from the original CD25 scFv CDRs.",
+    "interpretation": "The executable binder segments are intentionally degraded relative to the reference/oracle sequence so evolution has measurable room to improve. The reference sequence is metadata only and is not used as the starting template."
   }
 }

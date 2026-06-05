@@ -162,5 +162,17 @@
     "Residue-level list of mutable pocket residues and forbidden dimer/core residues.",
     "Quantitative DNA release threshold for the intended assay.",
     "Whether dopamine selectivity versus catecholamines or tetracycline-like ligands is required."
-  ]
+  ],
+  "benchmark_start": {
+    "schema_version": "ast_benchmark_start_v1",
+    "case_id": "tetr_dopamine",
+    "start_type": "dopamine_pocket_neutralized_seed",
+    "initial_seed_sequence": "MSRLDKSKVINSALELLNEVGIEGLTTRKLAQKLGVEQPTLYWHVKNKRALLDALAIEMLDRHHTHFCPLQGQSSQQSANNNANSSNSAAASNNQGANANAGTNPTQNQSQTAQNQLAFLCQQGFSLENALYALSAVGHFTLGCVLEDQEHQVAKEERETPTTDSMPPLLRQAIELFDHQGAEPAFLFGLELIICGLEKQLKCESGS",
+    "reference_oracle_sequence": "MSRLDKSKVINSALELLNEVGIEGLTTRKLAQKLGVEQPTLYWHVKNKRALLDALAIEMLDRHHTHFCPLEGESWQDFLRNNAKSFRCALLSHRDGAKVHLGTRPTEKQYETLENQLAFLCQQGFSLENALYALSAVGHFTLGCVLEDQEHQVAKEERETPTTDSMPPLLRQAIELFDHQGAEPAFLFGLELIICGLEKQLKCESGS",
+    "changed_nodes": [
+      "ligand_pocket_core"
+    ],
+    "rationale": "TetR should not start from a fully optimized ligand pocket. The initial executable pocket is chemically softened while the DNA-binding head and dimer core stay intact, giving the evaluator room to reward dopamine-pocket recovery plus apo/holo DNA-release behavior.",
+    "interpretation": "The executable binder segments are intentionally degraded relative to the reference/oracle sequence so evolution has measurable room to improve. The reference sequence is metadata only and is not used as the starting template."
+  }
 }

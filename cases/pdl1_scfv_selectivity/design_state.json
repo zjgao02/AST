@@ -36,7 +36,7 @@
       [
         "VH_CDR1",
         "cdr",
-        "CKASGYTFTSYRMH"
+        "CKASGSSGGSSGMH"
       ],
       [
         "VH_FR2",
@@ -46,7 +46,7 @@
       [
         "VH_CDR2",
         "cdr",
-        "GYINPSTGYTEYNQKF"
+        "GSSGSGTGSSTGNQGS"
       ],
       [
         "VH_FR3",
@@ -56,7 +56,7 @@
       [
         "VH_CDR3",
         "cdr",
-        "RGGGVFDY"
+        "GGGSGGSY"
       ],
       [
         "VH_FR4",
@@ -90,7 +90,7 @@
       [
         "VL_CDR1",
         "cdr",
-        "SASSSISYMH"
+        "SASSSGSGMH"
       ],
       [
         "VL_FR2",
@@ -100,7 +100,7 @@
       [
         "VL_CDR2",
         "cdr",
-        "TTSNLAS"
+        "SGSGTAS"
       ],
       [
         "VL_FR3",
@@ -110,7 +110,7 @@
       [
         "VL_CDR3",
         "cdr",
-        "HQRSTYPLT"
+        "QGSGGSTLT"
       ],
       [
         "VL_FR4",
@@ -227,7 +227,8 @@
       "VL_FR4",
       "Linker_head",
       "Linker_tail"
-    ]
+    ],
+    "initial_seed_policy": "Generic neutralized CDR seed on the same scFv framework; no PD-L1 oracle CDR is used as the executable starting point."
   },
   "complex_states": [
     {
@@ -470,5 +471,22 @@
     "Whether the desired antibody should block PD-1 by binding the PD-1 interface or bind a non-blocking PD-L1 epitope.",
     "Exact mature PD-L1/PD-L2 construct boundaries for assay matching.",
     "Allowed human framework families and developability liabilities."
-  ]
+  ],
+  "benchmark_start": {
+    "schema_version": "ast_benchmark_start_v1",
+    "case_id": "pdl1_scfv_selectivity",
+    "start_type": "generic_degraded_neutral_cdr_seed",
+    "initial_seed_sequence": "QVQLVQSGAEVKKPGSSVKVSCKASGSSGGSSGMHWVRQAPGQGLEWIGSSGSGTGSSTGNQGSKDKATITADESTNTAYMELSSLRSEDTAVYYCAGGGSGGSYWGQGTLVTVSGGGGSGGGGSGGGGSDIQMTQSPSTLSASVGDRVTITCSASSSGSGMHWYQQKPGKAPKLLIYSGSGTASGVPARFSGSGSGTEFTLTISSLQPDDFATYYCQGSGGSTLTFGQGTKVEVKRTVA",
+    "reference_oracle_sequence": "QVQLVQSGAEVKKPGSSVKVSCKASGYTFTSYRMHWVRQAPGQGLEWIGYINPSTGYTEYNQKFKDKATITADESTNTAYMELSSLRSEDTAVYYCARGGGVFDYWGQGTLVTVSGGGGSGGGGSGGGGSDIQMTQSPSTLSASVGDRVTITCSASSSISYMHWYQQKPGKAPKLLIYTTSNLASGVPARFSGSGSGTEFTLTISSLQPDDFATYYCHQRSTYPLTFGQGTKVEVKRTVA",
+    "changed_nodes": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3"
+    ],
+    "rationale": "PD-L1 design starts from generic weak CDRs to test whether AST can discover a PD-L1-selective paratope rather than inherit a tuned binder.",
+    "interpretation": "The executable binder segments are intentionally degraded relative to the reference/oracle sequence so evolution has measurable room to improve. The reference sequence is metadata only and is not used as the starting template."
+  }
 }

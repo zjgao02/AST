@@ -191,6 +191,106 @@ def split_chain_by_spans(seq: str, spans: list[list[int]], prefix: str, cdr_name
     return segments
 
 
+def sequence_from_binder(binder: dict) -> str:
+    seq = ""
+    for domain in binder.get("domain_order", []) or []:
+        key = (binder.get("domain_segment_keys") or {}).get(domain)
+        if key:
+            seq += "".join(str(seg[2]) for seg in binder.get(key, []) if len(seg) >= 3)
+    return seq
+
+
+def replace_segment_sequence(binder: dict, segment_name: str, sequence: str) -> None:
+    for key in (binder.get("domain_segment_keys") or {}).values():
+        for segment in binder.get(key, []) or []:
+            if len(segment) >= 3 and segment[0] == segment_name:
+                if len(segment[2]) != len(sequence):
+                    raise ValueError(
+                        f"{segment_name} replacement length mismatch: {len(segment[2])} != {len(sequence)}"
+                    )
+                segment[2] = sequence
+                return
+    raise KeyError(f"Unknown binder segment: {segment_name}")
+
+
+def add_benchmark_start(
+    state: dict,
+    *,
+    case_id: str,
+    start_type: str,
+    reference_binder_sequence: str,
+    changed_nodes: list[str],
+    rationale: str,
+) -> None:
+    state["benchmark_start"] = {
+        "schema_version": "ast_benchmark_start_v1",
+        "case_id": case_id,
+        "start_type": start_type,
+        "initial_seed_sequence": sequence_from_binder(state["binder"]),
+        "reference_oracle_sequence": reference_binder_sequence,
+        "changed_nodes": changed_nodes,
+        "rationale": rationale,
+        "interpretation": (
+            "The executable binder segments are intentionally degraded relative to the reference/oracle "
+            "sequence so evolution has measurable room to improve. The reference sequence is metadata only "
+            "and is not used as the starting template."
+        ),
+    }
+
+
+def neutral_pattern(length: int, alphabet: str = "SGTNQ") -> str:
+    return "".join(alphabet[i % len(alphabet)] for i in range(length))
+
+
+def replace_spans(seq: str, spans: list[list[int]], replacements: list[str]) -> str:
+    if len(spans) != len(replacements):
+        raise ValueError("spans/replacements length mismatch")
+    pieces: list[str] = []
+    cursor = 0
+    for (start, end), replacement in zip(spans, replacements):
+        if len(replacement) != end - start:
+            raise ValueError(f"replacement length mismatch for span {start}:{end}")
+        pieces.append(seq[cursor:start])
+        pieces.append(replacement)
+        cursor = end
+    pieces.append(seq[cursor:])
+    return "".join(pieces)
+
+
+def degraded_antibody_cdrs() -> dict[str, str]:
+    return {
+        "VH_CDR1": "CKASGSSGGSSGMH",
+        "VH_CDR2": "GSSGSGTGSSTGNQGS",
+        "VH_CDR3": "GGGSGGSY",
+        "VL_CDR1": "SASSSGSGMH",
+        "VL_CDR2": "SGSGTAS",
+        "VL_CDR3": "QGSGGSTLT",
+    }
+
+
+def apply_degraded_antibody_cdrs(binder: dict) -> None:
+    for name, seq in degraded_antibody_cdrs().items():
+        replace_segment_sequence(binder, name, seq)
+
+
+def neutralize_residue_for_pocket(aa: str) -> str:
+    if aa in "DE":
+        return "Q"
+    if aa in "KRH":
+        return "N"
+    if aa in "WYF":
+        return "S"
+    if aa in "LIVM":
+        return "A"
+    if aa == "C":
+        return "S"
+    return aa
+
+
+def neutralize_segment(seq: str) -> str:
+    return "".join(neutralize_residue_for_pocket(aa) for aa in seq)
+
+
 def split_spans(seq: str, spans: list[list[int]], mutable_prefix: str, support_prefix: str, mutable_kind: str) -> list[list[str]]:
     segments: list[list[str]] = []
     cursor = 0
@@ -208,9 +308,12 @@ def split_spans(seq: str, spans: list[list[int]], mutable_prefix: str, support_p
     return [seg for seg in segments if seg[2]]
 
 
-def scfv_binder_from_cd25() -> dict:
+def scfv_binder_from_cd25(*, degraded: bool = True) -> dict:
     base = json.loads((CASES_ROOT / "cd25_scfv" / "design_state.json").read_text(encoding="utf-8"))
-    return deepcopy(base["binder"])
+    binder = deepcopy(base["binder"])
+    if degraded:
+        apply_degraded_antibody_cdrs(binder)
+    return binder
 
 
 def scfv_regions() -> dict:
@@ -402,7 +505,15 @@ def write_case(case_id: str, name: str, task_type: str, design_state: dict, init
         write_text(case_dir / "memory.yaml", default_memory(case_id))
 
 
-def case_sheet(case_id: str, primary: str, positives: list[str], failures: list[str], thresholds: dict, gaps: list[str]) -> dict:
+def case_sheet(
+    case_id: str,
+    primary: str,
+    positives: list[str],
+    failures: list[str],
+    thresholds: dict,
+    gaps: list[str],
+    benchmark_start: dict | None = None,
+) -> dict:
     return {
         "schema_version": "ast_case_sheet_v1",
         "case_name": case_id,
@@ -420,6 +531,7 @@ def case_sheet(case_id: str, primary: str, positives: list[str], failures: list[
             "failure_signals": failures,
         },
         "objective_thresholds": thresholds,
+        "benchmark_start": benchmark_start or {},
         "information_gaps": gaps,
     }
 
@@ -427,6 +539,8 @@ def case_sheet(case_id: str, primary: str, positives: list[str], failures: list[
 def build_cd25_selectivity() -> None:
     base = json.loads((CASES_ROOT / "cd25_scfv" / "design_state.json").read_text(encoding="utf-8"))
     state = deepcopy(base)
+    reference_binder_sequence = sequence_from_binder(base["binder"])
+    state["binder"] = scfv_binder_from_cd25(degraded=True)
     state["task_name"] = "CD25_scFv_Selectivity_Design_Task"
     state["task_type"] = "selective_scfv_epitope_design"
     state["version"] = "cd25_scfv_selectivity_v1"
@@ -456,7 +570,16 @@ def build_cd25_selectivity() -> None:
         {"name": "bound_state_confidence", "type": "confidence", "states": ["cd25_positive_state", "il2rb_decoy_state"], "metric": "plddt", "weight": 0.45},
     ]
     state["design_points"]["design_intent"] = "Design a CD25-selective scFv: bind the CD25 basiliximab-like epitope, avoid IL2RB/CD122-like receptor-family decoy binding, and keep CDR/framework confidence interpretable."
+    state["design_points"]["initial_seed_policy"] = "CDRs are neutralized from the previous CD25 template; framework/linker are preserved. This avoids starting from a likely strong CD25 binder."
     state["mutation_policy"] = scfv_mutation_policy()
+    add_benchmark_start(
+        state,
+        case_id="cd25_scfv_selectivity",
+        start_type="degraded_neutral_cdr_seed",
+        reference_binder_sequence=reference_binder_sequence,
+        changed_nodes=list(degraded_antibody_cdrs()),
+        rationale="CD25 selectivity should be measured from a weak generic CDR seed, not from the original CD25 scFv CDRs.",
+    )
     block = scfv_block("CD25-selective", "CD25", "IL2RB/CD122")
     sheet = case_sheet(
         "cd25_scfv_selectivity",
@@ -465,6 +588,7 @@ def build_cd25_selectivity() -> None:
         ["Decoy IL2RB interface is comparable to CD25.", "Contacts are mostly outside the specified CD25 epitope.", "Interface relies on linker/framework rather than CDRs.", "CDRs collapse or severe clashes dominate."],
         {"cd25_epitope_interface_on": {"contacts": 64, "residue_pairs": 15, "coverage": 0.35}, "selectivity_delta": {"min_delta": 0.12, "target_delta": 0.45, "contact_delta_target": 35}, "cdr_confidence": {"hard_floor": 45, "target": 72}},
         ["Exact wet-lab CD25 construct boundaries.", "Whether basiliximab-like competition is required or just CD25-selective binding.", "Preferred developability liabilities and CDR length bounds."],
+        benchmark_start=state["benchmark_start"],
     )
     write_case("cd25_scfv_selectivity", "CD25 selective scFv design", "selective_scfv_epitope_design", state, scfv_initial("cd25_scfv_selectivity", block), config_yaml("cd25_scfv_selectivity", "CD25-selective scFv", "VH_CDR1, VH_CDR2, VH_CDR3, VL_CDR1, VL_CDR2, VL_CDR3, Linker_core, sparse FR2/FR3 support"), sheet)
 
@@ -476,7 +600,7 @@ def build_pdl1_selectivity() -> None:
         "version": "pdl1_scfv_selectivity_v1",
         "memory_path": "memory.yaml",
         "case_sheet_path": "case_sheet.json",
-        "binder": scfv_binder_from_cd25(),
+        "binder": scfv_binder_from_cd25(degraded=True),
         "target": {
             "chain_id": "T",
             "name": "PDL1",
@@ -518,6 +642,16 @@ def build_pdl1_selectivity() -> None:
         "mutation_policy": scfv_mutation_policy(),
         "case_information_needed": ["Whether the desired antibody should block PD-1 by binding the PD-1 interface or bind a non-blocking PD-L1 epitope.", "Exact mature PD-L1/PD-L2 construct boundaries for assay matching.", "Allowed human framework families and developability liabilities."],
     }
+    pdl1_reference_binder = sequence_from_binder(scfv_binder_from_cd25(degraded=False))
+    state["design_points"]["initial_seed_policy"] = "Generic neutralized CDR seed on the same scFv framework; no PD-L1 oracle CDR is used as the executable starting point."
+    add_benchmark_start(
+        state,
+        case_id="pdl1_scfv_selectivity",
+        start_type="generic_degraded_neutral_cdr_seed",
+        reference_binder_sequence=pdl1_reference_binder,
+        changed_nodes=list(degraded_antibody_cdrs()),
+        rationale="PD-L1 design starts from generic weak CDRs to test whether AST can discover a PD-L1-selective paratope rather than inherit a tuned binder.",
+    )
     block = scfv_block("PD-L1-selective", "PD-L1", "PD-L2/PD-1")
     sheet = case_sheet(
         "pdl1_scfv_selectivity",
@@ -526,20 +660,31 @@ def build_pdl1_selectivity() -> None:
         ["PD-L2 or PD-1 binding approaches PD-L1 binding.", "Contacts move away from the PD-L1 epitope.", "Framework/linker dominates the interface.", "CDRs are low-confidence or clashing."],
         {"pdl1_epitope_interface_on": {"contacts": 58, "residue_pairs": 14, "coverage": 0.32}, "pdl1_over_pdl2_delta": {"min_delta": 0.12, "target_delta": 0.45, "contact_delta_target": 32}, "cdr_confidence": {"hard_floor": 45, "target": 72}},
         state["case_information_needed"],
+        benchmark_start=state["benchmark_start"],
     )
     write_case("pdl1_scfv_selectivity", "PD-L1 selective scFv design", "selective_scfv_epitope_design", state, scfv_initial("pdl1_scfv_selectivity", block), config_yaml("pdl1_scfv_selectivity", "PD-L1-selective scFv", "VH_CDR1, VH_CDR2, VH_CDR3, VL_CDR1, VL_CDR2, VL_CDR3, Linker_core, sparse FR2/FR3 support"), sheet)
 
 
 def build_proteor1_cdr_mask() -> None:
+    seed_h = replace_spans(
+        PROTEOR1_H,
+        PROTEOR1_H_SPANS,
+        ["GSSGGSY", "SGSGTY", "GGSGGSGGSGDY"],
+    )
+    seed_l = replace_spans(
+        PROTEOR1_L,
+        PROTEOR1_L_SPANS,
+        ["SGSGGSGSGSY", "SGSGTAS", "QGSGGSTLT"],
+    )
     binder = {
         "chain_id": "BB",
         "architecture": "ProteoR1_HL_scFv_masked_CDR",
         "domain_segment_keys": {"VH_domain": "vh_segments", "Linker_module": "linker_segments", "VL_domain": "vl_segments"},
         "domain_aliases": {"VH": "VH_domain", "heavy": "VH_domain", "Linker": "Linker_module", "VL": "VL_domain", "light": "VL_domain"},
         "domain_order": ["VH_domain", "Linker_module", "VL_domain"],
-        "vh_segments": split_chain_by_spans(PROTEOR1_H, PROTEOR1_H_SPANS, "VH", ["VH_CDR1", "VH_CDR2", "VH_CDR3"]),
+        "vh_segments": split_chain_by_spans(seed_h, PROTEOR1_H_SPANS, "VH", ["VH_CDR1", "VH_CDR2", "VH_CDR3"]),
         "linker_segments": [["Linker_head", "linker", "GGGGS"], ["Linker_core", "linker", "GGGGS"], ["Linker_tail", "linker", "GGGGS"]],
-        "vl_segments": split_chain_by_spans(PROTEOR1_L, PROTEOR1_L_SPANS, "VL", ["VL_CDR1", "VL_CDR2", "VL_CDR3"]),
+        "vl_segments": split_chain_by_spans(seed_l, PROTEOR1_L_SPANS, "VL", ["VL_CDR1", "VL_CDR2", "VL_CDR3"]),
     }
     state = {
         "task_name": "ProteoR1_CDR_Mask_Reevolution_Task",
@@ -549,7 +694,7 @@ def build_proteor1_cdr_mask() -> None:
         "case_sheet_path": "case_sheet.json",
         "binder": binder,
         "target": {"chain_id": "T", "name": "ProteoR1_demo_antigen_8r9y_A", "sequence": PROTEOR1_A, "epitope_name": "ProteoR1_spec_mask_hotspot", "epitope_source": "Proteo-R1 demo canonical YAML 8r9y_H_L_A antigen spec_mask runs.", "epitope_spans": PROTEOR1_A_HOTSPOT_SPANS},
-        "design_points": {"schema_version": "ast_design_points_v1", "design_intent": "Replicate a Proteo-R1-style masked CDR redesign benchmark without copying its optimization method: evolve the CDR mask under AST typed structural scoring.", "primary_design_nodes": ["VH_CDR3", "VH_CDR1", "VL_CDR1", "VL_CDR3"], "secondary_design_nodes": ["VH_CDR2", "VL_CDR2"], "default_open_nodes": ["VH_CDR1", "VH_CDR2", "VH_CDR3", "VL_CDR1", "VL_CDR2", "VL_CDR3"], "preserved_nodes": ["VH_FR1", "VH_FR2", "VH_FR3", "VH_FR4", "VL_FR1", "VL_FR2", "VL_FR3", "VL_FR4"]},
+        "design_points": {"schema_version": "ast_design_points_v1", "design_intent": "Replicate a Proteo-R1-style masked CDR redesign benchmark without copying its optimization method: evolve the CDR mask under AST typed structural scoring.", "initial_seed_policy": "Executable H/L CDRs are neutral fills at the Proteo-R1 mask spans; the YAML ground_truth CDRs are stored only as oracle metadata.", "primary_design_nodes": ["VH_CDR3", "VH_CDR1", "VL_CDR1", "VL_CDR3"], "secondary_design_nodes": ["VH_CDR2", "VL_CDR2"], "default_open_nodes": ["VH_CDR1", "VH_CDR2", "VH_CDR3", "VL_CDR1", "VL_CDR2", "VL_CDR3"], "preserved_nodes": ["VH_FR1", "VH_FR2", "VH_FR3", "VH_FR4", "VL_FR1", "VL_FR2", "VL_FR3", "VL_FR4"]},
         "complex_states": [{"name": "proteor1_antigen_bound_state", "role": "masked CDR antigen-bound state", "objective": "Redesigned CDRs should recover hotspot-centered binding to the fixed antigen.", "metric": "plddt", "entities": [{"type": "protein", "id": "scFv", "source_chain": "BB"}, {"type": "protein", "id": "Antigen_A", "source_chain": "T"}]}],
         "multistate_regions": {**scfv_regions(), "target_epitope_focus": ["ProteoR1_spec_mask_hotspot"]},
         "multistate_objectives": [
@@ -561,6 +706,14 @@ def build_proteor1_cdr_mask() -> None:
         "mutation_policy": scfv_mutation_policy(),
         "case_information_needed": ["Whether the goal is de novo CDR recovery, improvement over ground truth, or robustness to masked inputs.", "External negative antigens for selectivity if desired."],
     }
+    add_benchmark_start(
+        state,
+        case_id="proteor1_cdr_mask",
+        start_type="proteor1_masked_cdr_neutral_fill",
+        reference_binder_sequence=PROTEOR1_H + "GGGGSGGGGSGGGGS" + PROTEOR1_L,
+        changed_nodes=["VH_CDR1", "VH_CDR2", "VH_CDR3", "VL_CDR1", "VL_CDR2", "VL_CDR3"],
+        rationale="The Proteo-R1 ground-truth CDRs are not used as the executable start; masked CDR spans are filled with neutral residues to create recovery room.",
+    )
     block = scfv_block("ProteoR1-style masked CDR", "8r9y antigen hotspot", "non-hotspot antigen surface")
     sheet = case_sheet(
         "proteor1_cdr_mask",
@@ -569,12 +722,18 @@ def build_proteor1_cdr_mask() -> None:
         ["Interface is broad but not hotspot-centered.", "Framework replaces CDRs as binder.", "CDR loops become low-confidence."],
         {"hotspot_interface": {"contacts": 70, "residue_pairs": 18, "coverage": 0.38}, "cdr_confidence": {"hard_floor": 45, "target": 72}},
         state["case_information_needed"],
+        benchmark_start=state["benchmark_start"],
     )
     write_case("proteor1_cdr_mask", "Proteo-R1 style masked CDR evolution", "masked_cdr_scfv_evolution", state, scfv_initial("proteor1_cdr_mask", block), config_yaml("proteor1_cdr_mask", "Proteo-R1-style masked CDR", "VH_CDR1, VH_CDR2, VH_CDR3, VL_CDR1, VL_CDR2, VL_CDR3, Linker_core, sparse FR2/FR3 support"), sheet)
 
 
 def build_pdz() -> None:
-    segments = split_spans(PDZ_SEQ, PDZ_GROOVE_SPANS, "PDZ_groove", "PDZ_scaffold", "framework")
+    pdz_seed = replace_spans(
+        PDZ_SEQ,
+        PDZ_GROOVE_SPANS,
+        [neutral_pattern(end - start, "ASG") for start, end in PDZ_GROOVE_SPANS],
+    )
+    segments = split_spans(pdz_seed, PDZ_GROOVE_SPANS, "PDZ_groove", "PDZ_scaffold", "framework")
     binder = {
         "name": "PDZ_domain",
         "chain_id": "BB",
@@ -594,7 +753,7 @@ def build_pdz() -> None:
         "binder": binder,
         "target": {"chain_id": "T", "name": "target_C_terminal_peptide", "sequence": "KQTSV", "feature_kind": "peptide", "epitope_name": "PDZ_target_peptide", "epitope_source": "1BE9 chain B target peptide KQTSV; full peptide is the desired contact region.", "epitope_spans": [[0, 5]]},
         "additional_targets": {"decoy_peptide": {"name": "decoy_C_terminal_peptide", "sequence": "KKAAA", "biological_reason": "A charge/small-residue decoy peptide lacking the canonical terminal Val motif."}},
-        "design_points": {"schema_version": "ast_design_points_v1", "design_intent": "Retune PDZ groove specificity for KQTSV-like target peptide while suppressing a decoy peptide.", "primary_design_nodes": groove_nodes, "secondary_design_nodes": scaffold_nodes[:2], "default_open_nodes": groove_nodes, "preserved_nodes": scaffold_nodes},
+        "design_points": {"schema_version": "ast_design_points_v1", "design_intent": "Retune PDZ groove specificity for KQTSV-like target peptide while suppressing a decoy peptide.", "initial_seed_policy": "The executable PDZ scaffold keeps 1BE9 backbone-length segmentation but neutralizes peptide-contact groove residues; native 1BE9 is oracle metadata only.", "primary_design_nodes": groove_nodes, "secondary_design_nodes": scaffold_nodes[:2], "default_open_nodes": groove_nodes, "preserved_nodes": scaffold_nodes},
         "complex_states": [
             {"name": "target_peptide_bound_state", "role": "desired target peptide state", "objective": "PDZ groove should bind KQTSV target peptide.", "metric": "plddt", "entities": [{"type": "protein", "id": "PDZ", "source_chain": "BB"}, {"type": "protein", "id": "target_peptide", "source_chain": "T"}]},
             {"name": "decoy_peptide_state", "role": "negative decoy peptide state", "objective": "PDZ groove should not bind decoy peptide as strongly.", "metric": "plddt", "entities": [{"type": "protein", "id": "PDZ", "source_chain": "BB"}, {"type": "protein", "id": "decoy_peptide", "sequence": "KKAAA"}]},
@@ -610,6 +769,14 @@ def build_pdz() -> None:
         "mutation_policy": {"preferred_edit_order": groove_nodes + scaffold_nodes[:2], "always_open_segments": groove_nodes, "conditionally_open_segments": scaffold_nodes[:2], "generally_frozen": scaffold_nodes[2:]},
         "case_information_needed": ["Actual target/decoy peptide panel for the biological question.", "Whether backbone remodeling of the PDZ groove is allowed.", "Desired peptide class constraints beyond KQTSV."],
     }
+    add_benchmark_start(
+        state,
+        case_id="pdz_peptide_selectivity",
+        start_type="pdz_groove_neutralized_seed",
+        reference_binder_sequence=PDZ_SEQ,
+        changed_nodes=groove_nodes,
+        rationale="Native 1BE9 already binds KQTSV-like peptide, so the executable start neutralizes groove contact residues to create a real selectivity recovery task.",
+    )
     regions = [
         {"name": "pdz_target_specificity_groove", "role": "primary peptide-binding groove residues from 1BE9 contacts", "position": 1, "bind_to": groove_nodes, "secondary_structure": "beta", "priority_boost": 1.45, "mutation_rate": 0.09, "max_mutations_per_step": 7, "operator_phase": "explore", "large_jump": True, "mutation_ops": {"point": 0.32, "block": 0.18, "site_resample": 0.24, "segment_mutagenesis": 0.16, "motif_graft": 0.06, "swap": 0.04}, "favored_residues": ["Y", "F", "H", "S", "T", "N", "Q", "R", "K", "D", "E"], "disfavored_residues": ["C"], "policy_weight": 0.95},
         {"name": "pdz_scaffold_guardrail", "role": "sparse support around groove while preserving PDZ fold", "position": 2, "bind_to": scaffold_nodes[:3], "secondary_structure": "beta", "priority_boost": 0.40, "mutation_rate": 0.018, "max_mutations_per_step": 1, "operator_phase": "stabilize", "mutation_ops": {"point": 0.92, "block": 0.03, "swap": 0.05}, "favored_residues": ["A", "S", "T", "N", "Q", "V", "I", "L"], "disfavored_residues": ["C", "P"], "policy_weight": 0.30},
@@ -622,12 +789,18 @@ def build_pdz() -> None:
         ["Decoy binds as strongly as target.", "Contacts are made by scaffold outside the groove.", "Groove mutations unfold the domain."],
         {"target_interface": {"contacts": 24, "residue_pairs": 7, "coverage": 0.45}, "target_over_decoy_delta": {"min_delta": 0.10, "target_delta": 0.40, "contact_delta_target": 18}, "groove_confidence": {"hard_floor": 45, "target": 75}},
         state["case_information_needed"],
+        benchmark_start=state["benchmark_start"],
     )
     write_case("pdz_peptide_selectivity", "PDZ peptide selectivity design", "peptide_binding_domain_selectivity", state, generic_initial("pdz_peptide_selectivity", block), config_yaml("pdz_peptide_selectivity", "PDZ peptide-selectivity", ", ".join(groove_nodes + scaffold_nodes[:3])), sheet)
 
 
 def build_calcium() -> None:
-    segments = split_spans(CALMODULIN_SEQ, CALMODULIN_EF_SPANS, "EFhand_loop", "CaM_scaffold", "framework")
+    calcium_seed = replace_spans(
+        CALMODULIN_SEQ,
+        CALMODULIN_EF_SPANS,
+        [neutralize_segment(CALMODULIN_SEQ[start:end]) for start, end in CALMODULIN_EF_SPANS],
+    )
+    segments = split_spans(calcium_seed, CALMODULIN_EF_SPANS, "EFhand_loop", "CaM_scaffold", "framework")
     loop_nodes = [seg[0] for seg in segments if seg[0].startswith("EFhand_loop")]
     scaffold_nodes = [seg[0] for seg in segments if seg[0].startswith("CaM_scaffold")]
     binder = {
@@ -647,7 +820,7 @@ def build_calcium() -> None:
         "binder": binder,
         "target": {"chain_id": "T", "name": "MLCK_like_target_peptide", "sequence": MLCK_PEPTIDE, "feature_kind": "peptide", "epitope_name": "MLCK_peptide_binding_surface", "epitope_source": "Canonical calmodulin target-peptide readout proxy; full peptide is treated as the desired binding region.", "epitope_spans": [[0, len(MLCK_PEPTIDE)]]},
         "ligands": {"calcium": {"name": "calcium", "ccd": "CA", "role": "EF-hand activating ion"}},
-        "design_points": {"schema_version": "ast_design_points_v1", "design_intent": "Design an EF-hand calcium switch: apo state should avoid strong peptide binding; calcium-loaded state should keep acidic EF pockets and improve peptide interface.", "primary_design_nodes": loop_nodes, "secondary_design_nodes": scaffold_nodes[:3], "default_open_nodes": loop_nodes, "preserved_nodes": scaffold_nodes},
+        "design_points": {"schema_version": "ast_design_points_v1", "design_intent": "Design an EF-hand calcium switch: apo state should avoid strong peptide binding; calcium-loaded state should keep acidic EF pockets and improve peptide interface.", "initial_seed_policy": "The executable CaM scaffold preserves domain length and scaffold segments but neutralizes the canonical EF-hand loop chemistry. Native calmodulin is reference metadata only.", "primary_design_nodes": loop_nodes, "secondary_design_nodes": scaffold_nodes[:3], "default_open_nodes": loop_nodes, "preserved_nodes": scaffold_nodes},
         "complex_states": [
             {"name": "apo_peptide_state", "role": "apo negative peptide-binding state", "objective": "Without calcium, the scaffold should avoid strong MLCK peptide binding while remaining folded.", "metric": "plddt", "entities": [{"type": "protein", "id": "CaM", "source_chain": "BB"}, {"type": "protein", "id": "MLCK_peptide", "source_chain": "T"}]},
             {"name": "calcium_peptide_state", "role": "calcium-loaded positive peptide-binding state", "objective": "Calcium-loaded CaM should bind the MLCK-like peptide more strongly.", "metric": "plddt", "entities": [{"type": "protein", "id": "CaM", "source_chain": "BB"}, {"type": "protein", "id": "MLCK_peptide", "source_chain": "T"}, {"type": "ion", "id": "calcium", "ccd": "CA", "count": 4}]},
@@ -665,6 +838,14 @@ def build_calcium() -> None:
         "mutation_policy": {"preferred_edit_order": loop_nodes + scaffold_nodes[:3], "always_open_segments": loop_nodes, "conditionally_open_segments": scaffold_nodes[:3], "generally_frozen": scaffold_nodes[3:]},
         "case_information_needed": ["Exact target peptide or protein readout for the calcium sensor.", "Allowed edits in EF-loop acidic residues versus scaffold helices.", "Whether the goal is calcium affinity tuning, peptide affinity switching, or both."],
     }
+    add_benchmark_start(
+        state,
+        case_id="calcium_efhand_switch",
+        start_type="efhand_loop_chemistry_neutralized_seed",
+        reference_binder_sequence=CALMODULIN_SEQ,
+        changed_nodes=loop_nodes,
+        rationale="Native calmodulin is already a calcium-gated peptide binder; the executable start neutralizes EF-hand loop chemistry so recovery of calcium/peptide behavior is measurable.",
+    )
     regions = [
         {"name": "efhand_calcium_coordination_loops", "role": "retune acidic/polar Ca2+ pocket loops without losing EF-hand geometry", "position": 1, "bind_to": loop_nodes, "secondary_structure": "loop", "priority_boost": 1.45, "mutation_rate": 0.075, "max_mutations_per_step": 6, "operator_phase": "explore", "large_jump": True, "mutation_ops": {"point": 0.32, "block": 0.16, "site_resample": 0.24, "segment_mutagenesis": 0.18, "motif_graft": 0.06, "swap": 0.04}, "favored_residues": ["D", "E", "N", "Q", "S", "T", "G"], "disfavored_residues": ["C", "W", "F"], "policy_weight": 0.95},
         {"name": "cam_lobe_scaffold_guardrail", "role": "sparse helix/scaffold support for calcium-gated peptide binding", "position": 2, "bind_to": scaffold_nodes[:4], "secondary_structure": "helix", "priority_boost": 0.45, "mutation_rate": 0.018, "max_mutations_per_step": 1, "operator_phase": "stabilize", "mutation_ops": {"point": 0.92, "block": 0.03, "swap": 0.05}, "favored_residues": ["A", "L", "I", "V", "S", "T", "N", "Q", "E", "K"], "disfavored_residues": ["C", "P"], "policy_weight": 0.30},
@@ -677,6 +858,7 @@ def build_calcium() -> None:
         ["Peptide binds equally in apo state.", "Calcium pocket loses acidic/polar chemistry.", "Switch arises from unfolding or clashes.", "Scaffold helices destabilize."],
         {"calcium_peptide_interface": {"contacts": 42, "residue_pairs": 12, "coverage": 0.25}, "calcium_vs_apo_delta": {"min_delta": 0.10, "target_delta": 0.40, "contact_delta_target": 25}, "efhand_pocket": {"acidic_fraction": 0.32, "polar_fraction": 0.45}, "loop_confidence": {"hard_floor": 45, "target": 72}},
         state["case_information_needed"],
+        benchmark_start=state["benchmark_start"],
     )
     write_case("calcium_efhand_switch", "Calcium EF-hand peptide-binding switch", "ion_gated_peptide_binding_switch", state, generic_initial("calcium_efhand_switch", block), config_yaml("calcium_efhand_switch", "calcium EF-hand switch", ", ".join(loop_nodes + scaffold_nodes[:4])), sheet)
 
@@ -684,6 +866,29 @@ def build_calcium() -> None:
 def upgrade_tetr() -> None:
     path = CASES_ROOT / "tetr_dopamine" / "design_state.json"
     state = json.loads(path.read_text(encoding="utf-8"))
+    reference_binder_sequence = state["binder"].get("source_sequence") or sequence_from_binder(state["binder"])
+    for segment in state["binder"].get("ted_ligand_dimer_segments", []):
+        if len(segment) >= 3 and segment[0] == "ligand_pocket_core":
+            segment[2] = neutralize_segment(segment[2])
+            break
+    state.setdefault("design_points", {})
+    state["design_points"]["initial_seed_policy"] = (
+        "The executable TetR seed preserves the native HTH, dimer scaffold, and allosteric topology, "
+        "but starts from a dopamine-naive ligand pocket with hydrophobic/aromatic/charged chemistry "
+        "neutralized. The native TetR-like source sequence is reference metadata only."
+    )
+    add_benchmark_start(
+        state,
+        case_id="tetr_dopamine",
+        start_type="dopamine_pocket_neutralized_seed",
+        reference_binder_sequence=reference_binder_sequence,
+        changed_nodes=["ligand_pocket_core"],
+        rationale=(
+            "TetR should not start from a fully optimized ligand pocket. The initial executable pocket is "
+            "chemically softened while the DNA-binding head and dimer core stay intact, giving the evaluator "
+            "room to reward dopamine-pocket recovery plus apo/holo DNA-release behavior."
+        ),
+    )
     objectives = state.get("multistate_objectives", [])
     names = {obj.get("name") for obj in objectives if isinstance(obj, dict)}
     additions = [
@@ -706,6 +911,7 @@ def upgrade_tetr() -> None:
     sheet.setdefault("objective_thresholds", {})
     sheet["objective_thresholds"]["dopamine_pocket_pharmacophore"] = {"acidic_fraction": 0.18, "polar_fraction": 0.35, "aromatic_fraction": 0.18}
     sheet["objective_thresholds"]["apo_vs_holo_dna_release_delta"] = {"min_delta": 0.10, "target_delta": 0.42, "contact_delta_target": 35}
+    sheet["benchmark_start"] = state["benchmark_start"]
     write_json(sheet_path, sheet)
 
 

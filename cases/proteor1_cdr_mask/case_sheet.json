@@ -33,6 +33,23 @@
       "target": 72
     }
   },
+  "benchmark_start": {
+    "schema_version": "ast_benchmark_start_v1",
+    "case_id": "proteor1_cdr_mask",
+    "start_type": "proteor1_masked_cdr_neutral_fill",
+    "initial_seed_sequence": "QVQLVESGGGVVQPGRSLRLSCAASGSSGGSYDMHWVRQAPGKGLEWVAVISGSGTYEYYADSVKGRFIISRDNSKNTLYLQMNSLRAEDTAVYYCARGGSGGSGGSGDYWGQGTLVTVSSGGGGSGGGGSGGGGSDIQMTQSPPSLSASVGDRVTITCSGSGGSGSGSYWHQQKPGKVPKLLIYSGSGTASGVPSRFSGSGSGTDFTLTISSLQPEDVATYYCQGSGGSTLTFGPGTKVDI",
+    "reference_oracle_sequence": "QVQLVESGGGVVQPGRSLRLSCAASGFTFSSYDMHWVRQAPGKGLEWVAVIWRDGSNEYYADSVKGRFIISRDNSKNTLYLQMNSLRAEDTAVYYCARRGIIMVRGLLGYWGQGTLVTVSSGGGGSGGGGSGGGGSDIQMTQSPPSLSASVGDRVTITCRASQGISNYLAWHQQKPGKVPKLLIYTASTLQSGVPSRFSGSGSGTDFTLTISSLQPEDVATYYCQKYNSAPFTFGPGTKVDI",
+    "changed_nodes": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3"
+    ],
+    "rationale": "The Proteo-R1 ground-truth CDRs are not used as the executable start; masked CDR spans are filled with neutral residues to create recovery room.",
+    "interpretation": "The executable binder segments are intentionally degraded relative to the reference/oracle sequence so evolution has measurable room to improve. The reference sequence is metadata only and is not used as the starting template."
+  },
   "information_gaps": [
     "Whether the goal is de novo CDR recovery, improvement over ground truth, or robustness to masked inputs.",
     "External negative antigens for selectivity if desired."

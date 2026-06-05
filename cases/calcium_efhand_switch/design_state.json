@@ -23,7 +23,7 @@
       [
         "EFhand_loop_1",
         "framework",
-        "FDKDGDGTITTK"
+        "SQNQGQGTATTN"
       ],
       [
         "CaM_scaffold_2",
@@ -33,7 +33,7 @@
       [
         "EFhand_loop_2",
         "framework",
-        "DADGNGTIDFPE"
+        "QAQGNGTAQSPQ"
       ],
       [
         "CaM_scaffold_3",
@@ -43,7 +43,7 @@
       [
         "EFhand_loop_3",
         "framework",
-        "FDKDGNGYISAA"
+        "SQNQGNGSASAA"
       ],
       [
         "CaM_scaffold_4",
@@ -53,7 +53,7 @@
       [
         "EFhand_loop_4",
         "framework",
-        "DIDGDGQVNYEE"
+        "QAQGQGQANSQQ"
       ],
       [
         "CaM_scaffold_5",
@@ -86,6 +86,7 @@
   "design_points": {
     "schema_version": "ast_design_points_v1",
     "design_intent": "Design an EF-hand calcium switch: apo state should avoid strong peptide binding; calcium-loaded state should keep acidic EF pockets and improve peptide interface.",
+    "initial_seed_policy": "The executable CaM scaffold preserves domain length and scaffold segments but neutralizes the canonical EF-hand loop chemistry. Native calmodulin is reference metadata only.",
     "primary_design_nodes": [
       "EFhand_loop_1",
       "EFhand_loop_2",
@@ -320,5 +321,20 @@
     "Exact target peptide or protein readout for the calcium sensor.",
     "Allowed edits in EF-loop acidic residues versus scaffold helices.",
     "Whether the goal is calcium affinity tuning, peptide affinity switching, or both."
-  ]
+  ],
+  "benchmark_start": {
+    "schema_version": "ast_benchmark_start_v1",
+    "case_id": "calcium_efhand_switch",
+    "start_type": "efhand_loop_chemistry_neutralized_seed",
+    "initial_seed_sequence": "MADQLTEEQIAEFKEAFSLSQNQGQGTATTNELGTVMRSLGQNPTEAELQDMINEVQAQGNGTAQSPQFLTMMARKMKDTDSEEEIREAFRVSQNQGNGSASAAELRHVMTNLGEKLTDEEVDEMIREAQAQGQGQANSQQFVQMMTAK",
+    "reference_oracle_sequence": "MADQLTEEQIAEFKEAFSLFDKDGDGTITTKELGTVMRSLGQNPTEAELQDMINEVDADGNGTIDFPEFLTMMARKMKDTDSEEEIREAFRVFDKDGNGYISAAELRHVMTNLGEKLTDEEVDEMIREADIDGDGQVNYEEFVQMMTAK",
+    "changed_nodes": [
+      "EFhand_loop_1",
+      "EFhand_loop_2",
+      "EFhand_loop_3",
+      "EFhand_loop_4"
+    ],
+    "rationale": "Native calmodulin is already a calcium-gated peptide binder; the executable start neutralizes EF-hand loop chemistry so recovery of calcium/peptide behavior is measurable.",
+    "interpretation": "The executable binder segments are intentionally degraded relative to the reference/oracle sequence so evolution has measurable room to improve. The reference sequence is metadata only and is not used as the starting template."
+  }
 }

@@ -23,7 +23,7 @@
       [
         "PDZ_groove_1",
         "framework",
-        "R"
+        "A"
       ],
       [
         "PDZ_scaffold_2",
@@ -33,7 +33,7 @@
       [
         "PDZ_groove_2",
         "framework",
-        "GLGFNIIG"
+        "ASGASGAS"
       ],
       [
         "PDZ_scaffold_3",
@@ -43,7 +43,7 @@
       [
         "PDZ_groove_3",
         "framework",
-        "E"
+        "A"
       ],
       [
         "PDZ_scaffold_4",
@@ -53,7 +53,7 @@
       [
         "PDZ_groove_4",
         "framework",
-        "S"
+        "A"
       ],
       [
         "PDZ_scaffold_5",
@@ -63,7 +63,7 @@
       [
         "PDZ_groove_5",
         "framework",
-        "H"
+        "A"
       ],
       [
         "PDZ_scaffold_6",
@@ -83,7 +83,7 @@
       [
         "PDZ_groove_7",
         "framework",
-        "LK"
+        "AS"
       ],
       [
         "PDZ_scaffold_8",
@@ -116,6 +116,7 @@
   "design_points": {
     "schema_version": "ast_design_points_v1",
     "design_intent": "Retune PDZ groove specificity for KQTSV-like target peptide while suppressing a decoy peptide.",
+    "initial_seed_policy": "The executable PDZ scaffold keeps 1BE9 backbone-length segmentation but neutralizes peptide-contact groove residues; native 1BE9 is oracle metadata only.",
     "primary_design_nodes": [
       "PDZ_groove_1",
       "PDZ_groove_2",
@@ -327,5 +328,23 @@
     "Actual target/decoy peptide panel for the biological question.",
     "Whether backbone remodeling of the PDZ groove is allowed.",
     "Desired peptide class constraints beyond KQTSV."
-  ]
+  ],
+  "benchmark_start": {
+    "schema_version": "ast_benchmark_start_v1",
+    "case_id": "pdz_peptide_selectivity",
+    "start_type": "pdz_groove_neutralized_seed",
+    "initial_seed_sequence": "GSPEFLGEEDIPREPRRIVIHAGSTASGASGASGADGEGIFIAFILAGGPADLSGELRKGDQILSVNGVDLRNASAEQAAIAASNAGQTVTIIAQYKPEEYSRFEANSRVNSSGRIVTN",
+    "reference_oracle_sequence": "GSPEFLGEEDIPREPRRIVIHRGSTGLGFNIIGGEDGEGIFISFILAGGPADLSGELRKGDQILSVNGVDLRNASHEQAAIALKNAGQTVTIIAQYKPEEYSRFEANSRVNSSGRIVTN",
+    "changed_nodes": [
+      "PDZ_groove_1",
+      "PDZ_groove_2",
+      "PDZ_groove_3",
+      "PDZ_groove_4",
+      "PDZ_groove_5",
+      "PDZ_groove_6",
+      "PDZ_groove_7"
+    ],
+    "rationale": "Native 1BE9 already binds KQTSV-like peptide, so the executable start neutralizes groove contact residues to create a real selectivity recovery task.",
+    "interpretation": "The executable binder segments are intentionally degraded relative to the reference/oracle sequence so evolution has measurable room to improve. The reference sequence is metadata only and is not used as the starting template."
+  }
 }
