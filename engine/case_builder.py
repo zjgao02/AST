@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -23,7 +24,16 @@ from .design_state import (
 )
 AA_CANONICAL = set("ACDEFGHIKLMNPQRSTVWY")
 AA_NO_CYS = set("ADEFGHIKLMNPQRSTVWY")
-MUTATION_OPS = {"point", "block", "segment_resample", "swap"}
+MUTATION_OPS = {
+    "point",
+    "block",
+    "segment_resample",
+    "swap",
+    "site_resample",
+    "region_shuffle",
+    "motif_graft",
+    "segment_mutagenesis",
+}
 MAX_DESIGN_REGIONS = 8
 MAX_REGION_TARGETS = 6
 MAX_REGION_RESIDUES = 16
@@ -76,6 +86,63 @@ def resolve_memory_path(memory_path: Optional[str] = None) -> Path:
         if path.exists():
             return path
     return candidates[0]
+
+
+def _resolve_case_path(raw_path: Any, design_state_path: Optional[str] = None) -> Optional[Path]:
+    if not raw_path:
+        return None
+    path = Path(str(raw_path))
+    if path.is_absolute():
+        return path
+    if design_state_path:
+        base = Path(design_state_path)
+        if not base.is_absolute():
+            base = PROJECT_ROOT / base
+        return base.parent / path
+    return PROJECT_ROOT / path
+
+
+def load_case_sheet(state: Dict[str, Any], design_state_path: Optional[str] = None) -> Dict[str, Any]:
+    candidates: List[Path] = []
+    configured = _resolve_case_path(state.get("case_sheet_path"), design_state_path)
+    if configured:
+        candidates.append(configured)
+    default_sheet = _resolve_case_path("case_sheet.json", design_state_path)
+    if default_sheet:
+        candidates.append(default_sheet)
+
+    for path in candidates:
+        try:
+            if not path.exists():
+                continue
+            text = path.read_text(encoding="utf-8")
+            if path.suffix.lower() in {".yaml", ".yml"}:
+                yaml = _safe_import_yaml()
+                if yaml is None:
+                    continue
+                data = yaml.safe_load(text)
+            else:
+                data = json.loads(text)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            continue
+    return {}
+
+
+def compact_case_sheet(case_sheet: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(case_sheet, dict) or not case_sheet:
+        return {}
+    return {
+        "schema_version": case_sheet.get("schema_version"),
+        "case_name": case_sheet.get("case_name"),
+        "readiness": case_sheet.get("readiness", {}),
+        "design_goal": case_sheet.get("design_goal", {}),
+        "state_success_criteria": case_sheet.get("state_success_criteria", {}),
+        "residue_level_constraints": case_sheet.get("residue_level_constraints", {}),
+        "objective_thresholds": case_sheet.get("objective_thresholds", {}),
+        "information_gaps": case_sheet.get("information_gaps", []),
+        "provisional_assumptions": case_sheet.get("provisional_assumptions", []),
+    }
 
 
 def extract_memory_bias(memory: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:
@@ -182,6 +249,33 @@ def _canonical_residue_list(value: Any, *, allow_cys: bool = False) -> List[str]
         if len(aa) == 1 and aa in allowed and aa not in out:
             out.append(aa)
         if len(out) >= MAX_REGION_RESIDUES:
+            break
+    return out
+
+
+def _canonical_position_list(value: Any, limit: int = 64) -> List[int]:
+    out: List[int] = []
+    raw = value if isinstance(value, list) else []
+    for item in raw:
+        try:
+            pos = int(round(float(item)))
+        except (TypeError, ValueError):
+            continue
+        if pos >= 0 and pos not in out:
+            out.append(pos)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _canonical_motif_list(value: Any, limit: int = 12) -> List[str]:
+    raw = value if isinstance(value, list) else [value] if isinstance(value, str) else []
+    out: List[str] = []
+    for item in raw:
+        motif = "".join(ch for ch in str(item).upper() if ch in AA_CANONICAL)
+        if 2 <= len(motif) <= 48 and motif not in out:
+            out.append(motif)
+        if len(out) >= limit:
             break
     return out
 
@@ -309,13 +403,31 @@ def sanitize_strategy_for_ast(state: Dict[str, Any], strategy: Dict[str, Any]) -
             "mutable": _as_bool(region.get("mutable"), True),
             "priority_boost": _clamp_float(region.get("priority_boost", 1.0), 1.0, 0.01, 5.0),
             "mutation_rate": _clamp_float(region.get("mutation_rate", 0.05), 0.05, 0.0, 0.30),
-            "max_mutations_per_step": _clamp_int(region.get("max_mutations_per_step"), 2, 1, 8),
+            "max_mutations_per_step": _clamp_int(region.get("max_mutations_per_step"), 2, 1, 16),
             "policy_weight": _clamp_float(region.get("policy_weight", 0.7), 0.7, 0.0, 1.0),
         }
 
         mut_ops = _sanitize_mutation_ops(region.get("mutation_ops"))
         if mut_ops is not None:
             out["mutation_ops"] = mut_ops
+
+        for field in ("hotspot_positions", "anchor_positions", "mutable_positions", "protected_positions"):
+            positions = _canonical_position_list(region.get(field))
+            if positions:
+                out[field] = positions
+
+        for field in ("graft_motifs", "motif_candidates"):
+            motifs = _canonical_motif_list(region.get(field))
+            if motifs:
+                out[field] = motifs
+
+        phase = str(region.get("operator_phase") or "").strip().lower()
+        if phase in {"explore", "refine", "stabilize"}:
+            out["operator_phase"] = phase
+        if "large_jump" in region:
+            out["large_jump"] = _as_bool(region.get("large_jump"), False)
+        if isinstance(region.get("design_points"), dict):
+            out["design_points"] = dict(region["design_points"])
 
         favored = _canonical_residue_list(region.get("favored_residues", []))
         if favored:
@@ -546,6 +658,14 @@ def _merge_region_policy(
         "secondary_structure",
         "position_weights",
         "hotspot_positions",
+        "anchor_positions",
+        "mutable_positions",
+        "protected_positions",
+        "graft_motifs",
+        "motif_candidates",
+        "operator_phase",
+        "large_jump",
+        "design_points",
     ):
         if field in region:
             base[field] = region[field]
@@ -767,6 +887,14 @@ def _collect_strategy_tree_policies(
             "secondary_structure",
             "position_weights",
             "hotspot_positions",
+            "anchor_positions",
+            "mutable_positions",
+            "protected_positions",
+            "graft_motifs",
+            "motif_candidates",
+            "operator_phase",
+            "large_jump",
+            "design_points",
             "site_anchors",
         ):
             _copy_node_field(policy, node, field)
@@ -1037,6 +1165,11 @@ def build_masks(state: Dict[str, Any], memory_bias: Dict[str, Any], strategy: Di
     always_open = set(policy.get("always_open_segments", []))
     conditionally_open = set(policy.get("conditionally_open_segments", []))
     edit_order = list(strategy.get("preferred_edit_order") or memory_bias.get("preferred_edit_order", []))
+    design_points = state.get("design_points", {}) if isinstance(state.get("design_points"), dict) else {}
+    for key in ("primary_design_nodes", "secondary_design_nodes", "default_open_nodes"):
+        for name in _name_list(design_points.get(key, [])):
+            if name not in edit_order:
+                edit_order.append(name)
     tree_policy_active = bool(strategy.get("_tree_policy_active"))
     node_policies = strategy.get("node_edit_policies", {})
 
@@ -1049,6 +1182,8 @@ def build_masks(state: Dict[str, Any], memory_bias: Dict[str, Any], strategy: Di
         if name in always_open or name in conditionally_open:
             if name in spans and spans[name] not in selected:
                 selected.append(spans[name])
+        elif name in spans and name in set(_name_list(design_points.get("default_open_nodes", []))):
+            selected.append(spans[name])
     if not tree_policy_active:
         for name in sorted(always_open):
             if name in spans and spans[name] not in selected:
@@ -1275,9 +1410,13 @@ def build_sa_config(strategy: Dict[str, Any]) -> Dict[str, Any]:
         "multistate_objectives_enabled": bool(strategy.get("multistate_objectives_enabled", True)),
         "multistate_objective_weight": float(strategy.get("multistate_objective_weight", 1.0)),
         "mutation_ops": dict(strategy.get("mutation_ops", {
-            "point": 0.75,
-            "block": 0.15,
-            "segment_resample": 0.07,
+            "point": 0.55,
+            "block": 0.14,
+            "segment_resample": 0.08,
+            "site_resample": 0.08,
+            "segment_mutagenesis": 0.07,
+            "motif_graft": 0.04,
+            "region_shuffle": 0.03,
             "swap": 0.03,
         })),
         "history_size": int(strategy.get("history_size", 50)),
@@ -1326,11 +1465,13 @@ def build_case_inputs(
     memory_path: Optional[str] = None,
 ) -> Tuple[Blueprint, List[Dict[str, Any]], Dict[str, Any], Dict[str, List[bool]], Dict[str, str], Dict[str, Dict[int, str]], Dict[str, Any], Dict[str, Any]]:
     state = load_design_state(design_state_path)
+    case_sheet = load_case_sheet(state, design_state_path)
     memory = load_memory_yaml(memory_path or state.get("memory_path"))
     memory_bias = extract_memory_bias(memory, state)
     strategy = sanitize_strategy_for_ast(state, strategy)
     strategy = normalize_strategy_tree(state, strategy, memory_bias)
     state = apply_strategy_tree_to_state(state, strategy)
+    state["_case_sheet"] = case_sheet
     state["_layout_summary"] = strategy.get("layout_summary", {})
     state["_node_edit_policies"] = strategy.get("node_edit_policies", {})
     state["_strategy_schema_report"] = strategy.get("strategy_schema_report", {})
@@ -1410,6 +1551,23 @@ def run_design_search(
         "epitope_name": state["target"].get("epitope_name"),
         "epitope_spans": state["target"].get("epitope_spans", []),
     }
+    design_points = state.get("design_points", {}) if isinstance(state.get("design_points"), dict) else {}
+    out["case_design_points"] = {
+        "design_intent": design_points.get("design_intent"),
+        "primary_design_nodes": design_points.get("primary_design_nodes", []),
+        "secondary_design_nodes": design_points.get("secondary_design_nodes", []),
+        "preserved_nodes": design_points.get("preserved_nodes", []),
+        "operator_policy": design_points.get("operator_policy", {}),
+        "known_gap": (
+            (design_points.get("epitope_focus", {}) or {}).get("known_gap")
+            if isinstance(design_points.get("epitope_focus"), dict)
+            else (design_points.get("state_logic", {}) or {}).get("known_gap")
+            if isinstance(design_points.get("state_logic"), dict)
+            else None
+        ),
+        "case_information_needed": state.get("case_information_needed", []),
+    }
+    out["case_sheet_summary"] = compact_case_sheet(state.get("_case_sheet", {}))
     out["layout_summary"] = state.get("_layout_summary", {})
     out["strategy_schema_report"] = state.get("_strategy_schema_report", {})
     out["score_config"] = score_cfg

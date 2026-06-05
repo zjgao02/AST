@@ -1,0 +1,129 @@
+{
+  "schema_version": "ast_case_sheet_v1",
+  "case_name": "tetr_dopamine",
+  "readiness": {
+    "runtime": "ready",
+    "biological_specificity": "provisional",
+    "primary_reason": "The current case defines multistate TetR/DNA/dopamine contexts and node-level regions, but lacks residue-numbered TetR reference structures and dopamine pharmacophore contacts."
+  },
+  "design_goal": {
+    "primary": "Redesign a TetR-family homodimer so dopamine binding promotes a DNA-release-compatible holo state while the apo/DNA state remains folded and operator-compatible.",
+    "switch_direction": "apo_or_no_dopamine_DNA_on__dopamine_bound_DNA_off",
+    "allowed_to_change": ["ligand_pocket_core", "allosteric_hinge", "relay_helix", "domain_connector", "HTH_exit_loop", "HTH_recognition_helix"],
+    "not_allowed_to_change": ["TetO_operator", "N_term_support", "HTH_helix1", "HTH_turn", "C_terminal_support"],
+    "formal_success_definition": "A successful candidate should strengthen dopamine-pocket contacts, preserve enough TetO-compatible apo contacts, weaken TetO contacts in dopamine-bound competition state, and keep the dimer/global fold stable."
+  },
+  "reference_inputs": {
+    "current_reference": {
+      "name": "User-provided TetR-family sequence and TetO proxy operator",
+      "available_in_case": true,
+      "resolution": "domain/node segmentation and molecule states only"
+    },
+    "needed_for_high_confidence_design": [
+      "TetR-family apo, DNA-bound, and ligand-bound reference structures with residue numbering.",
+      "Known tetracycline-pocket residues mapped onto the current TetR sequence.",
+      "Dopamine pharmacophore contacts and pocket-volume constraints.",
+      "A DNA-release success threshold tied to the intended reporter assay."
+    ]
+  },
+  "state_success_criteria": {
+    "tetO_bound_state_A": {
+      "desired_event": "TetR dimer remains compatible with TetO operator binding.",
+      "required_positive_signals": [
+        "HTH_recognition_helix and HTH_exit_loop contact TetO strands.",
+        "Dimerization interface remains structurally confident.",
+        "Ligand pocket does not collapse even without dopamine."
+      ],
+      "failure_signals": [
+        "TetO contacts vanish in apo/DNA state.",
+        "HTH domain unfolds or clashes with the operator.",
+        "Dimer interface becomes low-confidence."
+      ]
+    },
+    "dopamine_bound_state_B": {
+      "desired_event": "Dopamine occupies the redesigned ligand pocket.",
+      "required_positive_signals": [
+        "ligand_pocket_core forms dopamine contacts.",
+        "allosteric_hinge and relay_helix remain structurally interpretable.",
+        "Severe ligand/protein clashes are absent."
+      ],
+      "failure_signals": [
+        "Dopamine is ignored by the pocket.",
+        "Contacts are dominated by off-pocket residues.",
+        "Pocket confidence drops below the local confidence threshold."
+      ]
+    },
+    "dopamine_tetO_competition_state_C": {
+      "desired_event": "Dopamine-bound TetR weakens TetO-compatible DNA contacts while staying folded.",
+      "required_positive_signals": [
+        "TetO interface strength is lower than tetO_bound_state_A.",
+        "Dopamine contacts remain present.",
+        "Allosteric pathway shows some movement without unfolding."
+      ],
+      "failure_signals": [
+        "Dopamine and TetO both bind strongly with no conflict.",
+        "DNA release is caused by global unfolding rather than controlled interface weakening.",
+        "Dimer interface breaks."
+      ]
+    }
+  },
+  "residue_level_constraints": {
+    "indexing": "Node names are from design_state binder segmentation; exact residue numbering is pending reference-structure mapping.",
+    "primary_design_nodes": ["ligand_pocket_core", "allosteric_hinge", "relay_helix"],
+    "secondary_design_nodes": ["domain_connector", "HTH_exit_loop", "HTH_recognition_helix"],
+    "preserved_nodes": ["dimerization_interface", "N_term_support", "C_terminal_support", "HTH_helix1", "HTH_turn"],
+    "ligand_pharmacophore": {
+      "ligand": "dopamine",
+      "smiles": "NCCc1ccc(O)c(O)c1",
+      "desired_contacts": [
+        "catechol hydroxyls should be near polar or charged H-bond partners",
+        "protonatable amine should be near an acidic or polar pocket feature if feasible",
+        "aromatic ring should be supported by aromatic or hydrophobic packing without burying the amine"
+      ],
+      "status": "qualitative until residue-level pocket mapping is provided"
+    },
+    "dna_interface": {
+      "operator": "TetO_operator",
+      "preserve_in_state": "tetO_bound_state_A",
+      "disrupt_in_state": "dopamine_tetO_competition_state_C",
+      "status": "operator sequence known; reference contact map still needed"
+    }
+  },
+  "objective_thresholds": {
+    "tetO_interface_on": {
+      "interface_contact_target": 45,
+      "interface_residue_pair_target": 10,
+      "operator_coverage_target": 0.25
+    },
+    "dopamine_binding_on": {
+      "interface_contact_target": 18,
+      "interface_residue_pair_target": 5,
+      "pocket_coverage_target": 0.12
+    },
+    "tetO_interface_off_with_dopamine": {
+      "desired_direction": "lower_than_tetO_bound_state_A",
+      "current_metric": "interface_off score from contact strength"
+    },
+    "mechanistic_transition": {
+      "min_moving_rmsd": 0.5,
+      "target_moving_rmsd": 3.0,
+      "max_moving_rmsd": 12.0,
+      "stable_region_rmsd": 1.5
+    },
+    "node_confidence": {
+      "ligand_pocket_plddt_mean_target": 70,
+      "allosteric_pathway_plddt_min_target": 45
+    }
+  },
+  "provisional_assumptions": [
+    "Dopamine acts as a replacement effector for a TetR-like allosteric switch.",
+    "HTH recognition geometry should not be destroyed in apo/DNA state.",
+    "Dimer interface is mostly preserved; sparse edits are support-only unless the user explicitly permits dimer redesign."
+  ],
+  "information_gaps": [
+    "Reference TetR-DNA and TetR-ligand structures mapped to the current sequence.",
+    "Residue-level list of mutable pocket residues and forbidden dimer/core residues.",
+    "Quantitative DNA release threshold for the intended assay.",
+    "Whether dopamine selectivity versus catecholamines or tetracycline-like ligands is required."
+  ]
+}

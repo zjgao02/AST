@@ -2,6 +2,7 @@
   "task_name": "CD25_scFv_Design_Task",
   "version": "cd25_scfv_v1",
   "memory_path": "memory.yaml",
+  "case_sheet_path": "case_sheet.json",
   "binder": {
     "chain_id": "BB",
     "architecture": "VH-Linker-VL",
@@ -74,6 +75,46 @@
     "hotspot_motif": "ERIYHFV",
     "hotspot_motif_interpretation": "Hotspot-centered functional interface region, not a complete standalone linear epitope."
   },
+  "design_points": {
+    "schema_version": "ast_design_points_v1",
+    "design_intent": "Redesign the scFv binding surface around a known CD25/basiliximab-inspired epitope while preserving antibody-like framework stability.",
+    "primary_design_nodes": [
+      "VH_CDR3",
+      "VH_CDR2",
+      "VL_CDR3"
+    ],
+    "secondary_design_nodes": [
+      "VH_CDR1",
+      "VL_CDR1",
+      "VL_CDR2"
+    ],
+    "default_open_nodes": [
+      "VH_CDR3",
+      "VH_CDR2",
+      "VL_CDR3",
+      "VH_CDR1",
+      "VL_CDR1",
+      "VL_CDR2"
+    ],
+    "preserved_nodes": [
+      "VH_FR1",
+      "VH_FR4",
+      "VL_FR1",
+      "VL_FR4",
+      "Linker_head",
+      "Linker_tail"
+    ],
+    "epitope_focus": {
+      "target_region": "CD25_basiliximab_epitope",
+      "hotspot_motif": "ERIYHFV",
+      "known_gap": "The current case uses epitope spans and a linear hotspot fragment; a full residue-level structural epitope/contact map should replace this approximation when available."
+    },
+    "operator_policy": {
+      "explore": ["motif_graft", "site_resample", "segment_mutagenesis"],
+      "refine": ["site_resample", "block", "point"],
+      "stabilize": ["point", "swap"]
+    }
+  },
   "complex_states": [
     {
       "name": "cd25_bound_state",
@@ -94,6 +135,24 @@
       "VL_CDR1",
       "VL_CDR2",
       "VL_CDR3"
+    ],
+    "primary_cdr_hotspot": [
+      "VH_CDR3",
+      "VH_CDR2",
+      "VL_CDR3"
+    ],
+    "framework_stability_core": [
+      "VH_FR1",
+      "VH_FR2",
+      "VH_FR3",
+      "VH_FR4",
+      "VL_FR1",
+      "VL_FR2",
+      "VL_FR3",
+      "VL_FR4"
+    ],
+    "target_epitope_focus": [
+      "CD25_basiliximab_epitope"
     ],
     "linker_core": [
       "Linker_core"
@@ -127,6 +186,24 @@
       "coverage_target": 0.15,
       "off_target_penalty_weight": 0.15,
       "off_target_contact_tolerance": 80
+    },
+    {
+      "name": "cdr_surface_node_confidence",
+      "type": "region_confidence",
+      "states": ["cd25_bound_state"],
+      "region": "cdr_binding_surface",
+      "metric": "plddt_mean",
+      "target": 70,
+      "weight": 0.4
+    },
+    {
+      "name": "primary_cdr_hotspot_confidence",
+      "type": "region_confidence",
+      "states": ["cd25_bound_state"],
+      "region": "primary_cdr_hotspot",
+      "metric": "plddt_min",
+      "target": 50,
+      "weight": 0.25
     },
     {
       "name": "bound_state_confidence",
@@ -175,5 +252,11 @@
       "Target_CD25"
     ]
   },
+  "case_information_needed": [
+    "Exact CD25 target construct boundaries and numbering expected in the wet-lab assay.",
+    "A residue-level epitope/contact map or reference complex that should be favored, plus explicit off-target surfaces that should be avoided.",
+    "Whether the goal is basiliximab-like binding, non-overlapping CD25 binding, or competitive displacement.",
+    "Allowed framework/template family, liability constraints, and whether VH/VL orientation or linker length may change."
+  ],
   "round_history": []
 }

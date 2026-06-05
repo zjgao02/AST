@@ -3,6 +3,7 @@
   "task_type": "allosteric_tf_ligand_switch",
   "version": "tetr_dopamine_v1",
   "memory_path": "memory.yaml",
+  "case_sheet_path": "case_sheet.json",
   "binder": {
     "name": "TetR_monomer",
     "chain_id": "BB",
@@ -65,6 +66,44 @@
       "notes": "Dopamine is modeled as a small-molecule ligand in Protenix complex input."
     }
   },
+  "design_points": {
+    "schema_version": "ast_design_points_v1",
+    "design_intent": "Redesign a TetR-family switch so dopamine stabilizes a DNA-release-compatible holo state while the apo/DNA state remains folded and operator-compatible.",
+    "primary_design_nodes": [
+      "ligand_pocket_core",
+      "allosteric_hinge",
+      "relay_helix"
+    ],
+    "secondary_design_nodes": [
+      "domain_connector",
+      "HTH_exit_loop",
+      "HTH_recognition_helix"
+    ],
+    "default_open_nodes": [
+      "ligand_pocket_core",
+      "allosteric_hinge",
+      "relay_helix",
+      "domain_connector",
+      "HTH_exit_loop"
+    ],
+    "preserved_nodes": [
+      "dimerization_interface",
+      "N_term_support",
+      "C_terminal_support",
+      "HTH_helix1",
+      "HTH_turn"
+    ],
+    "state_logic": {
+      "apo_or_dna_state": "TetO contacts should remain plausible before dopamine binding.",
+      "holo_state": "Dopamine pocket contacts should strengthen while TetO-compatible DNA contacts weaken.",
+      "known_gap": "The current case does not yet encode a residue-level tetracycline-pocket template, dopamine pharmacophore contact map, or experimental DNA-release conformational reference."
+    },
+    "operator_policy": {
+      "explore": ["motif_graft", "segment_mutagenesis", "site_resample"],
+      "refine": ["site_resample", "block", "point"],
+      "stabilize": ["point", "swap"]
+    }
+  },
   "complex_states": [
     {
       "name": "tetO_bound_state_A",
@@ -113,6 +152,13 @@
     "dna_binding_head": [
       "HTH_recognition_helix",
       "HTH_exit_loop"
+    ],
+    "preserved_core": [
+      "dimerization_interface",
+      "N_term_support",
+      "C_terminal_support",
+      "HTH_helix1",
+      "HTH_turn"
     ]
   },
   "multistate_objectives": [
@@ -169,6 +215,24 @@
       "max_preserved_rmsd": 4.0
     },
     {
+      "name": "ligand_pocket_node_confidence",
+      "type": "region_confidence",
+      "states": ["dopamine_bound_state_B", "dopamine_tetO_competition_state_C"],
+      "region": "ligand_pocket",
+      "metric": "plddt_mean",
+      "target": 70,
+      "weight": 0.35
+    },
+    {
+      "name": "allosteric_pathway_node_confidence",
+      "type": "region_confidence",
+      "states": ["tetO_bound_state_A", "dopamine_bound_state_B"],
+      "region": "allosteric_pathway",
+      "metric": "plddt_min",
+      "target": 45,
+      "weight": 0.25
+    },
+    {
       "name": "state_confidence",
       "type": "confidence",
       "states": [
@@ -210,5 +274,11 @@
       "TetO_operator"
     ]
   },
+  "case_information_needed": [
+    "Reference TetR-family template structure and exact residue numbering for the ligand pocket, HTH domain, dimer interface, and allosteric hinge.",
+    "Dopamine pharmacophore/contact constraints: catechol H-bond donors/acceptors, amine salt-bridge preference, allowed pocket volume, and forbidden contacts.",
+    "DNA operator geometry or native TetR-DNA reference contacts that should be preserved in apo and disrupted in holo.",
+    "Assay direction and thresholds: desired dopamine response window, tolerated basal DNA leakage, mutation budget, and whether dimer interface redesign is allowed."
+  ],
   "round_history": []
 }

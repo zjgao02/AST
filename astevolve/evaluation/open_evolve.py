@@ -287,6 +287,8 @@ def _build_llm_feedback_summary(out, metrics):
             "multistate_score": metrics.get("multistate_score"),
             "multistate_loss": out.get("multistate_loss"),
         },
+        "case_design_points": out.get("case_design_points", {}),
+        "case_sheet_summary": out.get("case_sheet_summary", {}),
         "aggregate_structure": {
             "confidence": _compact_scalar(structure),
             "interface": _compact_interface(structure, pair_limit=0),

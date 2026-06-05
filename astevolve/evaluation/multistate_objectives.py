@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -574,6 +574,70 @@ def _score_confidence(by_state: Dict[str, Dict[str, Any]], spec: Dict[str, Any])
     return float(sum(values.values()) / len(values)), {"metric": metric, "states": names, "values": values}, warnings
 
 
+def _node_metric_value(item: Dict[str, Any], metric: str) -> Optional[float]:
+    metric = str(metric or "plddt_mean")
+    aliases = {
+        "plddt": "plddt_mean",
+        "mean": "plddt_mean",
+        "min": "plddt_min",
+        "max": "plddt_max",
+    }
+    key = aliases.get(metric, metric)
+    return _safe_float(item.get(key))
+
+
+def _score_region_confidence(
+    by_state: Dict[str, Dict[str, Any]],
+    spec: Dict[str, Any],
+    design_state: Dict[str, Any],
+) -> Tuple[float, Dict[str, Any], List[str]]:
+    names = _state_names(spec) or list(by_state)
+    metric = str(spec.get("metric") or "plddt_mean")
+    region_value = spec.get("region", spec.get("regions", spec.get("nodes", spec.get("node"))))
+    nodes = _expand_region_names(region_value, design_state)
+    if not nodes:
+        return 0.0, {"metric": metric, "states": names, "nodes": []}, ["region_confidence needs region, regions, node, or nodes"]
+
+    target_raw = _safe_float(spec.get("target"), None)
+    target = _normalize_metric(metric, target_raw) if target_raw is not None else None
+    values: Dict[str, Dict[str, Dict[str, float]]] = {}
+    scores: List[float] = []
+    warnings: List[str] = []
+
+    for name in names:
+        state = by_state.get(name)
+        if not state:
+            warnings.append(f"unknown state: {name}")
+            continue
+        summary = state.get("structure_metrics", {}) or {}
+        node_plddt = summary.get("node_plddt", {}) or state.get("node_plddt", {}) or {}
+        state_values: Dict[str, Dict[str, float]] = {}
+        for node in nodes:
+            item = node_plddt.get(node)
+            if not isinstance(item, dict):
+                continue
+            raw = _node_metric_value(item, metric)
+            if raw is None:
+                continue
+            normalized = _normalize_metric(metric, raw)
+            score = _clamp01(normalized / target) if target and target > 0 else normalized
+            state_values[str(node)] = {"raw": float(raw), "normalized": float(normalized), "score": float(score)}
+            scores.append(float(score))
+        if not state_values:
+            warnings.append(f"{name}: no node confidence values for region/nodes {nodes}")
+        values[name] = state_values
+
+    if not scores:
+        return 0.0, {"metric": metric, "states": names, "nodes": nodes, "values": values}, warnings
+    return float(sum(scores) / len(scores)), {
+        "metric": metric,
+        "states": names,
+        "nodes": nodes,
+        "target": target_raw,
+        "values": values,
+    }, warnings
+
+
 def _region_names(spec: Dict[str, Any], design_state: Dict[str, Any]) -> Optional[List[str]]:
     region = spec.get("region", spec.get("regions"))
     if region is None:
@@ -885,6 +949,119 @@ def _score_mechanistic_transition(
     return _clamp01(report.get("kinetic_path_score", 0.0)), details, warnings
 
 
+ObjectiveScorer = Callable[
+    [Dict[str, Dict[str, Any]], Dict[str, Any], Optional[Dict[str, Any]], Dict[str, Any]],
+    Tuple[float, Dict[str, Any], List[str]],
+]
+OBJECTIVE_REGISTRY: Dict[str, ObjectiveScorer] = {}
+
+
+def _register_objective(*names: str) -> Callable[[ObjectiveScorer], ObjectiveScorer]:
+    def decorator(func: ObjectiveScorer) -> ObjectiveScorer:
+        for name in names:
+            key = str(name).strip().lower()
+            if key:
+                OBJECTIVE_REGISTRY[key] = func
+        return func
+    return decorator
+
+
+@_register_objective("confidence", "structural_confidence")
+def _objective_confidence(
+    by_state: Dict[str, Dict[str, Any]],
+    spec: Dict[str, Any],
+    compiled: Optional[Dict[str, Any]],
+    design_state: Dict[str, Any],
+) -> Tuple[float, Dict[str, Any], List[str]]:
+    return _score_confidence(by_state, spec)
+
+
+@_register_objective("region_confidence", "node_confidence", "motif_confidence")
+def _objective_region_confidence(
+    by_state: Dict[str, Dict[str, Any]],
+    spec: Dict[str, Any],
+    compiled: Optional[Dict[str, Any]],
+    design_state: Dict[str, Any],
+) -> Tuple[float, Dict[str, Any], List[str]]:
+    return _score_region_confidence(by_state, spec, design_state)
+
+
+@_register_objective("interface_on", "preserve_interface", "bind", "binding")
+def _objective_interface_on(
+    by_state: Dict[str, Dict[str, Any]],
+    spec: Dict[str, Any],
+    compiled: Optional[Dict[str, Any]],
+    design_state: Dict[str, Any],
+) -> Tuple[float, Dict[str, Any], List[str]]:
+    state_name = (_state_names(spec) or [""])[0]
+    score, details, warnings = _interface_strength(by_state.get(state_name, {}), spec, compiled, design_state)
+    return score, {"state": state_name, **details}, warnings
+
+
+@_register_objective("interface_off", "disrupt_interface", "anti_bind", "anti-binding", "anti_binding")
+def _objective_interface_off(
+    by_state: Dict[str, Dict[str, Any]],
+    spec: Dict[str, Any],
+    compiled: Optional[Dict[str, Any]],
+    design_state: Dict[str, Any],
+) -> Tuple[float, Dict[str, Any], List[str]]:
+    state_name = (_state_names(spec) or [""])[0]
+    score, details, warnings = _interface_strength(by_state.get(state_name, {}), spec, compiled, design_state)
+    if any("could not resolve" in warning for warning in warnings):
+        return 0.0, {"state": state_name, "interface_strength": score, **details}, warnings
+    return 1.0 - score, {"state": state_name, "interface_strength": score, **details}, warnings
+
+
+@_register_objective("conf_change", "conformational_change")
+def _objective_conf_change(
+    by_state: Dict[str, Dict[str, Any]],
+    spec: Dict[str, Any],
+    compiled: Optional[Dict[str, Any]],
+    design_state: Dict[str, Any],
+) -> Tuple[float, Dict[str, Any], List[str]]:
+    return _score_conf_change(by_state, spec, compiled, design_state)
+
+
+@_register_objective("mechanistic_transition", "kinetic_path", "transition_path")
+def _objective_mechanistic_transition(
+    by_state: Dict[str, Dict[str, Any]],
+    spec: Dict[str, Any],
+    compiled: Optional[Dict[str, Any]],
+    design_state: Dict[str, Any],
+) -> Tuple[float, Dict[str, Any], List[str]]:
+    return _score_mechanistic_transition(by_state, spec, compiled, design_state)
+
+
+@_register_objective("preserve_motif", "motif_on")
+def _objective_motif_on(
+    by_state: Dict[str, Dict[str, Any]],
+    spec: Dict[str, Any],
+    compiled: Optional[Dict[str, Any]],
+    design_state: Dict[str, Any],
+) -> Tuple[float, Dict[str, Any], List[str]]:
+    motif_spec = dict(spec)
+    if motif_spec.get("region") or motif_spec.get("regions") or motif_spec.get("node") or motif_spec.get("nodes"):
+        motif_spec.setdefault("metric", "plddt_mean")
+        return _score_region_confidence(by_state, motif_spec, design_state)
+    motif_spec.setdefault("metric", "node_plddt_mean")
+    return _score_confidence(by_state, motif_spec)
+
+
+@_register_objective("disrupt_motif", "motif_off")
+def _objective_motif_off(
+    by_state: Dict[str, Dict[str, Any]],
+    spec: Dict[str, Any],
+    compiled: Optional[Dict[str, Any]],
+    design_state: Dict[str, Any],
+) -> Tuple[float, Dict[str, Any], List[str]]:
+    score, details, warnings = _objective_motif_on(by_state, spec, compiled, design_state)
+    return 1.0 - score, {"motif_confidence": score, **details}, warnings
+
+
+def supported_objective_types() -> List[str]:
+    return sorted(OBJECTIVE_REGISTRY)
+
+
 def _score_objective(
     by_state: Dict[str, Dict[str, Any]],
     spec: Dict[str, Any],
@@ -892,31 +1069,9 @@ def _score_objective(
     design_state: Dict[str, Any],
 ) -> Tuple[float, Dict[str, Any], List[str]]:
     kind = str(spec.get("type") or spec.get("kind") or "").strip().lower()
-    if kind in {"confidence", "structural_confidence"}:
-        return _score_confidence(by_state, spec)
-    if kind in {"interface_on", "preserve_interface", "bind", "binding"}:
-        state_name = (_state_names(spec) or [""])[0]
-        score, details, warnings = _interface_strength(by_state.get(state_name, {}), spec, compiled, design_state)
-        return score, {"state": state_name, **details}, warnings
-    if kind in {"interface_off", "disrupt_interface", "anti_bind", "anti-binding", "anti_binding"}:
-        state_name = (_state_names(spec) or [""])[0]
-        score, details, warnings = _interface_strength(by_state.get(state_name, {}), spec, compiled, design_state)
-        if any("could not resolve" in warning for warning in warnings):
-            return 0.0, {"state": state_name, "interface_strength": score, **details}, warnings
-        return 1.0 - score, {"state": state_name, "interface_strength": score, **details}, warnings
-    if kind in {"conf_change", "conformational_change"}:
-        return _score_conf_change(by_state, spec, compiled, design_state)
-    if kind in {"mechanistic_transition", "kinetic_path", "transition_path"}:
-        return _score_mechanistic_transition(by_state, spec, compiled, design_state)
-    if kind in {"preserve_motif", "motif_on"}:
-        motif_spec = dict(spec)
-        motif_spec.setdefault("metric", "node_plddt_mean")
-        return _score_confidence(by_state, motif_spec)
-    if kind in {"disrupt_motif", "motif_off"}:
-        motif_spec = dict(spec)
-        motif_spec.setdefault("metric", "node_plddt_mean")
-        score, details, warnings = _score_confidence(by_state, motif_spec)
-        return 1.0 - score, {"motif_confidence": score, **details}, warnings
+    scorer = OBJECTIVE_REGISTRY.get(kind)
+    if scorer is not None:
+        return scorer(by_state, spec, compiled, design_state)
     return 0.0, {}, [f"unsupported objective type: {kind}"]
 
 
@@ -941,6 +1096,7 @@ def evaluate_multistate_objectives(
             "loss": 0.0,
             "objectives": {},
             "warnings": [],
+            "supported_objective_types": supported_objective_types(),
         }
 
     design_state = design_state or ((compiled or {}).get("_design_state", {}) if compiled else {})
@@ -974,4 +1130,5 @@ def evaluate_multistate_objectives(
         "loss": float(1.0 - normalized),
         "objectives": objectives,
         "warnings": warnings,
+        "supported_objective_types": supported_objective_types(),
     }

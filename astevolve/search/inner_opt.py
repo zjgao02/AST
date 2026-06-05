@@ -71,9 +71,13 @@ class SAConfig:
     multistate_objective_weight: float = 1.0
 
     mutation_ops: Dict[str, float] = field(default_factory=lambda: {
-        "point": 0.6,
-        "block": 0.2,
-        "segment_resample": 0.15,
+        "point": 0.50,
+        "block": 0.14,
+        "segment_resample": 0.10,
+        "site_resample": 0.10,
+        "segment_mutagenesis": 0.08,
+        "motif_graft": 0.04,
+        "region_shuffle": 0.03,
         "swap": 0.05,
     })
 
@@ -192,6 +196,23 @@ def _mutate_swap(
     return [int(i), int(j)]
 
 
+def _mutate_region_shuffle(
+    seq_list: List[str], designable: np.ndarray, rng: np.random.Generator, k: int
+) -> List[int]:
+    if designable.size < 2:
+        return []
+    k = min(max(2, k), designable.size)
+    pos = list(map(int, rng.choice(designable, size=k, replace=False)))
+    old = [seq_list[i] for i in pos]
+    shuffled = old[:]
+    rng.shuffle(shuffled)
+    if shuffled == old and len(shuffled) > 1:
+        shuffled = shuffled[1:] + shuffled[:1]
+    for i, aa in zip(pos, shuffled):
+        seq_list[i] = aa
+    return pos
+
+
 def mutate_seqs(
     seqs: Dict[str, str],
     compiled: Dict[str, Any],
@@ -205,15 +226,21 @@ def mutate_seqs(
     op = _choose_op(rng, cfg.mutation_ops)
     move["op"] = op
 
-    if op == "segment_resample" or (
+    if op in {"segment_resample", "segment_mutagenesis", "motif_graft"} or (
         op == "block" and rng.random() < cfg.resample_segment_prob
     ):
         seg = rng.choice(compiled["segments"])
         cid = seg.chain_id
         mask = masks[cid]
+        designable = [int(i) for i in seg.indices() if bool(mask[i])]
+        if op in {"segment_mutagenesis", "motif_graft"}:
+            k = min(len(designable), max(4, int(round(cfg.mutation_rate * len(designable) * 2))))
+            selected = set(map(int, rng.choice(np.asarray(designable), size=k, replace=False))) if designable else set()
+        else:
+            selected = set(designable)
         positions: List[int] = []
-        for i in seg.indices():
-            if mask[i]:
+        for i in designable:
+            if i in selected:
                 new[cid][i] = AA[int(rng.integers(0, len(AA)))]
                 positions.append(i)
         move["segments"] = [(cid, seg.name, seg.spans)]
@@ -229,9 +256,13 @@ def mutate_seqs(
         k = max(1, int(round(cfg.mutation_rate * designable.size)))
         if op == "point":
             pos = _mutate_point(s_list, designable, rng, k)
+        elif op == "site_resample":
+            pos = _mutate_point(s_list, designable, rng, max(k, min(4, designable.size)))
         elif op == "block":
             block_len = int(rng.integers(2, 6))
             pos = _mutate_block(s_list, designable, rng, block_len)
+        elif op == "region_shuffle":
+            pos = _mutate_region_shuffle(s_list, designable, rng, max(k, min(8, designable.size)))
         elif op == "swap":
             pos = _mutate_swap(s_list, designable, rng)
         else:
@@ -1185,6 +1216,127 @@ def _position_sampling_probs(
     return probs
 
 
+def _policy_abs_positions(seg: Any, node_policy: Optional[Dict[str, Any]], field: str) -> List[int]:
+    if not isinstance(node_policy, dict):
+        return []
+    out: List[int] = []
+    for raw_pos in node_policy.get(field, []) or []:
+        pos = _relative_to_abs_position(seg, raw_pos)
+        if pos is not None and int(pos) not in out:
+            out.append(int(pos))
+    return out
+
+
+def _policy_anchor_positions(seg: Any, node_policy: Optional[Dict[str, Any]]) -> List[int]:
+    if not isinstance(node_policy, dict):
+        return []
+    out = _policy_abs_positions(seg, node_policy, "anchor_positions")
+    raw_anchor = node_policy.get("site_anchors", {})
+    if isinstance(raw_anchor, dict) and seg.name in raw_anchor and isinstance(raw_anchor[seg.name], dict):
+        raw_anchor = raw_anchor[seg.name]
+    if isinstance(raw_anchor, dict):
+        for raw_pos in raw_anchor.get("relative_positions", raw_anchor.get("positions", [])) or []:
+            pos = _relative_to_abs_position(seg, raw_pos)
+            if pos is not None and int(pos) not in out:
+                out.append(int(pos))
+    return out
+
+
+def _policy_motifs(node_policy: Optional[Dict[str, Any]]) -> List[str]:
+    if not isinstance(node_policy, dict):
+        return []
+    raw: List[Any] = []
+    for field in ("graft_motifs", "motif_candidates", "fill_residues"):
+        value = node_policy.get(field)
+        if isinstance(value, str):
+            raw.append(value)
+        elif isinstance(value, list):
+            raw.extend(value)
+    motifs: List[str] = []
+    for item in raw:
+        motif = "".join(ch for ch in str(item).upper() if ch in AA)
+        if 2 <= len(motif) <= 48 and motif not in motifs:
+            motifs.append(motif)
+    return motifs
+
+
+def _sample_positions(
+    positions: List[int],
+    rng: np.random.Generator,
+    k: int,
+    probs: Optional[np.ndarray] = None,
+    preferred: Optional[List[int]] = None,
+) -> List[int]:
+    if not positions:
+        return []
+    preferred = [int(p) for p in (preferred or []) if int(p) in set(positions)]
+    chosen: List[int] = []
+    if preferred:
+        rng.shuffle(preferred)
+        chosen.extend(preferred[: min(len(preferred), max(1, k))])
+    remaining = [int(p) for p in positions if int(p) not in set(chosen)]
+    if len(chosen) < k and remaining:
+        if probs is not None and len(probs) == len(positions):
+            prob_by_pos = {int(pos): float(prob) for pos, prob in zip(positions, probs)}
+            rem_probs = np.asarray([prob_by_pos[int(pos)] for pos in remaining], dtype=float)
+            total = float(rem_probs.sum())
+            rem_probs = rem_probs / total if total > 0 else None
+        else:
+            rem_probs = None
+        extra = rng.choice(
+            np.asarray(remaining),
+            size=min(len(remaining), k - len(chosen)),
+            replace=False,
+            p=rem_probs,
+        ).tolist()
+        chosen.extend(int(x) for x in extra)
+    return sorted(set(chosen))
+
+
+def _graft_motif_into_node(
+    seq_list: List[str],
+    seg: Any,
+    positions: List[int],
+    motif: str,
+    rng: np.random.Generator,
+    node_policy: Optional[Dict[str, Any]],
+) -> Tuple[List[int], List[Dict[str, Any]]]:
+    pos_set = set(int(p) for p in positions)
+    indices = [int(x) for x in seg.indices()]
+    anchors = _policy_anchor_positions(seg, node_policy) + _policy_abs_positions(seg, node_policy, "hotspot_positions")
+    candidate_starts = [int(p) for p in anchors if int(p) in pos_set]
+    if not candidate_starts:
+        candidate_starts = [
+            start
+            for start in positions
+            if all((int(start) + offset) in pos_set for offset in range(len(motif)))
+        ]
+    if not candidate_starts and indices:
+        max_start_idx = max(0, len(indices) - len(motif))
+        candidate_starts = [
+            indices[offset]
+            for offset in range(0, max_start_idx + 1)
+            if all(indices[offset + j] in pos_set for j in range(len(motif)))
+        ]
+    if not candidate_starts:
+        return [], []
+
+    start = int(rng.choice(np.asarray(candidate_starts)))
+    changes: List[Dict[str, Any]] = []
+    chosen: List[int] = []
+    for offset, aa in enumerate(motif):
+        pos = start + offset
+        if pos not in pos_set or pos >= len(seq_list):
+            continue
+        old = seq_list[pos]
+        if old == aa:
+            continue
+        seq_list[pos] = aa
+        chosen.append(pos)
+        changes.append({"position": int(pos), "from": old, "to": aa, "motif": motif})
+    return chosen, changes
+
+
 def _mutate_node_seqs(
     seqs: Dict[str, str],
     seg: Any,
@@ -1215,6 +1367,11 @@ def _mutate_node_seqs(
         return seqs, move
 
     node_policy = _node_policy(cfg, seg)
+    protected = set(_policy_abs_positions(seg, node_policy, "protected_positions"))
+    if protected:
+        positions = [p for p in positions if int(p) not in protected]
+    if not positions:
+        return seqs, move
     op_weights = node_policy.get("mutation_ops", cfg.mutation_ops) if node_policy else cfg.mutation_ops
     if not isinstance(op_weights, dict):
         op_weights = cfg.mutation_ops
@@ -1245,6 +1402,12 @@ def _mutate_node_seqs(
             "favored_residues": list(node_policy.get("favored_residues", []) or [])[:12],
             "favored_residue_classes": list(node_policy.get("favored_residue_classes", []) or [])[:8],
             "site_anchors": node_policy.get("site_anchors"),
+            "anchor_positions": list(node_policy.get("anchor_positions", []) or [])[:16],
+            "hotspot_positions": list(node_policy.get("hotspot_positions", []) or [])[:16],
+            "graft_motifs": list(node_policy.get("graft_motifs", []) or [])[:6],
+            "motif_candidates": list(node_policy.get("motif_candidates", []) or [])[:6],
+            "operator_phase": node_policy.get("operator_phase"),
+            "large_jump": node_policy.get("large_jump"),
             "secondary_structure": node_policy.get("secondary_structure"),
         }
     if external_prior:
@@ -1266,7 +1429,58 @@ def _mutate_node_seqs(
         k = min(len(positions), max(base_k, min(4, len(positions))))
         if max_step > 0:
             k = min(k, max_step)
-        chosen = sorted(rng.choice(np.asarray(positions), size=k, replace=False, p=position_probs).tolist())
+        chosen = _sample_positions(positions, rng, k, position_probs)
+    elif op == "segment_mutagenesis":
+        jump_floor = min(8, len(positions)) if bool(node_policy.get("large_jump")) else min(5, len(positions))
+        k = min(len(positions), max(base_k, jump_floor))
+        if max_step > 0:
+            k = min(k, max_step)
+        preferred = _policy_abs_positions(seg, node_policy, "hotspot_positions") + _policy_anchor_positions(seg, node_policy)
+        chosen = _sample_positions(positions, rng, k, position_probs, preferred=preferred)
+    elif op == "site_resample":
+        preferred = (
+            _policy_abs_positions(seg, node_policy, "hotspot_positions")
+            + _policy_abs_positions(seg, node_policy, "anchor_positions")
+            + _policy_abs_positions(seg, node_policy, "mutable_positions")
+            + _policy_anchor_positions(seg, node_policy)
+        )
+        k = min(len(positions), max(base_k, min(4, len(positions))))
+        if max_step > 0:
+            k = min(k, max_step)
+        chosen = _sample_positions(positions, rng, k, position_probs, preferred=preferred)
+    elif op == "motif_graft":
+        motifs = _policy_motifs(node_policy)
+        if motifs:
+            motif = str(rng.choice(np.asarray(motifs)))
+            chosen, motif_changes = _graft_motif_into_node(new[cid], seg, positions, motif, rng, node_policy)
+            move["motif"] = motif
+            move["changes"] = [
+                {"chain_id": cid, "node": seg.name, **change}
+                for change in motif_changes
+            ]
+            if chosen:
+                move["positions"][cid] = [int(x) for x in chosen]
+                return {k: "".join(v) for k, v in new.items()}, move
+        k = min(len(positions), max(base_k, min(4, len(positions))))
+        chosen = _sample_positions(positions, rng, k, position_probs)
+    elif op == "region_shuffle":
+        k = min(len(positions), max(2, max(base_k, min(8, len(positions)))))
+        if max_step > 0:
+            k = min(k, max_step)
+        chosen = _sample_positions(positions, rng, k, position_probs)
+        old_residues = [new[cid][pos] for pos in chosen]
+        shuffled = old_residues[:]
+        rng.shuffle(shuffled)
+        if shuffled == old_residues and len(shuffled) > 1:
+            shuffled = shuffled[1:] + shuffled[:1]
+        for pos, aa in zip(chosen, shuffled):
+            old = new[cid][pos]
+            new[cid][pos] = aa
+            move["changes"].append(
+                {"chain_id": cid, "position": int(pos), "from": old, "to": aa, "node": seg.name}
+            )
+        move["positions"][cid] = [int(x) for x in chosen]
+        return {k: "".join(v) for k, v in new.items()}, move
     elif op == "block":
         start = int(rng.choice(np.asarray(positions), p=position_probs))
         block_upper = max(3, min(6, (max_step + 1) if max_step > 0 else 6))
