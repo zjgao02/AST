@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import tempfile
 from pathlib import Path
 from typing import Optional
@@ -26,6 +27,17 @@ def data_root() -> Path:
 
 def artifact_root() -> Path:
     return _root_from_env("ASTEVOLVE_ARTIFACT_ROOT", "artifacts")
+
+
+def transient_artifact_dir() -> str:
+    return os.environ.get("ASTEVOLVE_TRANSIENT_ARTIFACT_DIR", "transient").strip() or "transient"
+
+
+def _looks_like_uuid(value: str) -> bool:
+    return bool(re.fullmatch(
+        r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+        str(value).strip(),
+    ))
 
 
 def model_root() -> Path:
@@ -56,6 +68,8 @@ def data_path(*parts: str) -> Path:
 
 
 def artifact_path(*parts: str) -> Path:
+    if len(parts) == 1 and _looks_like_uuid(str(parts[0])):
+        return artifact_root().joinpath(transient_artifact_dir(), str(parts[0]))
     return artifact_root().joinpath(*parts)
 
 

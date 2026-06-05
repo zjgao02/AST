@@ -121,6 +121,28 @@ PowerShell names:
 -DryRun
 ```
 
+## 5.1 Artifact Layout
+
+Formal run outputs should be under:
+
+```text
+artifacts/runs/<case>/<run_name>/
+```
+
+Legacy or fallback one-off outputs that use a UUID as the artifact id are
+automatically placed under:
+
+```text
+artifacts/transient/<uuid>/
+```
+
+This keeps the top-level `artifacts/` directory from accumulating many UUID
+folders. Override the transient folder name if needed:
+
+```bash
+export ASTEVOLVE_TRANSIENT_ARTIFACT_DIR=transient
+```
+
 ## 6. Current Bash Commands
 
 Fast preview for TetR:
