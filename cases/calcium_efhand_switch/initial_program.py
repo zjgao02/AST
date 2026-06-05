@@ -219,6 +219,8 @@ def _apply_runtime_overrides(strategy):
     protenix_conda_env = os.environ.get("ASTEVOLVE_PROTENIX_CONDA_ENV") or os.environ.get("ASTEVOLVE_CONDA_ENV")
     if protenix_conda_env:
         strategy["protenix_conda_env"] = protenix_conda_env
+    if os.environ.get("ASTEVOLVE_PROTENIX_MODEL_NAME"):
+        strategy["protenix_model_name"] = os.environ["ASTEVOLVE_PROTENIX_MODEL_NAME"]
     if "ASTEVOLVE_PROTENIX_COMPLEX_USE_MSA" in os.environ:
         strategy["protenix_complex_use_msa"] = _env_bool(
             "ASTEVOLVE_PROTENIX_COMPLEX_USE_MSA",

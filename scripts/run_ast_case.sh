@@ -33,6 +33,8 @@ export ASTEVOLVE_ARTIFACT_ROOT="${ASTEVOLVE_ARTIFACT_ROOT:-$PROJECT_ROOT/artifac
 export ASTEVOLVE_TMP_ROOT="${ASTEVOLVE_TMP_ROOT:-$ASTEVOLVE_ARTIFACT_ROOT/tmp}"
 export HF_HOME="${HF_HOME:-$ASTEVOLVE_MODEL_ROOT/huggingface}"
 export HF_HUB_CACHE="${HF_HUB_CACHE:-$HF_HOME/hub}"
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
+export CUDA_MODULE_LOADING="${CUDA_MODULE_LOADING:-LAZY}"
 
 CASE="${CASE:-tetr_dopamine}"
 STAGE="${STAGE:-outer}"
@@ -47,6 +49,12 @@ PROGEN_WEIGHT="${PROGEN_WEIGHT:-}"
 
 mkdir -p "$ASTEVOLVE_ARTIFACT_ROOT/runs/logs" "$ASTEVOLVE_TMP_ROOT"
 
+if [[ -n "${ASTEVOLVE_PROTENIX_MODEL_NAME:-}" ]]; then
+  echo "protenix_model_name=$ASTEVOLVE_PROTENIX_MODEL_NAME"
+else
+  echo "protenix_model_name=case_default"
+fi
+
 python - <<'PY'
 import torch
 print("torch:", torch.__version__)
@@ -54,6 +62,10 @@ print("cuda available:", torch.cuda.is_available())
 if torch.cuda.is_available():
     print("device:", torch.cuda.get_device_name(0))
 PY
+
+if command -v nvidia-smi >/dev/null 2>&1; then
+  nvidia-smi
+fi
 
 args=(
   scripts/submit_ast_run.sh

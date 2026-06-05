@@ -51,6 +51,7 @@ def _protenix_env() -> Dict[str, str]:
     env = os.environ.copy()
     env.setdefault("PROTENIX_ROOT_DIR", str(_DEFAULT_PROTENIX_ROOT))
     env.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")
+    env.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
     return env
 
 
@@ -413,9 +414,9 @@ def _run_protenix_complex(
     if result.returncode != 0:
         print(f"[protenix] failed (rc={result.returncode})")
         if result.stdout:
-            print(f"[protenix] stdout: {result.stdout[-1000:]}")
+            print(f"[protenix] stdout: {_head_tail_text(result.stdout)}")
         if result.stderr:
-            print(f"[protenix] stderr: {result.stderr[-1000:]}")
+            print(f"[protenix] stderr: {_head_tail_text(result.stderr)}")
         if _prediction_available(out_dir):
             print("[protenix] salvaging prediction files despite nonzero return code")
             return out_dir, preview
@@ -450,12 +451,20 @@ def _prediction_available(out_dir: Path) -> bool:
     return bool(_first_json(out_dir, "*summary_confidence*.json") or _first_cif(out_dir))
 
 
-def _tail_text(value: Optional[str], limit: int = 4000) -> str:
+def _tail_text(value: Optional[str], limit: int = 12000) -> str:
     text = str(value or "")
     return text[-limit:] if len(text) > limit else text
 
 
-def _read_error_files(out_dir: Path, limit: int = 4000) -> str:
+def _head_tail_text(value: Optional[str], limit: int = 12000) -> str:
+    text = str(value or "")
+    if len(text) <= limit:
+        return text
+    half = max(1000, limit // 2)
+    return f"{text[:half]}\n... <trimmed {len(text) - (2 * half)} chars> ...\n{text[-half:]}"
+
+
+def _read_error_files(out_dir: Path, limit: int = 12000) -> str:
     err_dir = out_dir / "ERR"
     if not err_dir.exists():
         return ""

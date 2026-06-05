@@ -34,6 +34,16 @@ notes:
   The exact checkpoint filenames are Protenix-version-specific; verify with:
     protenix predict --help
     python -c "import protenix, pathlib; print(pathlib.Path(protenix.__file__).parent)"
+  For protein-protein or peptide-complex cases, protenix_mini_esm_v0.5.0 can
+  OOM during ESM3B embedding precomputation on some A100 jobs. Download at
+  least one non-ESM fallback checkpoint and run with
+  ASTEVOLVE_PROTENIX_MODEL_NAME=protenix_mini_default_v0.5.0 or
+  ASTEVOLVE_PROTENIX_MODEL_NAME=protenix_tiny_default_v0.5.0.
+optional_fallback_files:
+  release_data/checkpoint/protenix_mini_default_v0.5.0.pt
+    url: https://af3-dev.tos-cn-beijing.volces.com/release_model/protenix_mini_default_v0.5.0.pt
+  release_data/checkpoint/protenix_tiny_default_v0.5.0.pt
+    url: https://af3-dev.tos-cn-beijing.volces.com/release_model/protenix_tiny_default_v0.5.0.pt
 
 [optional] Biohub ESMFold2-Fast local structure backend
 target_dir: model_weights/biohub/ESMFold2-Fast
