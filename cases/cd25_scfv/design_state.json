@@ -105,9 +105,28 @@
       "type": "interface_on",
       "state": "cd25_bound_state",
       "pair": ["scFv", "CD25"],
+      "left_region": "cdr_binding_surface",
+      "right_region": "CD25_basiliximab_epitope",
       "weight": 1.0,
-      "contact_target": 80,
-      "residue_pair_target": 16
+      "contact_target": 60,
+      "residue_pair_target": 14,
+      "coverage_target": 0.35,
+      "off_target_penalty_weight": 0.25,
+      "off_target_contact_tolerance": 120
+    },
+    {
+      "name": "vh_cdr3_epitope_hotspot",
+      "type": "interface_on",
+      "state": "cd25_bound_state",
+      "pair": ["scFv", "CD25"],
+      "left_region": "VH_CDR3",
+      "right_region": "CD25_basiliximab_epitope",
+      "weight": 0.7,
+      "contact_target": 24,
+      "residue_pair_target": 6,
+      "coverage_target": 0.15,
+      "off_target_penalty_weight": 0.15,
+      "off_target_contact_tolerance": 80
     },
     {
       "name": "bound_state_confidence",

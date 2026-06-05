@@ -142,10 +142,210 @@ def _pair_key(left: str, right: str, pairs: Dict[str, Any]) -> Optional[str]:
     return None
 
 
+def _region_indices_from_spec(spec: Dict[str, Any]) -> Optional[set[int]]:
+    values = spec.get("indices")
+    if values is None:
+        values = spec.get("residues")
+    if values is not None:
+        try:
+            out = {int(v) for v in values}
+        except (TypeError, ValueError):
+            out = set()
+        if not bool(spec.get("zero_based", False)) and bool(spec.get("one_based", False)):
+            out = {idx - 1 for idx in out if idx > 0}
+        return out
+
+    spans = spec.get("spans", spec.get("ranges", spec.get("residue_ranges")))
+    if spans is None:
+        return None
+    out: set[int] = set()
+    for raw in spans:
+        if not isinstance(raw, (list, tuple)) or len(raw) < 2:
+            continue
+        try:
+            start = int(raw[0])
+            end = int(raw[1])
+        except (TypeError, ValueError):
+            continue
+        if bool(spec.get("one_based", False)) and not bool(spec.get("zero_based", False)):
+            start -= 1
+            end -= 1
+        for idx in range(max(0, start), max(0, end)):
+            out.add(idx)
+    return out
+
+
+def _unit_region_candidates(unit: Dict[str, Any]) -> set[str]:
+    candidates = {
+        str(unit.get("asym_id") or "").lower(),
+        str(unit.get("label") or "").lower(),
+        str(unit.get("base_label") or "").lower(),
+        str(unit.get("source_chain") or "").lower(),
+        str(unit.get("kind") or "").lower(),
+    }
+    candidates.update(_kind_aliases(str(unit.get("kind") or "")))
+    return {item for item in candidates if item}
+
+
+def _region_filters_by_asym(
+    state_result: Dict[str, Any],
+    region_specs: Optional[List[Dict[str, Any]]],
+) -> Dict[str, Optional[set[int]]]:
+    if not region_specs:
+        return {}
+    units = _expand_entity_units(state_result)
+    filters: Dict[str, Optional[set[int]]] = {}
+    for spec in region_specs:
+        if not isinstance(spec, dict):
+            continue
+        chain_id = str(
+            spec.get("chain_id")
+            or spec.get("source_chain")
+            or spec.get("chain")
+            or spec.get("asym_id")
+            or spec.get("entity")
+            or ""
+        ).strip()
+        wanted = chain_id.lower()
+        indices = _region_indices_from_spec(spec)
+        matched = False
+        for unit in units:
+            asym = str(unit.get("asym_id") or "")
+            if not asym:
+                continue
+            if wanted and wanted not in _unit_region_candidates(unit):
+                continue
+            matched = True
+            if indices is None:
+                filters[asym] = None
+            elif asym not in filters:
+                filters[asym] = set(indices)
+            elif filters.get(asym) is not None:
+                filters.setdefault(asym, set()).update(indices)
+        if not matched and chain_id and len(chain_id) <= 3:
+            if indices is None:
+                filters[chain_id] = None
+            elif chain_id not in filters:
+                filters[chain_id] = set(indices)
+            elif filters.get(chain_id) is not None:
+                filters.setdefault(chain_id, set()).update(indices)
+    return filters
+
+
+def _residue_allowed(residue: Dict[str, Any], filters: Dict[str, Optional[set[int]]]) -> bool:
+    if not filters:
+        return True
+    chain = str(residue.get("chain") or "")
+    if chain not in filters:
+        return False
+    allowed = filters[chain]
+    if allowed is None:
+        return True
+    try:
+        idx = int(residue.get("residue") or 0) - 1
+    except (TypeError, ValueError):
+        return False
+    return idx in allowed
+
+
+def _coverage(filters: Dict[str, Optional[set[int]]], contacted: set[Tuple[str, int]]) -> Optional[float]:
+    if not filters:
+        return None
+    total = 0
+    for residues in filters.values():
+        if residues is not None:
+            total += len(residues)
+    if total <= 0:
+        return None
+    covered = 0
+    for chain, zero_idx in contacted:
+        allowed = filters.get(chain)
+        if allowed is not None and zero_idx in allowed:
+            covered += 1
+    return _clamp01(float(covered) / float(total))
+
+
+def _filtered_pair_item(
+    item: Dict[str, Any],
+    left_ids: List[str],
+    right_ids: List[str],
+    left_filters: Dict[str, Optional[set[int]]],
+    right_filters: Dict[str, Optional[set[int]]],
+) -> Optional[Dict[str, Any]]:
+    residue_pairs = item.get("residue_pairs")
+    if not residue_pairs:
+        if left_filters or right_filters:
+            return None
+        return dict(item)
+
+    contact_count = 0
+    clash_count = 0
+    residue_pair_count = 0
+    plddt_values: List[float] = []
+    left_contacted: set[Tuple[str, int]] = set()
+    right_contacted: set[Tuple[str, int]] = set()
+    examples: List[Dict[str, Any]] = []
+
+    for pair in residue_pairs:
+        if not isinstance(pair, dict):
+            continue
+        raw_left = pair.get("left", {}) or {}
+        raw_right = pair.get("right", {}) or {}
+        left_chain = str(raw_left.get("chain") or "")
+        right_chain = str(raw_right.get("chain") or "")
+        if left_chain in left_ids and right_chain in right_ids:
+            oriented_left, oriented_right = raw_left, raw_right
+        elif left_chain in right_ids and right_chain in left_ids:
+            oriented_left, oriented_right = raw_right, raw_left
+        else:
+            continue
+        if not _residue_allowed(oriented_left, left_filters):
+            continue
+        if not _residue_allowed(oriented_right, right_filters):
+            continue
+
+        contact_count += int(pair.get("contact_count") or 0)
+        clash_count += int(pair.get("clash_count") or 0)
+        residue_pair_count += 1
+        for residue, contacted in ((oriented_left, left_contacted), (oriented_right, right_contacted)):
+            plddt = _safe_float(residue.get("plddt"))
+            if plddt is not None:
+                plddt_values.append(float(plddt))
+            try:
+                contacted.add((str(residue.get("chain") or ""), int(residue.get("residue") or 0) - 1))
+            except (TypeError, ValueError):
+                pass
+        if len(examples) < 10:
+            examples.append(
+                {
+                    "left": oriented_left,
+                    "right": oriented_right,
+                    "contact_count": pair.get("contact_count"),
+                    "clash_count": pair.get("clash_count"),
+                    "min_distance": pair.get("min_distance"),
+                }
+            )
+
+    if contact_count <= 0 and clash_count <= 0:
+        return None
+    return {
+        "contact_count": int(contact_count),
+        "residue_pair_count": int(residue_pair_count),
+        "clash_count": int(clash_count),
+        "interface_plddt_mean": _mean(plddt_values),
+        "interface_plddt_min": min(plddt_values) if plddt_values else None,
+        "left_region_coverage": _coverage(left_filters, left_contacted),
+        "right_region_coverage": _coverage(right_filters, right_contacted),
+        "contact_examples": examples,
+    }
+
+
 def _sum_pair_metrics(
     state_result: Dict[str, Any],
     left_selector: Any,
     right_selector: Any,
+    left_region_specs: Optional[List[Dict[str, Any]]] = None,
+    right_region_specs: Optional[List[Dict[str, Any]]] = None,
 ) -> Tuple[Dict[str, Any], List[str]]:
     summary = state_result.get("structure_metrics", {}) or {}
     interface = summary.get("interface", {}) or {}
@@ -180,10 +380,37 @@ def _sum_pair_metrics(
         warnings.append(f"no interface pair metrics for selectors: {left_selector}, {right_selector}")
         return {"available": False}, warnings
 
+    left_filters = _region_filters_by_asym(state_result, left_region_specs)
+    right_filters = _region_filters_by_asym(state_result, right_region_specs)
+    if left_region_specs and not left_filters:
+        warnings.append(f"could not resolve left region for selector: {left_selector}")
+    if right_region_specs and not right_filters:
+        warnings.append(f"could not resolve right region for selector: {right_selector}")
+
+    if left_filters or right_filters:
+        filtered: List[Dict[str, Any]] = []
+        for item in selected:
+            filtered_item = _filtered_pair_item(item, left_ids, right_ids, left_filters, right_filters)
+            if filtered_item is not None:
+                filtered.append(filtered_item)
+        selected = filtered
+        if not selected:
+            return {"available": False, "left_region_resolved": bool(left_filters), "right_region_resolved": bool(right_filters)}, warnings
+
     plddt_values = [
         float(item["interface_plddt_mean"])
         for item in selected
         if _safe_float(item.get("interface_plddt_mean")) is not None
+    ]
+    left_coverages = [
+        float(item["left_region_coverage"])
+        for item in selected
+        if _safe_float(item.get("left_region_coverage")) is not None
+    ]
+    right_coverages = [
+        float(item["right_region_coverage"])
+        for item in selected
+        if _safe_float(item.get("right_region_coverage")) is not None
     ]
     return {
         "available": True,
@@ -191,6 +418,9 @@ def _sum_pair_metrics(
         "residue_pair_count": int(sum(int(item.get("residue_pair_count") or 0) for item in selected)),
         "clash_count": int(sum(int(item.get("clash_count") or 0) for item in selected)),
         "interface_plddt_mean": _mean(plddt_values),
+        "left_region_coverage": _mean(left_coverages),
+        "right_region_coverage": _mean(right_coverages),
+        "region_filtered": bool(left_filters or right_filters),
     }, warnings
 
 
@@ -204,11 +434,54 @@ def _interface_selectors(spec: Dict[str, Any]) -> Tuple[Any, Any]:
     )
 
 
-def _interface_strength(state_result: Dict[str, Any], spec: Dict[str, Any]) -> Tuple[float, Dict[str, Any], List[str]]:
+def _interface_region_specs(
+    spec: Dict[str, Any],
+    side: str,
+    compiled: Optional[Dict[str, Any]],
+    design_state: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    regions = spec.get("regions")
+    value = None
+    if isinstance(regions, dict):
+        value = regions.get(side)
+    if value is None:
+        if side == "left":
+            for key in ("left_region", "binder_region", "protein_region"):
+                if spec.get(key) is not None:
+                    value = spec.get(key)
+                    break
+        else:
+            for key in ("right_region", "target_region", "ligand_region"):
+                if spec.get(key) is not None:
+                    value = spec.get(key)
+                    break
+    return _ast_region_specs(value, compiled, design_state)
+
+
+def _interface_strength(
+    state_result: Dict[str, Any],
+    spec: Dict[str, Any],
+    compiled: Optional[Dict[str, Any]] = None,
+    design_state: Optional[Dict[str, Any]] = None,
+) -> Tuple[float, Dict[str, Any], List[str]]:
     left, right = _interface_selectors(spec)
-    metrics, warnings = _sum_pair_metrics(state_result, left, right)
+    design_state = design_state or {}
+    left_region_specs = _interface_region_specs(spec, "left", compiled, design_state)
+    right_region_specs = _interface_region_specs(spec, "right", compiled, design_state)
+    metrics, warnings = _sum_pair_metrics(
+        state_result,
+        left,
+        right,
+        left_region_specs=left_region_specs,
+        right_region_specs=right_region_specs,
+    )
+    full_metrics, full_warnings = _sum_pair_metrics(state_result, left, right)
+    full_warnings = [warning for warning in full_warnings if warning not in warnings]
+    warnings.extend(full_warnings)
     if not metrics.get("available"):
-        return 0.0, metrics, warnings
+        details = dict(metrics)
+        details["full_interface"] = full_metrics
+        return 0.0, details, warnings
 
     kind_hint = f"{left} {right}".lower()
     default_target = 8.0 if "ligand" in kind_hint or "dopamine" in kind_hint else 30.0
@@ -220,14 +493,55 @@ def _interface_strength(state_result: Dict[str, Any], spec: Dict[str, Any]) -> T
     residue_score = _clamp01(math.log1p(float(metrics.get("residue_pair_count") or 0)) / math.log1p(residue_target))
     plddt_score = _normalize_metric("plddt", metrics.get("interface_plddt_mean"))
     clash_score = 1.0 - _clamp01(float(metrics.get("clash_count") or 0) / clash_target)
-    score = (0.35 * contact_score) + (0.20 * residue_score) + (0.30 * plddt_score) + (0.15 * clash_score)
+    coverage_values = [
+        float(value)
+        for value in (metrics.get("left_region_coverage"), metrics.get("right_region_coverage"))
+        if _safe_float(value) is not None
+    ]
+    coverage = _mean(coverage_values)
+    coverage_target = _safe_float(spec.get("coverage_target"))
+    coverage_score = None
+    if coverage is not None and coverage_target is not None:
+        coverage_score = _clamp01(float(coverage) / max(1e-6, float(coverage_target)))
+
+    if coverage_score is None:
+        score = (0.35 * contact_score) + (0.20 * residue_score) + (0.30 * plddt_score) + (0.15 * clash_score)
+    else:
+        score = (
+            (0.25 * contact_score)
+            + (0.15 * residue_score)
+            + (0.25 * plddt_score)
+            + (0.20 * coverage_score)
+            + (0.15 * clash_score)
+        )
+
+    off_target_contact_count = max(0.0, float(full_metrics.get("contact_count") or 0) - float(metrics.get("contact_count") or 0))
+    off_target_residue_pair_count = max(
+        0.0,
+        float(full_metrics.get("residue_pair_count") or 0) - float(metrics.get("residue_pair_count") or 0),
+    )
+    off_target_penalty_weight = float(spec.get("off_target_penalty_weight", 0.0) or 0.0)
+    off_target_contact_tolerance = max(1.0, float(spec.get("off_target_contact_tolerance", contact_target) or contact_target))
+    off_target_score = _clamp01(math.log1p(off_target_contact_count) / math.log1p(off_target_contact_tolerance))
+    if off_target_penalty_weight > 0.0:
+        score -= off_target_penalty_weight * off_target_score
+
     details = dict(metrics)
     details.update(
         {
             "contact_score": contact_score,
             "residue_pair_score": residue_score,
             "interface_plddt_score": plddt_score,
+            "coverage": coverage,
+            "coverage_target": coverage_target,
+            "coverage_score": coverage_score,
             "clash_score": clash_score,
+            "full_contact_count": full_metrics.get("contact_count"),
+            "full_residue_pair_count": full_metrics.get("residue_pair_count"),
+            "off_target_contact_count": off_target_contact_count,
+            "off_target_residue_pair_count": off_target_residue_pair_count,
+            "off_target_score": off_target_score,
+            "off_target_penalty_weight": off_target_penalty_weight,
         }
     )
     return _clamp01(score), details, warnings
@@ -346,6 +660,28 @@ def _ast_region_specs(
                 "zero_based": True,
             }
         )
+    if not out and isinstance(design_state, dict):
+        target = design_state.get("target", {}) or {}
+        target_name = str(target.get("epitope_name") or "")
+        if target_name and target_name in wanted:
+            indices: List[int] = []
+            for span in target.get("epitope_spans", []) or []:
+                if not isinstance(span, (list, tuple)) or len(span) < 2:
+                    continue
+                try:
+                    start = int(span[0])
+                    end = int(span[1])
+                except (TypeError, ValueError):
+                    continue
+                indices.extend(range(max(0, start), max(0, end)))
+            out.append(
+                {
+                    "name": target_name,
+                    "chain_id": str(target.get("chain_id", "T")),
+                    "indices": sorted(set(indices)),
+                    "zero_based": True,
+                }
+            )
     return out
 
 
@@ -560,11 +896,11 @@ def _score_objective(
         return _score_confidence(by_state, spec)
     if kind in {"interface_on", "preserve_interface", "bind", "binding"}:
         state_name = (_state_names(spec) or [""])[0]
-        score, details, warnings = _interface_strength(by_state.get(state_name, {}), spec)
+        score, details, warnings = _interface_strength(by_state.get(state_name, {}), spec, compiled, design_state)
         return score, {"state": state_name, **details}, warnings
     if kind in {"interface_off", "disrupt_interface", "anti_bind", "anti-binding", "anti_binding"}:
         state_name = (_state_names(spec) or [""])[0]
-        score, details, warnings = _interface_strength(by_state.get(state_name, {}), spec)
+        score, details, warnings = _interface_strength(by_state.get(state_name, {}), spec, compiled, design_state)
         if any("could not resolve" in warning for warning in warnings):
             return 0.0, {"state": state_name, "interface_strength": score, **details}, warnings
         return 1.0 - score, {"state": state_name, "interface_strength": score, **details}, warnings

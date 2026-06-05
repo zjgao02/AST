@@ -121,27 +121,38 @@
       "type": "interface_on",
       "state": "tetO_bound_state_A",
       "pair": ["TetR_dimer", ["TetO_plus", "TetO_minus"]],
+      "left_region": "dna_binding_head",
       "weight": 1.0,
-      "contact_target": 60,
-      "residue_pair_target": 12
+      "contact_target": 45,
+      "residue_pair_target": 10,
+      "coverage_target": 0.25,
+      "off_target_penalty_weight": 0.10,
+      "off_target_contact_tolerance": 120
     },
     {
       "name": "dopamine_binding_on",
       "type": "bind",
       "state": "dopamine_bound_state_B",
       "pair": ["TetR_dimer", "dopamine"],
+      "left_region": "ligand_pocket",
       "weight": 1.0,
-      "contact_target": 20,
-      "residue_pair_target": 6
+      "contact_target": 18,
+      "residue_pair_target": 5,
+      "coverage_target": 0.12,
+      "off_target_penalty_weight": 0.35,
+      "off_target_contact_tolerance": 24
     },
     {
       "name": "tetO_interface_off_with_dopamine",
       "type": "interface_off",
       "state": "dopamine_tetO_competition_state_C",
       "pair": ["TetR_dimer", ["TetO_plus", "TetO_minus"]],
+      "left_region": "dna_binding_head",
       "weight": 1.2,
-      "contact_target": 60,
-      "residue_pair_target": 12
+      "contact_target": 45,
+      "residue_pair_target": 10,
+      "coverage_target": 0.25,
+      "off_target_contact_tolerance": 120
     },
     {
       "name": "dna_to_dopamine_allosteric_shift",

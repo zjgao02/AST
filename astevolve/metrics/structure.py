@@ -209,7 +209,10 @@ def contact_metrics_from_cif(
         for right in asym_ids[i + 1 :]:
             atom_contacts = 0
             atom_clashes = 0
-            residue_pairs = set()
+            residue_pair_stats: Dict[
+                Tuple[Tuple[str, int, str], Tuple[str, int, str]],
+                Dict[str, Any],
+            ] = {}
             contacted_residues = {}
             examples: List[Dict[str, Any]] = []
 
@@ -223,7 +226,33 @@ def contact_metrics_from_cif(
                     atom_contacts += 1
                     residue_a = (a["asym"], int(a["seq_id"]), a["comp"])
                     residue_b = (b["asym"], int(b["seq_id"]), b["comp"])
-                    residue_pairs.add((residue_a, residue_b))
+                    pair_key = (residue_a, residue_b)
+                    pair_stat = residue_pair_stats.setdefault(
+                        pair_key,
+                        {
+                            "left": {
+                                "chain": a["asym"],
+                                "residue": int(a["seq_id"]),
+                                "resname": a["comp"],
+                                "plddt": float(a["b"]),
+                            },
+                            "right": {
+                                "chain": b["asym"],
+                                "residue": int(b["seq_id"]),
+                                "resname": b["comp"],
+                                "plddt": float(b["b"]),
+                            },
+                            "contact_count": 0,
+                            "clash_count": 0,
+                            "min_distance": None,
+                        },
+                    )
+                    pair_stat["contact_count"] = int(pair_stat["contact_count"]) + 1
+                    if d2 <= clash2:
+                        pair_stat["clash_count"] = int(pair_stat["clash_count"]) + 1
+                    dist = round(math.sqrt(d2), 3)
+                    old_min = pair_stat.get("min_distance")
+                    pair_stat["min_distance"] = dist if old_min is None else min(float(old_min), dist)
                     contacted_residues[residue_a] = float(a["b"])
                     contacted_residues[residue_b] = float(b["b"])
                     if len(examples) < max_reported_pairs:
@@ -240,17 +269,27 @@ def contact_metrics_from_cif(
             plddt_values = list(contacted_residues.values())
             all_interface_plddt.extend(plddt_values)
             key = f"{left}:{right}"
+            residue_pair_details = sorted(
+                residue_pair_stats.values(),
+                key=lambda item: (
+                    str(item["left"]["chain"]),
+                    int(item["left"]["residue"]),
+                    str(item["right"]["chain"]),
+                    int(item["right"]["residue"]),
+                ),
+            )
             pairs[key] = {
                 "contact_count": int(atom_contacts),
-                "residue_pair_count": int(len(residue_pairs)),
+                "residue_pair_count": int(len(residue_pair_details)),
                 "clash_count": int(atom_clashes),
                 "interface_plddt_mean": _mean(plddt_values),
                 "interface_plddt_min": min(plddt_values) if plddt_values else None,
+                "residue_pairs": residue_pair_details,
                 "contact_examples": examples,
             }
             total_contacts += int(atom_contacts)
             total_clashes += int(atom_clashes)
-            total_residue_pairs += int(len(residue_pairs))
+            total_residue_pairs += int(len(residue_pair_details))
 
     return {
         "available": True,
@@ -330,4 +369,3 @@ def metric_value(summary: Dict[str, Any], key: str, default: float = 0.0) -> flo
         value = _safe_float((summary.get("node_summary") or {}).get("node_plddt_min"))
         return float(value if value is not None else default)
     return float(default)
-
