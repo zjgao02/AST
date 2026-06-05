@@ -29,3 +29,6 @@ model_weights/**
 # Case outputs and local caches after project modularization.
 artifacts/
 
+# Local reference structures used while deriving case sheets/hotspots.
+data/reference_structures/
+

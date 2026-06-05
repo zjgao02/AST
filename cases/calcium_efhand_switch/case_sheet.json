@@ -1,0 +1,52 @@
+{
+  "schema_version": "ast_case_sheet_v1",
+  "case_name": "calcium_efhand_switch",
+  "readiness": {
+    "runtime": "ready",
+    "biological_specificity": "structured_provisional",
+    "primary_reason": "Case includes explicit states, target/decoy entities, node regions, hotspot spans, typed objectives, and confidence/clash guardrails; wet-lab construct details can further tighten thresholds."
+  },
+  "design_goal": {
+    "primary": "Design a CaM/EF-hand-like switch where calcium-loaded state binds MLCK-like peptide better than apo state.",
+    "formal_success_definition": "Improve the typed positive-state objectives while suppressing typed negative/decoy objectives, preserving local node confidence, and avoiding severe clashes or unfolding."
+  },
+  "state_success_criteria": {
+    "positive_signals": [
+      "Calcium-peptide interface increases.",
+      "Apo-peptide interface stays weak.",
+      "EF-hand loops preserve acidic/polar calcium pocket chemistry.",
+      "Scaffold remains confident."
+    ],
+    "failure_signals": [
+      "Peptide binds equally in apo state.",
+      "Calcium pocket loses acidic/polar chemistry.",
+      "Switch arises from unfolding or clashes.",
+      "Scaffold helices destabilize."
+    ]
+  },
+  "objective_thresholds": {
+    "calcium_peptide_interface": {
+      "contacts": 42,
+      "residue_pairs": 12,
+      "coverage": 0.25
+    },
+    "calcium_vs_apo_delta": {
+      "min_delta": 0.1,
+      "target_delta": 0.4,
+      "contact_delta_target": 25
+    },
+    "efhand_pocket": {
+      "acidic_fraction": 0.32,
+      "polar_fraction": 0.45
+    },
+    "loop_confidence": {
+      "hard_floor": 45,
+      "target": 72
+    }
+  },
+  "information_gaps": [
+    "Exact target peptide or protein readout for the calcium sensor.",
+    "Allowed edits in EF-loop acidic residues versus scaffold helices.",
+    "Whether the goal is calcium affinity tuning, peptide affinity switching, or both."
+  ]
+}

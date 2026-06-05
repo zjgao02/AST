@@ -1,0 +1,332 @@
+{
+  "task_name": "ProteoR1_CDR_Mask_Reevolution_Task",
+  "task_type": "masked_cdr_scfv_evolution",
+  "version": "proteor1_cdr_mask_v1",
+  "memory_path": "memory.yaml",
+  "case_sheet_path": "case_sheet.json",
+  "binder": {
+    "chain_id": "BB",
+    "architecture": "ProteoR1_HL_scFv_masked_CDR",
+    "domain_segment_keys": {
+      "VH_domain": "vh_segments",
+      "Linker_module": "linker_segments",
+      "VL_domain": "vl_segments"
+    },
+    "domain_aliases": {
+      "VH": "VH_domain",
+      "heavy": "VH_domain",
+      "Linker": "Linker_module",
+      "VL": "VL_domain",
+      "light": "VL_domain"
+    },
+    "domain_order": [
+      "VH_domain",
+      "Linker_module",
+      "VL_domain"
+    ],
+    "vh_segments": [
+      [
+        "VH_FR1",
+        "framework",
+        "QVQLVESGGGVVQPGRSLRLSCAAS"
+      ],
+      [
+        "VH_CDR1",
+        "cdr",
+        "GFTFSSY"
+      ],
+      [
+        "VH_FR2",
+        "framework",
+        "DMHWVRQAPGKGLEWVAVI"
+      ],
+      [
+        "VH_CDR2",
+        "cdr",
+        "WRDGSN"
+      ],
+      [
+        "VH_FR3",
+        "framework",
+        "EYYADSVKGRFIISRDNSKNTLYLQMNSLRAEDTAVYYCAR"
+      ],
+      [
+        "VH_CDR3",
+        "cdr",
+        "RGIIMVRGLLGY"
+      ],
+      [
+        "VH_FR4",
+        "framework",
+        "WGQGTLVTVSS"
+      ]
+    ],
+    "linker_segments": [
+      [
+        "Linker_head",
+        "linker",
+        "GGGGS"
+      ],
+      [
+        "Linker_core",
+        "linker",
+        "GGGGS"
+      ],
+      [
+        "Linker_tail",
+        "linker",
+        "GGGGS"
+      ]
+    ],
+    "vl_segments": [
+      [
+        "VL_FR1",
+        "framework",
+        "DIQMTQSPPSLSASVGDRVTITC"
+      ],
+      [
+        "VL_CDR1",
+        "cdr",
+        "RASQGISNYLA"
+      ],
+      [
+        "VL_FR2",
+        "framework",
+        "WHQQKPGKVPKLLIY"
+      ],
+      [
+        "VL_CDR2",
+        "cdr",
+        "TASTLQS"
+      ],
+      [
+        "VL_FR3",
+        "framework",
+        "GVPSRFSGSGSGTDFTLTISSLQPEDVATYYC"
+      ],
+      [
+        "VL_CDR3",
+        "cdr",
+        "QKYNSAPFT"
+      ],
+      [
+        "VL_FR4",
+        "framework",
+        "FGPGTKVDI"
+      ]
+    ]
+  },
+  "target": {
+    "chain_id": "T",
+    "name": "ProteoR1_demo_antigen_8r9y_A",
+    "sequence": "LEVVQLNISAHMDFGEARLDSVTINGNTSYCVTKPYFRLETNFMCTGCTMNLRTDTCSFDLSAVNNGMSFSQFCLSTESGACEMKIIVTYVWNYLLRQRLYVTAVEGQTHTGTT",
+    "epitope_name": "ProteoR1_spec_mask_hotspot",
+    "epitope_source": "Proteo-R1 demo canonical YAML 8r9y_H_L_A antigen spec_mask runs.",
+    "epitope_spans": [
+      [
+        52,
+        60
+      ],
+      [
+        62,
+        64
+      ],
+      [
+        66,
+        74
+      ],
+      [
+        77,
+        85
+      ],
+      [
+        98,
+        108
+      ],
+      [
+        109,
+        110
+      ]
+    ]
+  },
+  "design_points": {
+    "schema_version": "ast_design_points_v1",
+    "design_intent": "Replicate a Proteo-R1-style masked CDR redesign benchmark without copying its optimization method: evolve the CDR mask under AST typed structural scoring.",
+    "primary_design_nodes": [
+      "VH_CDR3",
+      "VH_CDR1",
+      "VL_CDR1",
+      "VL_CDR3"
+    ],
+    "secondary_design_nodes": [
+      "VH_CDR2",
+      "VL_CDR2"
+    ],
+    "default_open_nodes": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3"
+    ],
+    "preserved_nodes": [
+      "VH_FR1",
+      "VH_FR2",
+      "VH_FR3",
+      "VH_FR4",
+      "VL_FR1",
+      "VL_FR2",
+      "VL_FR3",
+      "VL_FR4"
+    ]
+  },
+  "complex_states": [
+    {
+      "name": "proteor1_antigen_bound_state",
+      "role": "masked CDR antigen-bound state",
+      "objective": "Redesigned CDRs should recover hotspot-centered binding to the fixed antigen.",
+      "metric": "plddt",
+      "entities": [
+        {
+          "type": "protein",
+          "id": "scFv",
+          "source_chain": "BB"
+        },
+        {
+          "type": "protein",
+          "id": "Antigen_A",
+          "source_chain": "T"
+        }
+      ]
+    }
+  ],
+  "multistate_regions": {
+    "cdr_binding_surface": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3"
+    ],
+    "primary_cdr_hotspot": [
+      "VH_CDR3",
+      "VH_CDR2",
+      "VL_CDR3"
+    ],
+    "framework_stability_core": [
+      "VH_FR1",
+      "VH_FR2",
+      "VH_FR3",
+      "VH_FR4",
+      "VL_FR1",
+      "VL_FR2",
+      "VL_FR3",
+      "VL_FR4"
+    ],
+    "linker_core": [
+      "Linker_core"
+    ],
+    "target_epitope_focus": [
+      "ProteoR1_spec_mask_hotspot"
+    ]
+  },
+  "multistate_objectives": [
+    {
+      "name": "masked_cdr_hotspot_interface_on",
+      "type": "interface_on",
+      "state": "proteor1_antigen_bound_state",
+      "pair": [
+        "scFv",
+        "Antigen_A"
+      ],
+      "left_region": "cdr_binding_surface",
+      "right_region": "ProteoR1_spec_mask_hotspot",
+      "weight": 1.25,
+      "contact_target": 70,
+      "residue_pair_target": 18,
+      "coverage_target": 0.38,
+      "off_target_penalty_weight": 0.22,
+      "off_target_contact_tolerance": 140
+    },
+    {
+      "name": "cdr3_hotspot_specificity",
+      "type": "epitope_specificity",
+      "state": "proteor1_antigen_bound_state",
+      "pair": [
+        "scFv",
+        "Antigen_A"
+      ],
+      "left_region": "primary_cdr_hotspot",
+      "target_region": "ProteoR1_spec_mask_hotspot",
+      "weight": 0.85,
+      "target_contact_fraction": 0.55,
+      "contact_target": 45,
+      "coverage_target": 0.3
+    },
+    {
+      "name": "cdr_mask_confidence_floor",
+      "type": "region_confidence_floor",
+      "states": [
+        "proteor1_antigen_bound_state"
+      ],
+      "region": "cdr_binding_surface",
+      "metric": "plddt_min",
+      "floor": 45,
+      "target": 72,
+      "weight": 0.6
+    },
+    {
+      "name": "bound_state_confidence",
+      "type": "confidence",
+      "states": [
+        "proteor1_antigen_bound_state"
+      ],
+      "metric": "plddt",
+      "weight": 0.45
+    }
+  ],
+  "mutation_policy": {
+    "preferred_edit_order": [
+      "VH_CDR3",
+      "VH_CDR2",
+      "VL_CDR3",
+      "VH_CDR1",
+      "VL_CDR1",
+      "VL_CDR2",
+      "Linker_core",
+      "VH_FR2",
+      "VH_FR3",
+      "VL_FR2",
+      "VL_FR3"
+    ],
+    "always_open_segments": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3"
+    ],
+    "conditionally_open_segments": [
+      "Linker_core",
+      "VH_FR2",
+      "VH_FR3",
+      "VL_FR2",
+      "VL_FR3"
+    ],
+    "fixed_linker_segments": [
+      "Linker_head",
+      "Linker_tail"
+    ],
+    "generally_frozen": [
+      "FR1",
+      "FR4"
+    ]
+  },
+  "case_information_needed": [
+    "Whether the goal is de novo CDR recovery, improvement over ground truth, or robustness to masked inputs.",
+    "External negative antigens for selectivity if desired."
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "schema_version": "ast_case_sheet_v1",
+  "case_name": "cd25_scfv_selectivity",
+  "readiness": {
+    "runtime": "ready",
+    "biological_specificity": "structured_provisional",
+    "primary_reason": "Case includes explicit states, target/decoy entities, node regions, hotspot spans, typed objectives, and confidence/clash guardrails; wet-lab construct details can further tighten thresholds."
+  },
+  "design_goal": {
+    "primary": "Design a VH-linker-VL scFv that binds a known CD25 epitope while rejecting an IL2RB/CD122 decoy surface.",
+    "formal_success_definition": "Improve the typed positive-state objectives while suppressing typed negative/decoy objectives, preserving local node confidence, and avoiding severe clashes or unfolding."
+  },
+  "state_success_criteria": {
+    "positive_signals": [
+      "CDR-to-CD25 epitope contacts increase.",
+      "A majority of CD25 contacts stay on the specified epitope spans.",
+      "IL2RB decoy contacts remain weak.",
+      "CDR node confidence remains above the hard floor."
+    ],
+    "failure_signals": [
+      "Decoy IL2RB interface is comparable to CD25.",
+      "Contacts are mostly outside the specified CD25 epitope.",
+      "Interface relies on linker/framework rather than CDRs.",
+      "CDRs collapse or severe clashes dominate."
+    ]
+  },
+  "objective_thresholds": {
+    "cd25_epitope_interface_on": {
+      "contacts": 64,
+      "residue_pairs": 15,
+      "coverage": 0.35
+    },
+    "selectivity_delta": {
+      "min_delta": 0.12,
+      "target_delta": 0.45,
+      "contact_delta_target": 35
+    },
+    "cdr_confidence": {
+      "hard_floor": 45,
+      "target": 72
+    }
+  },
+  "information_gaps": [
+    "Exact wet-lab CD25 construct boundaries.",
+    "Whether basiliximab-like competition is required or just CD25-selective binding.",
+    "Preferred developability liabilities and CDR length bounds."
+  ]
+}

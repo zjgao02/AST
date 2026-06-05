@@ -1,0 +1,59 @@
+# General settings
+max_iterations: 200
+checkpoint_interval: 10
+log_level: "INFO"
+random_seed: 42
+max_tasks_per_child: 1
+
+# Evolution settings
+diff_based_evolution: true
+max_code_length: 32000
+
+llm:
+  models:
+    - name: "qwen3.7-max"
+      weight: 1.0
+  api_base: "${ASTEVOLVE_LLM_API_BASE}"
+  api_key: "${ASTEVOLVE_LLM_API_KEY}"
+  temperature: 0.85
+  top_p: 0.95
+  max_tokens: 4096
+  timeout: 180
+  retries: 1
+  retry_delay: 5
+
+prompt:
+  system_message: |
+    You are ASTevolve's outer-loop strategy designer for the fixed PDZ peptide-selectivity task.
+
+    Modify only the EVOLVE-BLOCK in cases/pdz_peptide_selectivity/initial_program.py. Prefer exact SEARCH/REPLACE diffs.
+    Your entire response must be one or more exact diff blocks and nothing else:
+    <<<<<<< SEARCH
+    exact original code
+    =======
+    replacement code
+    >>>>>>> REPLACE
+
+    Preserve propose_strategy(), run_search(seed=None), preview_case(), design_state.json,
+    evaluator.py, engine interfaces, and the fixed biological case identity.
+    Runtime settings are locked outside the EVOLVE-BLOCK and will be overwritten before evaluation.
+
+    Editable scope is layout/topology only:
+    - create, remove, split, merge, reorder, or reweight design_regions;
+    - choose binder_domain_order only within the declared case architecture;
+    - map design regions to concrete node names: PDZ_groove_1, PDZ_groove_2, PDZ_groove_3, PDZ_groove_4, PDZ_groove_5, PDZ_groove_6, PDZ_groove_7, PDZ_scaffold_1, PDZ_scaffold_2, PDZ_scaffold_3;
+    - tune length budgets/ranges only for mutable loop/CDR/linker-like nodes;
+    - set secondary_structure_priors, site_anchors, motif candidates, and residue-class priors;
+    - increase large-jump exploration by region design, not by changing iteration or solver parameters.
+
+    Do not hard-code final sequences, copy retrieved proteins verbatim, edit target/decoy sequences,
+    bypass evaluation, change model/KB paths, or add top-level strategy settings outside layout_plan.
+    Use prompt artifacts such as llm_feedback_summary, layout_summary, strategy_schema_report,
+    objective warnings, node pLDDT, and state/interface metrics to decide the next blueprint edit.
+
+evaluator:
+  timeout: 180000
+  parallel_evaluations: 1
+  enable_artifacts: true
+  cascade_evaluation: false
+  use_llm_feedback: false

@@ -1,5 +1,4 @@
 param(
-    [ValidateSet("tetr_dopamine", "cd25_scfv")]
     [string]$Case = "tetr_dopamine",
 
     [ValidateSet("assets", "preview", "inner-smoke", "outer", "formal", "all")]
@@ -35,6 +34,13 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $ProjectRoot
 
+if (-not (Test-Path (Join-Path $ProjectRoot ("cases\{0}\case.json" -f $Case)))) {
+    $available = Get-ChildItem (Join-Path $ProjectRoot "cases") -Directory |
+        Where-Object { Test-Path (Join-Path $_.FullName "case.json") } |
+        ForEach-Object { $_.Name }
+    throw ("Invalid case '{0}'. Available cases: {1}" -f $Case, ($available -join ", "))
+}
+
 function Get-CaseDefault {
     param([string]$CaseId)
     if ($CaseId -eq "tetr_dopamine") {
@@ -44,10 +50,17 @@ function Get-CaseDefault {
             ExternalRetrieval = $false
         }
     }
+    if ($CaseId -in @("cd25_scfv", "cd25_scfv_selectivity", "pdl1_scfv_selectivity", "proteor1_cdr_mask")) {
+        return @{
+            InnerIterations = 1200
+            ProgenWeight = 1.0
+            ExternalRetrieval = $true
+        }
+    }
     return @{
-        InnerIterations = 1200
-        ProgenWeight = 1.0
-        ExternalRetrieval = $true
+        InnerIterations = 360
+        ProgenWeight = 0.6
+        ExternalRetrieval = $false
     }
 }
 

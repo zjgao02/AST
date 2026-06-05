@@ -1,0 +1,445 @@
+{
+  "task_name": "CD25_scFv_Selectivity_Design_Task",
+  "version": "cd25_scfv_selectivity_v1",
+  "memory_path": "memory.yaml",
+  "case_sheet_path": "case_sheet.json",
+  "binder": {
+    "chain_id": "BB",
+    "architecture": "VH-Linker-VL",
+    "domain_segment_keys": {
+      "VH_domain": "vh_segments",
+      "Linker_module": "linker_segments",
+      "VL_domain": "vl_segments"
+    },
+    "domain_aliases": {
+      "VH": "VH_domain",
+      "heavy": "VH_domain",
+      "heavy_chain": "VH_domain",
+      "Linker": "Linker_module",
+      "linker": "Linker_module",
+      "VL": "VL_domain",
+      "light": "VL_domain",
+      "light_chain": "VL_domain"
+    },
+    "domain_order": [
+      "VH_domain",
+      "Linker_module",
+      "VL_domain"
+    ],
+    "vh_segments": [
+      [
+        "VH_FR1",
+        "framework",
+        "QVQLVQSGAEVKKPGSSVKVS"
+      ],
+      [
+        "VH_CDR1",
+        "cdr",
+        "CKASGYTFTSYRMH"
+      ],
+      [
+        "VH_FR2",
+        "framework",
+        "WVRQAPGQGLEWI"
+      ],
+      [
+        "VH_CDR2",
+        "cdr",
+        "GYINPSTGYTEYNQKF"
+      ],
+      [
+        "VH_FR3",
+        "framework",
+        "KDKATITADESTNTAYMELSSLRSEDTAVYYCA"
+      ],
+      [
+        "VH_CDR3",
+        "cdr",
+        "RGGGVFDY"
+      ],
+      [
+        "VH_FR4",
+        "framework",
+        "WGQGTLVTVS"
+      ]
+    ],
+    "linker_segments": [
+      [
+        "Linker_head",
+        "linker",
+        "GGGGS"
+      ],
+      [
+        "Linker_core",
+        "linker",
+        "GGGGS"
+      ],
+      [
+        "Linker_tail",
+        "linker",
+        "GGGGS"
+      ]
+    ],
+    "vl_segments": [
+      [
+        "VL_FR1",
+        "framework",
+        "DIQMTQSPSTLSASVGDRVTITC"
+      ],
+      [
+        "VL_CDR1",
+        "cdr",
+        "SASSSISYMH"
+      ],
+      [
+        "VL_FR2",
+        "framework",
+        "WYQQKPGKAPKLLIY"
+      ],
+      [
+        "VL_CDR2",
+        "cdr",
+        "TTSNLAS"
+      ],
+      [
+        "VL_FR3",
+        "framework",
+        "GVPARFSGSGSGTEFTLTISSLQPDDFATYYC"
+      ],
+      [
+        "VL_CDR3",
+        "cdr",
+        "HQRSTYPLT"
+      ],
+      [
+        "VL_FR4",
+        "framework",
+        "FGQGTKVEVKRTVA"
+      ]
+    ]
+  },
+  "target": {
+    "chain_id": "T",
+    "name": "CD25",
+    "uniprot_id": "P01589",
+    "sequence_numbering": "The first residue in target.sequence is PDB 3IU3 CD25 residue 1 and UniProt P01589 residue 22.",
+    "sequence": "ELCDDDPPEIPHATFKAMAYKEGTMLNCECKRGFRRIKSGSLYMLCTGNSSHSSWDNQCQCTSSATRNTTKQVTPQPEEQKERKTTEMQSPMQPVDQASLPGHCREPPPWENEATERIYHFVVGQMVYYQCVQGYRALHRGPAESVCKMTHGKTRWTQPQLICTGEMETSQFPGEEKPQASPEGRPESETSCLVTTTDFQIQTEMAATMETSIFTTE",
+    "literature_fragment": "DDPPEIPHATFKAMAYKEGTMLNCECKRGFRRIKSGSLYMLCTGNSSHSSWDNQCQCTSSATRNTTKQVTPQPEEQKERKTTEMQSPMQPVDQASLPGHCREPPPWENEATERIYHFVVGQMVYYQCVQGYRALHRGPAESVCKMTHGKTRWTQPQLICTG",
+    "epitope_name": "CD25_basiliximab_epitope",
+    "epitope_source": "PDB 3IU3 Basiliximab-CD25 interface, strict three-copy consensus, 4.0 A heavy-atom cutoff.",
+    "epitope_spans": [
+      [
+        0,
+        2
+      ],
+      [
+        3,
+        6
+      ],
+      [
+        21,
+        23
+      ],
+      [
+        24,
+        25
+      ],
+      [
+        26,
+        27
+      ],
+      [
+        28,
+        29
+      ],
+      [
+        41,
+        43
+      ],
+      [
+        44,
+        45
+      ],
+      [
+        46,
+        48
+      ],
+      [
+        55,
+        57
+      ],
+      [
+        119,
+        120
+      ]
+    ],
+    "hotspot_motif": "ERIYHFV",
+    "hotspot_motif_interpretation": "Hotspot-centered functional interface region, not a complete standalone linear epitope."
+  },
+  "design_points": {
+    "schema_version": "ast_design_points_v1",
+    "design_intent": "Design a CD25-selective scFv: bind the CD25 basiliximab-like epitope, avoid IL2RB/CD122-like receptor-family decoy binding, and keep CDR/framework confidence interpretable.",
+    "primary_design_nodes": [
+      "VH_CDR3",
+      "VH_CDR2",
+      "VL_CDR3"
+    ],
+    "secondary_design_nodes": [
+      "VH_CDR1",
+      "VL_CDR1",
+      "VL_CDR2"
+    ],
+    "default_open_nodes": [
+      "VH_CDR3",
+      "VH_CDR2",
+      "VL_CDR3",
+      "VH_CDR1",
+      "VL_CDR1",
+      "VL_CDR2"
+    ],
+    "preserved_nodes": [
+      "VH_FR1",
+      "VH_FR4",
+      "VL_FR1",
+      "VL_FR4",
+      "Linker_head",
+      "Linker_tail"
+    ],
+    "epitope_focus": {
+      "target_region": "CD25_basiliximab_epitope",
+      "hotspot_motif": "ERIYHFV",
+      "known_gap": "The current case uses epitope spans and a linear hotspot fragment; a full residue-level structural epitope/contact map should replace this approximation when available."
+    },
+    "operator_policy": {
+      "explore": [
+        "motif_graft",
+        "site_resample",
+        "segment_mutagenesis"
+      ],
+      "refine": [
+        "site_resample",
+        "block",
+        "point"
+      ],
+      "stabilize": [
+        "point",
+        "swap"
+      ]
+    }
+  },
+  "complex_states": [
+    {
+      "name": "cd25_positive_state",
+      "role": "desired CD25-bound state",
+      "objective": "CDR surface should bind CD25 at the basiliximab-like epitope.",
+      "metric": "plddt",
+      "entities": [
+        {
+          "type": "protein",
+          "id": "scFv",
+          "source_chain": "BB"
+        },
+        {
+          "type": "protein",
+          "id": "CD25",
+          "source_chain": "T"
+        }
+      ]
+    },
+    {
+      "name": "il2rb_decoy_state",
+      "role": "negative receptor-family decoy state",
+      "objective": "The same scFv should not form a strong broad interface with CD122/IL2RB.",
+      "metric": "plddt",
+      "entities": [
+        {
+          "type": "protein",
+          "id": "scFv",
+          "source_chain": "BB"
+        },
+        {
+          "type": "protein",
+          "id": "IL2RB",
+          "sequence": "AVNGTSQFTCFYNSRANISCVWSQDGALQDTSCQVHAWPDRRRWNQTCELLPVSQASWACNLILGAPDSQKLTTVDIVTLRVLCREGVRWRVMAIQDFKPFENLRLMAPISLQVVHVETHRCNISWEISQASHYFERHLEFEARTLSPGHTWEEAPLLTLKQKQEWICLETLTPDTQYEFQVRVKPLQGEFTTWSPWSQPLAFRTKPAALGKDTIPWLGHLLVGLSGAFGFIILVYLLINCRNTGPWLKKVLKCNTPDPSKFFSQLSSEHGGDVQKWLSSPFPSSSFSPG"
+        }
+      ]
+    }
+  ],
+  "multistate_regions": {
+    "cdr_binding_surface": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3"
+    ],
+    "primary_cdr_hotspot": [
+      "VH_CDR3",
+      "VH_CDR2",
+      "VL_CDR3"
+    ],
+    "framework_stability_core": [
+      "VH_FR1",
+      "VH_FR2",
+      "VH_FR3",
+      "VH_FR4",
+      "VL_FR1",
+      "VL_FR2",
+      "VL_FR3",
+      "VL_FR4"
+    ],
+    "linker_core": [
+      "Linker_core"
+    ],
+    "target_epitope_focus": [
+      "CD25_basiliximab_epitope"
+    ]
+  },
+  "multistate_objectives": [
+    {
+      "name": "cd25_epitope_interface_on",
+      "type": "interface_on",
+      "state": "cd25_positive_state",
+      "pair": [
+        "scFv",
+        "CD25"
+      ],
+      "left_region": "cdr_binding_surface",
+      "right_region": "CD25_basiliximab_epitope",
+      "weight": 1.15,
+      "contact_target": 64,
+      "residue_pair_target": 15,
+      "coverage_target": 0.35,
+      "off_target_penalty_weight": 0.2,
+      "off_target_contact_tolerance": 130
+    },
+    {
+      "name": "cd25_epitope_specificity",
+      "type": "epitope_specificity",
+      "state": "cd25_positive_state",
+      "pair": [
+        "scFv",
+        "CD25"
+      ],
+      "left_region": "cdr_binding_surface",
+      "target_region": "CD25_basiliximab_epitope",
+      "weight": 0.85,
+      "target_contact_fraction": 0.55,
+      "contact_target": 60,
+      "coverage_target": 0.35
+    },
+    {
+      "name": "il2rb_decoy_interface_off",
+      "type": "interface_off",
+      "state": "il2rb_decoy_state",
+      "pair": [
+        "scFv",
+        "IL2RB"
+      ],
+      "left_region": "cdr_binding_surface",
+      "weight": 1.0,
+      "contact_target": 45,
+      "residue_pair_target": 10,
+      "off_target_contact_tolerance": 65
+    },
+    {
+      "name": "cd25_over_il2rb_selectivity_delta",
+      "type": "interface_delta",
+      "positive_state": "cd25_positive_state",
+      "negative_state": "il2rb_decoy_state",
+      "positive_pair": [
+        "scFv",
+        "CD25"
+      ],
+      "negative_pair": [
+        "scFv",
+        "IL2RB"
+      ],
+      "positive_left_region": "cdr_binding_surface",
+      "positive_right_region": "CD25_basiliximab_epitope",
+      "negative_left_region": "cdr_binding_surface",
+      "weight": 1.2,
+      "direction": "decrease",
+      "min_delta": 0.12,
+      "target_delta": 0.45,
+      "contact_delta_target": 35
+    },
+    {
+      "name": "cdr_confidence_floor",
+      "type": "region_confidence_floor",
+      "states": [
+        "cd25_positive_state",
+        "il2rb_decoy_state"
+      ],
+      "region": "cdr_binding_surface",
+      "metric": "plddt_min",
+      "floor": 45,
+      "target": 72,
+      "weight": 0.55
+    },
+    {
+      "name": "bound_state_confidence",
+      "type": "confidence",
+      "states": [
+        "cd25_positive_state",
+        "il2rb_decoy_state"
+      ],
+      "metric": "plddt",
+      "weight": 0.45
+    }
+  ],
+  "mutation_policy": {
+    "preferred_edit_order": [
+      "VH_CDR3",
+      "VH_CDR2",
+      "VL_CDR3",
+      "VH_CDR1",
+      "VL_CDR1",
+      "VL_CDR2",
+      "Linker_core",
+      "VH_FR2",
+      "VH_FR3",
+      "VL_FR2",
+      "VL_FR3"
+    ],
+    "always_open_segments": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3"
+    ],
+    "conditionally_open_segments": [
+      "Linker_core",
+      "VH_FR2",
+      "VH_FR3",
+      "VL_FR2",
+      "VL_FR3"
+    ],
+    "fixed_linker_segments": [
+      "Linker_head",
+      "Linker_tail"
+    ],
+    "generally_frozen": [
+      "FR1",
+      "FR4"
+    ]
+  },
+  "case_information_needed": [
+    "Exact CD25 target construct boundaries and numbering expected in the wet-lab assay.",
+    "A residue-level epitope/contact map or reference complex that should be favored, plus explicit off-target surfaces that should be avoided.",
+    "Whether the goal is basiliximab-like binding, non-overlapping CD25 binding, or competitive displacement.",
+    "Allowed framework/template family, liability constraints, and whether VH/VL orientation or linker length may change."
+  ],
+  "round_history": [],
+  "task_type": "selective_scfv_epitope_design",
+  "additional_targets": {
+    "IL2RB_decoy": {
+      "name": "IL2RB_CD122_decoy",
+      "sequence": "AVNGTSQFTCFYNSRANISCVWSQDGALQDTSCQVHAWPDRRRWNQTCELLPVSQASWACNLILGAPDSQKLTTVDIVTLRVLCREGVRWRVMAIQDFKPFENLRLMAPISLQVVHVETHRCNISWEISQASHYFERHLEFEARTLSPGHTWEEAPLLTLKQKQEWICLETLTPDTQYEFQVRVKPLQGEFTTWSPWSQPLAFRTKPAALGKDTIPWLGHLLVGLSGAFGFIILVYLLINCRNTGPWLKKVLKCNTPDPSKFFSQLSSEHGGDVQKWLSSPFPSSSFSPG",
+      "biological_reason": "CD122 is an IL-2 receptor-family off-target decoy; selectivity should favor CD25 over CD122-like receptor surfaces."
+    }
+  }
+}

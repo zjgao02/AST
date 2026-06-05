@@ -22,7 +22,7 @@ Usage:
   bash scripts/submit_ast_run.sh --case tetr_dopamine --profile formal --stage formal
 
 Options:
-  --case tetr_dopamine|cd25_scfv
+  --case CASE_ID (any cases/CASE_ID/case.json)
   --stage assets|preview|inner-smoke|outer|formal|all
   --profile smoke|cheap|formal
   --outer-iterations N
@@ -60,10 +60,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-case "$CASE" in
-  tetr_dopamine|cd25_scfv) ;;
-  *) echo "Invalid --case: $CASE" >&2; exit 2 ;;
-esac
 case "$STAGE" in
   assets|preview|inner-smoke|outer|formal|all) ;;
   *) echo "Invalid --stage: $STAGE" >&2; exit 2 ;;
@@ -84,15 +80,39 @@ resolve_toggle() {
   esac
 }
 
-if [[ "$CASE" == "tetr_dopamine" ]]; then
-  CASE_INNER_DEFAULT=240
-  CASE_PROGEN_DEFAULT="0.5"
-  CASE_RETRIEVAL_DEFAULT=0
-else
-  CASE_INNER_DEFAULT=1200
-  CASE_PROGEN_DEFAULT="1.0"
-  CASE_RETRIEVAL_DEFAULT=1
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
+
+if [[ ! -f "cases/$CASE/case.json" ]]; then
+  echo "Invalid --case: $CASE (missing cases/$CASE/case.json)" >&2
+  echo "Available cases:" >&2
+  find cases -maxdepth 2 -name case.json -printf '  %h\n' | sed 's#cases/##' >&2 || true
+  exit 2
 fi
+
+case "$CASE" in
+  tetr_dopamine)
+    CASE_INNER_DEFAULT=240
+    CASE_PROGEN_DEFAULT="0.5"
+    CASE_RETRIEVAL_DEFAULT=0
+    ;;
+  cd25_scfv|cd25_scfv_selectivity|pdl1_scfv_selectivity|proteor1_cdr_mask)
+    CASE_INNER_DEFAULT=1200
+    CASE_PROGEN_DEFAULT="1.0"
+    CASE_RETRIEVAL_DEFAULT=1
+    ;;
+  pdz_peptide_selectivity|calcium_efhand_switch)
+    CASE_INNER_DEFAULT=360
+    CASE_PROGEN_DEFAULT="0.6"
+    CASE_RETRIEVAL_DEFAULT=0
+    ;;
+  *)
+    CASE_INNER_DEFAULT=360
+    CASE_PROGEN_DEFAULT="0.6"
+    CASE_RETRIEVAL_DEFAULT=0
+    ;;
+esac
 
 if [[ "$PROFILE" == "smoke" ]]; then
   PROFILE_OUTER=1
@@ -123,10 +143,6 @@ PROGEN_WEIGHT="${PROGEN_WEIGHT:-$PROFILE_PROGEN}"
 USE_PROTENIX="$(resolve_toggle "$PROTENIX" "$PROFILE_PROTENIX")"
 USE_EXTERNAL_KB="$(resolve_toggle "$EXTERNAL_KB" "$PROFILE_EXTERNAL_KB")"
 USE_EXTERNAL_RETRIEVAL="$(resolve_toggle "$EXTERNAL_RETRIEVAL" "$PROFILE_EXTERNAL_RETRIEVAL")"
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-cd "$PROJECT_ROOT"
 
 if [[ -z "$RUN_NAME" ]]; then
   RUN_NAME="${CASE}_${PROFILE}_$(date +%Y%m%d_%H%M%S)"

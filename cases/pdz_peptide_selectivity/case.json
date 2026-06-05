@@ -1,0 +1,11 @@
+{
+  "case_id": "pdz_peptide_selectivity",
+  "name": "PDZ peptide selectivity design",
+  "task_type": "peptide_binding_domain_selectivity",
+  "design_state_path": "design_state.json",
+  "memory_path": "memory.yaml",
+  "output_root": "../../artifacts/pdz_peptide_selectivity",
+  "entry_program": "initial_program.py",
+  "config_path": "config.yaml",
+  "notes": "Self-contained ASTevolve case with case-specific typed multistate objectives."
+}

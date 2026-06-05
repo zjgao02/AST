@@ -14,18 +14,37 @@ if str(PROJECT_ROOT) not in sys.path:
 from astevolve.runtime.paths import data_path, model_path, project_root
 
 
+ANTIBODY_KB_ASSETS = [
+    data_path("antibody_kb", "sabdab_external_prior_cache.json"),
+    data_path("antibody_kb", "embedding_manifest_esm2_t6_8M_sabdab_cdr.json"),
+    data_path("antibody_kb", "embeddings_esm2_t6_8M_sabdab_cdr.npy"),
+]
+
+ATF_KB_ASSETS = [
+    data_path("atf_kb", "atf_interpro_external_prior_cache.json"),
+    data_path("atf_kb", "embedding_manifest_esm2_t6_8M_atf_interpro.json"),
+    data_path("atf_kb", "embeddings_esm2_t6_8M_atf_interpro.npy"),
+]
+
 CASE_ASSETS = {
-    "cd25_scfv": [
-        data_path("antibody_kb", "sabdab_external_prior_cache.json"),
-        data_path("antibody_kb", "embedding_manifest_esm2_t6_8M_sabdab_cdr.json"),
-        data_path("antibody_kb", "embeddings_esm2_t6_8M_sabdab_cdr.npy"),
-    ],
-    "tetr_dopamine": [
-        data_path("atf_kb", "atf_interpro_external_prior_cache.json"),
-        data_path("atf_kb", "embedding_manifest_esm2_t6_8M_atf_interpro.json"),
-        data_path("atf_kb", "embeddings_esm2_t6_8M_atf_interpro.npy"),
-    ],
+    "cd25_scfv": ANTIBODY_KB_ASSETS,
+    "cd25_scfv_selectivity": ANTIBODY_KB_ASSETS,
+    "pdl1_scfv_selectivity": ANTIBODY_KB_ASSETS,
+    "proteor1_cdr_mask": ANTIBODY_KB_ASSETS,
+    "tetr_dopamine": ATF_KB_ASSETS,
+    "calcium_efhand_switch": ATF_KB_ASSETS,
+    "pdz_peptide_selectivity": [],
 }
+
+
+def _discover_case_assets() -> Dict[str, List[Path]]:
+    cases_root = PROJECT_ROOT / "cases"
+    if not cases_root.exists():
+        return dict(CASE_ASSETS)
+    out = dict(CASE_ASSETS)
+    for manifest in cases_root.glob("*/case.json"):
+        out.setdefault(manifest.parent.name, [])
+    return out
 
 PROGEN2_SMALL_FILES = [
     "config.json",
@@ -46,12 +65,13 @@ def _status(path: Path) -> Dict[str, Any]:
 
 
 def main() -> int:
+    case_assets = _discover_case_assets()
     parser = argparse.ArgumentParser(description="Check ASTevolve local/server assets without loading models.")
-    parser.add_argument("--case", choices=sorted(CASE_ASSETS), default=None)
+    parser.add_argument("--case", choices=sorted(case_assets), default=None)
     parser.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
     args = parser.parse_args()
 
-    cases = [args.case] if args.case else sorted(CASE_ASSETS)
+    cases = [args.case] if args.case else sorted(case_assets)
     progen_dir = Path(os.environ.get("ASTEVOLVE_PROGEN_MODEL_DIR", model_path("progen2-small")))
     protenix_dir = Path(os.environ.get("ASTEVOLVE_PROTENIX_ROOT", model_path("protenix")))
     report: Dict[str, Any] = {
@@ -70,7 +90,7 @@ def main() -> int:
     }
     missing: List[str] = []
     for case_id in cases:
-        entries = [_status(path) for path in CASE_ASSETS[case_id]]
+        entries = [_status(path) for path in case_assets[case_id]]
         report["cases"][case_id] = entries
         missing.extend(entry["path"] for entry in entries if not entry["exists"])
     missing.extend(

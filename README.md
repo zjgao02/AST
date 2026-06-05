@@ -4,6 +4,11 @@ ASTevolve is the current protein-design search workspace for:
 
 - `tetr_dopamine`: TetR dopamine-responsive redesign.
 - `cd25_scfv`: CD25-targeting scFv optimization.
+- `cd25_scfv_selectivity`: CD25 epitope scFv with IL2RB/CD122 decoy rejection.
+- `pdl1_scfv_selectivity`: PD-L1 epitope scFv with PD-L2 and PD-1 decoy rejection.
+- `proteor1_cdr_mask`: Proteo-R1-style masked CDR re-evolution.
+- `pdz_peptide_selectivity`: PDZ groove peptide-selectivity design.
+- `calcium_efhand_switch`: CaM/EF-hand calcium-gated peptide switch.
 
 The current outer loop uses OpenEvolve to edit each case's `EVOLVE-BLOCK`.
 The editable design layer is the AST layout/topology DSL: domains, design
@@ -31,6 +36,14 @@ Preview scFv:
 bash scripts/submit_ast_run.sh --case cd25_scfv --profile smoke --stage preview
 ```
 
+Preview every prepared case:
+
+```bash
+for case in tetr_dopamine cd25_scfv_selectivity pdl1_scfv_selectivity proteor1_cdr_mask pdz_peptide_selectivity calcium_efhand_switch; do
+  bash scripts/submit_ast_run.sh --case "$case" --profile smoke --stage preview --no-conda
+done
+```
+
 Formal TetR exploratory run:
 
 ```bash
@@ -55,6 +68,14 @@ bash scripts/submit_ast_run.sh \
   --outer-iterations 200 \
   --inner-iterations 1200 \
   --run-name scfv_formal_001
+```
+
+Detached Slurm GPU submission on the Linux cluster:
+
+```bash
+CASE=pdl1_scfv_selectivity STAGE=outer PROFILE=formal RUN_NAME=pdl1_full_001 \
+OUTER_ITERATIONS=120 INNER_ITERATIONS=720 TIME=48:00:00 \
+bash scripts/submit_ast_gpu.sh
 ```
 
 Windows PowerShell uses the same profile/stage idea:

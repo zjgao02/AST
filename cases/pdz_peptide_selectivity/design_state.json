@@ -1,0 +1,331 @@
+{
+  "task_name": "PDZ_Peptide_Selectivity_Design_Task",
+  "task_type": "peptide_binding_domain_selectivity",
+  "version": "pdz_peptide_selectivity_v1",
+  "memory_path": "memory.yaml",
+  "case_sheet_path": "case_sheet.json",
+  "binder": {
+    "name": "PDZ_domain",
+    "chain_id": "BB",
+    "architecture": "single_domain_PDZ_peptide_binding_domain",
+    "domain_segment_keys": {
+      "PDZ_domain": "pdz_segments"
+    },
+    "domain_order": [
+      "PDZ_domain"
+    ],
+    "pdz_segments": [
+      [
+        "PDZ_scaffold_1",
+        "framework",
+        "GSPEFLGEEDIPREPRRIVIH"
+      ],
+      [
+        "PDZ_groove_1",
+        "framework",
+        "R"
+      ],
+      [
+        "PDZ_scaffold_2",
+        "framework",
+        "GST"
+      ],
+      [
+        "PDZ_groove_2",
+        "framework",
+        "GLGFNIIG"
+      ],
+      [
+        "PDZ_scaffold_3",
+        "framework",
+        "G"
+      ],
+      [
+        "PDZ_groove_3",
+        "framework",
+        "E"
+      ],
+      [
+        "PDZ_scaffold_4",
+        "framework",
+        "DGEGIFI"
+      ],
+      [
+        "PDZ_groove_4",
+        "framework",
+        "S"
+      ],
+      [
+        "PDZ_scaffold_5",
+        "framework",
+        "FILAGGPADLSGELRKGDQILSVNGVDLRNAS"
+      ],
+      [
+        "PDZ_groove_5",
+        "framework",
+        "H"
+      ],
+      [
+        "PDZ_scaffold_6",
+        "framework",
+        "EQA"
+      ],
+      [
+        "PDZ_groove_6",
+        "framework",
+        "A"
+      ],
+      [
+        "PDZ_scaffold_7",
+        "framework",
+        "IA"
+      ],
+      [
+        "PDZ_groove_7",
+        "framework",
+        "LK"
+      ],
+      [
+        "PDZ_scaffold_8",
+        "framework",
+        "NAGQTVTIIAQYKPEEYSRFEANSRVNSSGRIVTN"
+      ]
+    ]
+  },
+  "target": {
+    "chain_id": "T",
+    "name": "target_C_terminal_peptide",
+    "sequence": "KQTSV",
+    "feature_kind": "peptide",
+    "epitope_name": "PDZ_target_peptide",
+    "epitope_source": "1BE9 chain B target peptide KQTSV; full peptide is the desired contact region.",
+    "epitope_spans": [
+      [
+        0,
+        5
+      ]
+    ]
+  },
+  "additional_targets": {
+    "decoy_peptide": {
+      "name": "decoy_C_terminal_peptide",
+      "sequence": "KKAAA",
+      "biological_reason": "A charge/small-residue decoy peptide lacking the canonical terminal Val motif."
+    }
+  },
+  "design_points": {
+    "schema_version": "ast_design_points_v1",
+    "design_intent": "Retune PDZ groove specificity for KQTSV-like target peptide while suppressing a decoy peptide.",
+    "primary_design_nodes": [
+      "PDZ_groove_1",
+      "PDZ_groove_2",
+      "PDZ_groove_3",
+      "PDZ_groove_4",
+      "PDZ_groove_5",
+      "PDZ_groove_6",
+      "PDZ_groove_7"
+    ],
+    "secondary_design_nodes": [
+      "PDZ_scaffold_1",
+      "PDZ_scaffold_2"
+    ],
+    "default_open_nodes": [
+      "PDZ_groove_1",
+      "PDZ_groove_2",
+      "PDZ_groove_3",
+      "PDZ_groove_4",
+      "PDZ_groove_5",
+      "PDZ_groove_6",
+      "PDZ_groove_7"
+    ],
+    "preserved_nodes": [
+      "PDZ_scaffold_1",
+      "PDZ_scaffold_2",
+      "PDZ_scaffold_3",
+      "PDZ_scaffold_4",
+      "PDZ_scaffold_5",
+      "PDZ_scaffold_6",
+      "PDZ_scaffold_7",
+      "PDZ_scaffold_8"
+    ]
+  },
+  "complex_states": [
+    {
+      "name": "target_peptide_bound_state",
+      "role": "desired target peptide state",
+      "objective": "PDZ groove should bind KQTSV target peptide.",
+      "metric": "plddt",
+      "entities": [
+        {
+          "type": "protein",
+          "id": "PDZ",
+          "source_chain": "BB"
+        },
+        {
+          "type": "protein",
+          "id": "target_peptide",
+          "source_chain": "T"
+        }
+      ]
+    },
+    {
+      "name": "decoy_peptide_state",
+      "role": "negative decoy peptide state",
+      "objective": "PDZ groove should not bind decoy peptide as strongly.",
+      "metric": "plddt",
+      "entities": [
+        {
+          "type": "protein",
+          "id": "PDZ",
+          "source_chain": "BB"
+        },
+        {
+          "type": "protein",
+          "id": "decoy_peptide",
+          "sequence": "KKAAA"
+        }
+      ]
+    }
+  ],
+  "multistate_regions": {
+    "pdz_groove": [
+      "PDZ_groove_1",
+      "PDZ_groove_2",
+      "PDZ_groove_3",
+      "PDZ_groove_4",
+      "PDZ_groove_5",
+      "PDZ_groove_6",
+      "PDZ_groove_7"
+    ],
+    "pdz_scaffold": [
+      "PDZ_scaffold_1",
+      "PDZ_scaffold_2",
+      "PDZ_scaffold_3",
+      "PDZ_scaffold_4",
+      "PDZ_scaffold_5",
+      "PDZ_scaffold_6",
+      "PDZ_scaffold_7",
+      "PDZ_scaffold_8"
+    ],
+    "target_peptide": [
+      "PDZ_target_peptide"
+    ]
+  },
+  "multistate_objectives": [
+    {
+      "name": "target_peptide_interface_on",
+      "type": "interface_on",
+      "state": "target_peptide_bound_state",
+      "pair": [
+        "PDZ",
+        "target_peptide"
+      ],
+      "left_region": "pdz_groove",
+      "right_region": "PDZ_target_peptide",
+      "weight": 1.2,
+      "contact_target": 24,
+      "residue_pair_target": 7,
+      "coverage_target": 0.45,
+      "off_target_penalty_weight": 0.1,
+      "off_target_contact_tolerance": 70
+    },
+    {
+      "name": "decoy_peptide_interface_off",
+      "type": "interface_off",
+      "state": "decoy_peptide_state",
+      "pair": [
+        "PDZ",
+        "decoy_peptide"
+      ],
+      "left_region": "pdz_groove",
+      "weight": 1.0,
+      "contact_target": 18,
+      "residue_pair_target": 5,
+      "off_target_contact_tolerance": 30
+    },
+    {
+      "name": "target_over_decoy_delta",
+      "type": "interface_delta",
+      "positive_state": "target_peptide_bound_state",
+      "negative_state": "decoy_peptide_state",
+      "positive_pair": [
+        "PDZ",
+        "target_peptide"
+      ],
+      "negative_pair": [
+        "PDZ",
+        "decoy_peptide"
+      ],
+      "positive_left_region": "pdz_groove",
+      "positive_right_region": "PDZ_target_peptide",
+      "negative_left_region": "pdz_groove",
+      "weight": 1.25,
+      "direction": "decrease",
+      "min_delta": 0.1,
+      "target_delta": 0.4,
+      "contact_delta_target": 18
+    },
+    {
+      "name": "groove_confidence_floor",
+      "type": "region_confidence_floor",
+      "states": [
+        "target_peptide_bound_state",
+        "decoy_peptide_state"
+      ],
+      "region": "pdz_groove",
+      "metric": "plddt_min",
+      "floor": 45,
+      "target": 75,
+      "weight": 0.55
+    },
+    {
+      "name": "state_confidence",
+      "type": "confidence",
+      "states": [
+        "target_peptide_bound_state",
+        "decoy_peptide_state"
+      ],
+      "metric": "plddt",
+      "weight": 0.45
+    }
+  ],
+  "mutation_policy": {
+    "preferred_edit_order": [
+      "PDZ_groove_1",
+      "PDZ_groove_2",
+      "PDZ_groove_3",
+      "PDZ_groove_4",
+      "PDZ_groove_5",
+      "PDZ_groove_6",
+      "PDZ_groove_7",
+      "PDZ_scaffold_1",
+      "PDZ_scaffold_2"
+    ],
+    "always_open_segments": [
+      "PDZ_groove_1",
+      "PDZ_groove_2",
+      "PDZ_groove_3",
+      "PDZ_groove_4",
+      "PDZ_groove_5",
+      "PDZ_groove_6",
+      "PDZ_groove_7"
+    ],
+    "conditionally_open_segments": [
+      "PDZ_scaffold_1",
+      "PDZ_scaffold_2"
+    ],
+    "generally_frozen": [
+      "PDZ_scaffold_3",
+      "PDZ_scaffold_4",
+      "PDZ_scaffold_5",
+      "PDZ_scaffold_6",
+      "PDZ_scaffold_7",
+      "PDZ_scaffold_8"
+    ]
+  },
+  "case_information_needed": [
+    "Actual target/decoy peptide panel for the biological question.",
+    "Whether backbone remodeling of the PDZ groove is allowed.",
+    "Desired peptide class constraints beyond KQTSV."
+  ]
+}

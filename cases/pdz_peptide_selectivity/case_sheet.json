@@ -1,0 +1,46 @@
+{
+  "schema_version": "ast_case_sheet_v1",
+  "case_name": "pdz_peptide_selectivity",
+  "readiness": {
+    "runtime": "ready",
+    "biological_specificity": "structured_provisional",
+    "primary_reason": "Case includes explicit states, target/decoy entities, node regions, hotspot spans, typed objectives, and confidence/clash guardrails; wet-lab construct details can further tighten thresholds."
+  },
+  "design_goal": {
+    "primary": "Retune a PDZ groove to bind KQTSV target peptide and reject KKAAA decoy peptide.",
+    "formal_success_definition": "Improve the typed positive-state objectives while suppressing typed negative/decoy objectives, preserving local node confidence, and avoiding severe clashes or unfolding."
+  },
+  "state_success_criteria": {
+    "positive_signals": [
+      "Groove-target peptide contacts form.",
+      "Decoy peptide contacts stay lower.",
+      "PDZ groove confidence remains stable."
+    ],
+    "failure_signals": [
+      "Decoy binds as strongly as target.",
+      "Contacts are made by scaffold outside the groove.",
+      "Groove mutations unfold the domain."
+    ]
+  },
+  "objective_thresholds": {
+    "target_interface": {
+      "contacts": 24,
+      "residue_pairs": 7,
+      "coverage": 0.45
+    },
+    "target_over_decoy_delta": {
+      "min_delta": 0.1,
+      "target_delta": 0.4,
+      "contact_delta_target": 18
+    },
+    "groove_confidence": {
+      "hard_floor": 45,
+      "target": 75
+    }
+  },
+  "information_gaps": [
+    "Actual target/decoy peptide panel for the biological question.",
+    "Whether backbone remodeling of the PDZ groove is allowed.",
+    "Desired peptide class constraints beyond KQTSV."
+  ]
+}

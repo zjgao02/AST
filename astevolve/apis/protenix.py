@@ -151,7 +151,7 @@ def _normalise_entity(
 
     direct_keys = ["proteinChain", "dnaSequence", "rnaSequence", "ligand", "ion"]
     for key in direct_keys:
-        if key in entity:
+        if key in entity and isinstance(entity[key], dict):
             payload = dict(entity[key])
             count = _normalise_count(payload.get("count", 1))
             payload["count"] = count

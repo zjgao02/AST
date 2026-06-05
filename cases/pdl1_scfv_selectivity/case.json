@@ -1,0 +1,11 @@
+{
+  "case_id": "pdl1_scfv_selectivity",
+  "name": "PD-L1 selective scFv design",
+  "task_type": "selective_scfv_epitope_design",
+  "design_state_path": "design_state.json",
+  "memory_path": "memory.yaml",
+  "output_root": "../../artifacts/pdl1_scfv_selectivity",
+  "entry_program": "initial_program.py",
+  "config_path": "config.yaml",
+  "notes": "Self-contained ASTevolve case with case-specific typed multistate objectives."
+}

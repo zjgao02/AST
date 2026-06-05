@@ -1,0 +1,48 @@
+{
+  "schema_version": "ast_case_sheet_v1",
+  "case_name": "pdl1_scfv_selectivity",
+  "readiness": {
+    "runtime": "ready",
+    "biological_specificity": "structured_provisional",
+    "primary_reason": "Case includes explicit states, target/decoy entities, node regions, hotspot spans, typed objectives, and confidence/clash guardrails; wet-lab construct details can further tighten thresholds."
+  },
+  "design_goal": {
+    "primary": "Design a PD-L1-selective scFv focused on an avelumab-like PD-L1 ECD hotspot while rejecting PD-L2 and PD-1 decoys.",
+    "formal_success_definition": "Improve the typed positive-state objectives while suppressing typed negative/decoy objectives, preserving local node confidence, and avoiding severe clashes or unfolding."
+  },
+  "state_success_criteria": {
+    "positive_signals": [
+      "CDR-to-PD-L1 epitope contacts form.",
+      "PD-L1 contacts are concentrated on the known hotspot spans.",
+      "PD-L2 and PD-1 decoy interfaces remain weak.",
+      "CDR confidence remains interpretable."
+    ],
+    "failure_signals": [
+      "PD-L2 or PD-1 binding approaches PD-L1 binding.",
+      "Contacts move away from the PD-L1 epitope.",
+      "Framework/linker dominates the interface.",
+      "CDRs are low-confidence or clashing."
+    ]
+  },
+  "objective_thresholds": {
+    "pdl1_epitope_interface_on": {
+      "contacts": 58,
+      "residue_pairs": 14,
+      "coverage": 0.32
+    },
+    "pdl1_over_pdl2_delta": {
+      "min_delta": 0.12,
+      "target_delta": 0.45,
+      "contact_delta_target": 32
+    },
+    "cdr_confidence": {
+      "hard_floor": 45,
+      "target": 72
+    }
+  },
+  "information_gaps": [
+    "Whether the desired antibody should block PD-1 by binding the PD-1 interface or bind a non-blocking PD-L1 epitope.",
+    "Exact mature PD-L1/PD-L2 construct boundaries for assay matching.",
+    "Allowed human framework families and developability liabilities."
+  ]
+}

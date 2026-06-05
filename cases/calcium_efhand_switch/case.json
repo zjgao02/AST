@@ -1,0 +1,11 @@
+{
+  "case_id": "calcium_efhand_switch",
+  "name": "Calcium EF-hand peptide-binding switch",
+  "task_type": "ion_gated_peptide_binding_switch",
+  "design_state_path": "design_state.json",
+  "memory_path": "memory.yaml",
+  "output_root": "../../artifacts/calcium_efhand_switch",
+  "entry_program": "initial_program.py",
+  "config_path": "config.yaml",
+  "notes": "Self-contained ASTevolve case with case-specific typed multistate objectives."
+}

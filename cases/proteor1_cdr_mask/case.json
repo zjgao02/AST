@@ -1,0 +1,11 @@
+{
+  "case_id": "proteor1_cdr_mask",
+  "name": "Proteo-R1 style masked CDR evolution",
+  "task_type": "masked_cdr_scfv_evolution",
+  "design_state_path": "design_state.json",
+  "memory_path": "memory.yaml",
+  "output_root": "../../artifacts/proteor1_cdr_mask",
+  "entry_program": "initial_program.py",
+  "config_path": "config.yaml",
+  "notes": "Self-contained ASTevolve case with case-specific typed multistate objectives."
+}

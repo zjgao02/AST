@@ -1,0 +1,474 @@
+{
+  "task_name": "PDL1_scFv_Selectivity_Design_Task",
+  "task_type": "selective_scfv_epitope_design",
+  "version": "pdl1_scfv_selectivity_v1",
+  "memory_path": "memory.yaml",
+  "case_sheet_path": "case_sheet.json",
+  "binder": {
+    "chain_id": "BB",
+    "architecture": "VH-Linker-VL",
+    "domain_segment_keys": {
+      "VH_domain": "vh_segments",
+      "Linker_module": "linker_segments",
+      "VL_domain": "vl_segments"
+    },
+    "domain_aliases": {
+      "VH": "VH_domain",
+      "heavy": "VH_domain",
+      "heavy_chain": "VH_domain",
+      "Linker": "Linker_module",
+      "linker": "Linker_module",
+      "VL": "VL_domain",
+      "light": "VL_domain",
+      "light_chain": "VL_domain"
+    },
+    "domain_order": [
+      "VH_domain",
+      "Linker_module",
+      "VL_domain"
+    ],
+    "vh_segments": [
+      [
+        "VH_FR1",
+        "framework",
+        "QVQLVQSGAEVKKPGSSVKVS"
+      ],
+      [
+        "VH_CDR1",
+        "cdr",
+        "CKASGYTFTSYRMH"
+      ],
+      [
+        "VH_FR2",
+        "framework",
+        "WVRQAPGQGLEWI"
+      ],
+      [
+        "VH_CDR2",
+        "cdr",
+        "GYINPSTGYTEYNQKF"
+      ],
+      [
+        "VH_FR3",
+        "framework",
+        "KDKATITADESTNTAYMELSSLRSEDTAVYYCA"
+      ],
+      [
+        "VH_CDR3",
+        "cdr",
+        "RGGGVFDY"
+      ],
+      [
+        "VH_FR4",
+        "framework",
+        "WGQGTLVTVS"
+      ]
+    ],
+    "linker_segments": [
+      [
+        "Linker_head",
+        "linker",
+        "GGGGS"
+      ],
+      [
+        "Linker_core",
+        "linker",
+        "GGGGS"
+      ],
+      [
+        "Linker_tail",
+        "linker",
+        "GGGGS"
+      ]
+    ],
+    "vl_segments": [
+      [
+        "VL_FR1",
+        "framework",
+        "DIQMTQSPSTLSASVGDRVTITC"
+      ],
+      [
+        "VL_CDR1",
+        "cdr",
+        "SASSSISYMH"
+      ],
+      [
+        "VL_FR2",
+        "framework",
+        "WYQQKPGKAPKLLIY"
+      ],
+      [
+        "VL_CDR2",
+        "cdr",
+        "TTSNLAS"
+      ],
+      [
+        "VL_FR3",
+        "framework",
+        "GVPARFSGSGSGTEFTLTISSLQPDDFATYYC"
+      ],
+      [
+        "VL_CDR3",
+        "cdr",
+        "HQRSTYPLT"
+      ],
+      [
+        "VL_FR4",
+        "framework",
+        "FGQGTKVEVKRTVA"
+      ]
+    ]
+  },
+  "target": {
+    "chain_id": "T",
+    "name": "PDL1",
+    "uniprot_id": "Q9NZQ7",
+    "sequence_numbering": "First residue is mature PD-L1 ECD residue 1 from the local case proxy.",
+    "sequence": "AFTVTVPKDLYVVEYGSNMTIECKFPVEKQLDLAALIVYWEMEDKNIIQFVHGEEDLKVQHSSYRQRARLLKDQLSLGNAALQITDVKLQDAGVYRCMISYGGADYKRITVKVNAPYNKINQRILVVDPVTSEHELTCQAEGYPKAEVIWTSSDHQVLSGKTTTTNSKREEKLFNVTSTLRINTTTNEIFYCTFRRLDPEENHTAELVIPELPLAHPPNER",
+    "epitope_name": "PDL1_avelumab_epitope",
+    "epitope_source": "RCSB 5GRJ chain C antibody-contact residues, 4.5 A heavy-atom cutoff, converted to zero-based end-exclusive spans.",
+    "epitope_spans": [
+      [
+        36,
+        37
+      ],
+      [
+        38,
+        39
+      ],
+      [
+        40,
+        46
+      ],
+      [
+        48,
+        49
+      ],
+      [
+        51,
+        52
+      ],
+      [
+        55,
+        56
+      ],
+      [
+        57,
+        59
+      ],
+      [
+        60,
+        61
+      ],
+      [
+        95,
+        96
+      ],
+      [
+        97,
+        98
+      ],
+      [
+        99,
+        100
+      ],
+      [
+        103,
+        104
+      ],
+      [
+        105,
+        106
+      ],
+      [
+        107,
+        108
+      ]
+    ],
+    "hotspot_motif": "YRCMISYGGADYKRITVKVN"
+  },
+  "additional_targets": {
+    "PDL2_decoy": {
+      "name": "PDL2",
+      "sequence": "LPDLKAFPVEKINLSDYHYNSRLRVVLNTQGITLQCYGSVLLSNLQLGVPQELDLSKIKNQLTQLVDPNVTCQLKFRFYQDQKTTLPDCTTWEKILEVHGVGYNVTYRQTNTLEVILTSGQVILQAGERVHFSCSVMHEALHNHYTQKSLSLSPGK",
+      "biological_reason": "PD-L2 is the closest functional homolog; anti-PD-L1 selectivity should avoid strong PD-L2 binding."
+    },
+    "PD1_decoy": {
+      "name": "PD1",
+      "sequence": "NPPTFSPALLVVTEGDNATFTCSFSNTSESFVLNWYRMSPSNQTDKLAAFPEDRSQPGQDSRFRVTQLPNGRDFHMSVVRARRNDSGTYLCGAISLAPKAQIKESLRAELRVTERRAE",
+      "biological_reason": "PD-1 is included as an off-target protein to discourage receptor-like binding by the designed scFv."
+    }
+  },
+  "design_points": {
+    "schema_version": "ast_design_points_v1",
+    "design_intent": "Design an anti-PD-L1 scFv that focuses on avelumab/PD-1-overlap ECD surface while staying selective against PD-L2 and PD-1 off-target proteins.",
+    "primary_design_nodes": [
+      "VH_CDR3",
+      "VH_CDR2",
+      "VL_CDR3"
+    ],
+    "secondary_design_nodes": [
+      "VH_CDR1",
+      "VL_CDR1",
+      "VL_CDR2"
+    ],
+    "default_open_nodes": [
+      "VH_CDR3",
+      "VH_CDR2",
+      "VL_CDR3",
+      "VH_CDR1",
+      "VL_CDR1",
+      "VL_CDR2"
+    ],
+    "preserved_nodes": [
+      "VH_FR1",
+      "VH_FR4",
+      "VL_FR1",
+      "VL_FR4",
+      "Linker_head",
+      "Linker_tail"
+    ]
+  },
+  "complex_states": [
+    {
+      "name": "pdl1_positive_state",
+      "role": "desired PD-L1-bound state",
+      "objective": "scFv CDRs should bind the PD-L1 ECD at the avelumab-like epitope.",
+      "metric": "plddt",
+      "entities": [
+        {
+          "type": "protein",
+          "id": "scFv",
+          "source_chain": "BB"
+        },
+        {
+          "type": "protein",
+          "id": "PDL1",
+          "source_chain": "T"
+        }
+      ]
+    },
+    {
+      "name": "pdl2_decoy_state",
+      "role": "PD-L2 homolog negative state",
+      "objective": "scFv should avoid strong PD-L2 binding.",
+      "metric": "plddt",
+      "entities": [
+        {
+          "type": "protein",
+          "id": "scFv",
+          "source_chain": "BB"
+        },
+        {
+          "type": "protein",
+          "id": "PDL2",
+          "sequence": "LPDLKAFPVEKINLSDYHYNSRLRVVLNTQGITLQCYGSVLLSNLQLGVPQELDLSKIKNQLTQLVDPNVTCQLKFRFYQDQKTTLPDCTTWEKILEVHGVGYNVTYRQTNTLEVILTSGQVILQAGERVHFSCSVMHEALHNHYTQKSLSLSPGK"
+        }
+      ]
+    },
+    {
+      "name": "pd1_offtarget_state",
+      "role": "PD-1 receptor off-target state",
+      "objective": "scFv should avoid receptor-like off-target binding to PD-1.",
+      "metric": "plddt",
+      "entities": [
+        {
+          "type": "protein",
+          "id": "scFv",
+          "source_chain": "BB"
+        },
+        {
+          "type": "protein",
+          "id": "PD1",
+          "sequence": "NPPTFSPALLVVTEGDNATFTCSFSNTSESFVLNWYRMSPSNQTDKLAAFPEDRSQPGQDSRFRVTQLPNGRDFHMSVVRARRNDSGTYLCGAISLAPKAQIKESLRAELRVTERRAE"
+        }
+      ]
+    }
+  ],
+  "multistate_regions": {
+    "cdr_binding_surface": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3"
+    ],
+    "primary_cdr_hotspot": [
+      "VH_CDR3",
+      "VH_CDR2",
+      "VL_CDR3"
+    ],
+    "framework_stability_core": [
+      "VH_FR1",
+      "VH_FR2",
+      "VH_FR3",
+      "VH_FR4",
+      "VL_FR1",
+      "VL_FR2",
+      "VL_FR3",
+      "VL_FR4"
+    ],
+    "linker_core": [
+      "Linker_core"
+    ],
+    "target_epitope_focus": [
+      "PDL1_avelumab_epitope"
+    ],
+    "pd1_overlap_surface": [
+      "PDL1_PD1_interface"
+    ]
+  },
+  "multistate_objectives": [
+    {
+      "name": "pdl1_epitope_interface_on",
+      "type": "interface_on",
+      "state": "pdl1_positive_state",
+      "pair": [
+        "scFv",
+        "PDL1"
+      ],
+      "left_region": "cdr_binding_surface",
+      "right_region": "PDL1_avelumab_epitope",
+      "weight": 1.2,
+      "contact_target": 58,
+      "residue_pair_target": 14,
+      "coverage_target": 0.32,
+      "off_target_penalty_weight": 0.2,
+      "off_target_contact_tolerance": 120
+    },
+    {
+      "name": "pdl1_epitope_specificity",
+      "type": "epitope_specificity",
+      "state": "pdl1_positive_state",
+      "pair": [
+        "scFv",
+        "PDL1"
+      ],
+      "left_region": "cdr_binding_surface",
+      "target_region": "PDL1_avelumab_epitope",
+      "weight": 0.9,
+      "target_contact_fraction": 0.55,
+      "contact_target": 55,
+      "coverage_target": 0.32
+    },
+    {
+      "name": "pdl2_decoy_interface_off",
+      "type": "interface_off",
+      "state": "pdl2_decoy_state",
+      "pair": [
+        "scFv",
+        "PDL2"
+      ],
+      "left_region": "cdr_binding_surface",
+      "weight": 0.95,
+      "contact_target": 42,
+      "residue_pair_target": 9,
+      "off_target_contact_tolerance": 60
+    },
+    {
+      "name": "pd1_offtarget_interface_off",
+      "type": "interface_off",
+      "state": "pd1_offtarget_state",
+      "pair": [
+        "scFv",
+        "PD1"
+      ],
+      "left_region": "cdr_binding_surface",
+      "weight": 0.65,
+      "contact_target": 35,
+      "residue_pair_target": 8,
+      "off_target_contact_tolerance": 55
+    },
+    {
+      "name": "pdl1_over_pdl2_selectivity_delta",
+      "type": "interface_delta",
+      "positive_state": "pdl1_positive_state",
+      "negative_state": "pdl2_decoy_state",
+      "positive_pair": [
+        "scFv",
+        "PDL1"
+      ],
+      "negative_pair": [
+        "scFv",
+        "PDL2"
+      ],
+      "positive_left_region": "cdr_binding_surface",
+      "positive_right_region": "PDL1_avelumab_epitope",
+      "negative_left_region": "cdr_binding_surface",
+      "weight": 1.15,
+      "direction": "decrease",
+      "min_delta": 0.12,
+      "target_delta": 0.45,
+      "contact_delta_target": 32
+    },
+    {
+      "name": "cdr_confidence_floor",
+      "type": "region_confidence_floor",
+      "states": [
+        "pdl1_positive_state",
+        "pdl2_decoy_state",
+        "pd1_offtarget_state"
+      ],
+      "region": "cdr_binding_surface",
+      "metric": "plddt_min",
+      "floor": 45,
+      "target": 72,
+      "weight": 0.55
+    },
+    {
+      "name": "state_confidence",
+      "type": "confidence",
+      "states": [
+        "pdl1_positive_state",
+        "pdl2_decoy_state",
+        "pd1_offtarget_state"
+      ],
+      "metric": "plddt",
+      "weight": 0.45
+    }
+  ],
+  "mutation_policy": {
+    "preferred_edit_order": [
+      "VH_CDR3",
+      "VH_CDR2",
+      "VL_CDR3",
+      "VH_CDR1",
+      "VL_CDR1",
+      "VL_CDR2",
+      "Linker_core",
+      "VH_FR2",
+      "VH_FR3",
+      "VL_FR2",
+      "VL_FR3"
+    ],
+    "always_open_segments": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3"
+    ],
+    "conditionally_open_segments": [
+      "Linker_core",
+      "VH_FR2",
+      "VH_FR3",
+      "VL_FR2",
+      "VL_FR3"
+    ],
+    "fixed_linker_segments": [
+      "Linker_head",
+      "Linker_tail"
+    ],
+    "generally_frozen": [
+      "FR1",
+      "FR4"
+    ]
+  },
+  "case_information_needed": [
+    "Whether the desired antibody should block PD-1 by binding the PD-1 interface or bind a non-blocking PD-L1 epitope.",
+    "Exact mature PD-L1/PD-L2 construct boundaries for assay matching.",
+    "Allowed human framework families and developability liabilities."
+  ]
+}

@@ -1,10 +1,15 @@
 # ASTevolve Run Quick Start
 
 This document is the current run/submission standard for ASTevolve case runs.
-It covers the two active cases:
+It covers the prepared active cases:
 
 - `tetr_dopamine`: TetR dopamine-responsive redesign.
 - `cd25_scfv`: CD25-targeting scFv optimization.
+- `cd25_scfv_selectivity`: CD25 epitope binding with IL2RB/CD122 decoy rejection.
+- `pdl1_scfv_selectivity`: PD-L1 epitope binding with PD-L2 and PD-1 decoy rejection.
+- `proteor1_cdr_mask`: Proteo-R1-style masked CDR re-evolution.
+- `pdz_peptide_selectivity`: PDZ target peptide versus decoy peptide selectivity.
+- `calcium_efhand_switch`: calcium-gated EF-hand peptide-binding switch.
 
 The intended split is:
 
@@ -40,12 +45,29 @@ points:
 - `scripts/smoke_case.py`
 - `openevolve/openevolve-run.py`
 
+For detached GPU jobs on the Linux cluster, use:
+
+```bash
+CASE=pdl1_scfv_selectivity STAGE=outer PROFILE=formal RUN_NAME=pdl1_full_001 \
+OUTER_ITERATIONS=120 INNER_ITERATIONS=720 TIME=48:00:00 \
+bash scripts/submit_ast_gpu.sh
+```
+
+`submit_ast_gpu.sh` writes the Slurm batch file and logs under
+`artifacts/runs/logs/`; it defaults to `sbatch`, so the job continues after the
+terminal disconnects.
+
 ## 2. Cases
 
 | Case | Entry program | OpenEvolve config | Formal inner default |
 |---|---|---|---:|
 | `tetr_dopamine` | `cases/tetr_dopamine/initial_program.py` | `cases/tetr_dopamine/config.yaml` | 240 |
 | `cd25_scfv` | `cases/cd25_scfv/initial_program.py` | `cases/cd25_scfv/config.yaml` | 1200 |
+| `cd25_scfv_selectivity` | `cases/cd25_scfv_selectivity/initial_program.py` | `cases/cd25_scfv_selectivity/config.yaml` | 1200 |
+| `pdl1_scfv_selectivity` | `cases/pdl1_scfv_selectivity/initial_program.py` | `cases/pdl1_scfv_selectivity/config.yaml` | 1200 |
+| `proteor1_cdr_mask` | `cases/proteor1_cdr_mask/initial_program.py` | `cases/proteor1_cdr_mask/config.yaml` | 1200 |
+| `pdz_peptide_selectivity` | `cases/pdz_peptide_selectivity/initial_program.py` | `cases/pdz_peptide_selectivity/config.yaml` | 360 |
+| `calcium_efhand_switch` | `cases/calcium_efhand_switch/initial_program.py` | `cases/calcium_efhand_switch/config.yaml` | 360 |
 
 Both configs currently use `max_iterations: 200` as their default outer-loop
 budget. The launcher can override it with `--outer-iterations` or
@@ -62,7 +84,8 @@ budget. The launcher can override it with `--outer-iterations` or
 Case defaults:
 
 - TetR: retrieval off, ProGen weight `0.5`, formal inner iterations `240`.
-- scFv: retrieval on, ProGen weight `1.0`, formal inner iterations `1200`.
+- scFv/antibody-style cases: retrieval on, ProGen weight `1.0`, formal inner iterations `1200`.
+- PDZ and EF-hand single-domain cases: retrieval off, ProGen weight `0.6`, formal inner iterations `360`.
 
 Any profile value can be overridden at submission time.
 
@@ -88,7 +111,7 @@ assets -> preview -> inner-smoke -> outer
 Bash names:
 
 ```bash
---case tetr_dopamine|cd25_scfv
+--case CASE_ID
 --stage assets|preview|inner-smoke|outer|formal|all
 --profile smoke|cheap|formal
 --outer-iterations N
@@ -106,7 +129,7 @@ Bash names:
 PowerShell names:
 
 ```powershell
--Case tetr_dopamine|cd25_scfv
+-Case CASE_ID
 -Stage assets|preview|inner-smoke|outer|formal|all
 -Profile smoke|cheap|formal
 -OuterIterations N

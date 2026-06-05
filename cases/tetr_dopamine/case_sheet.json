@@ -9,8 +9,21 @@
   "design_goal": {
     "primary": "Redesign a TetR-family homodimer so dopamine binding promotes a DNA-release-compatible holo state while the apo/DNA state remains folded and operator-compatible.",
     "switch_direction": "apo_or_no_dopamine_DNA_on__dopamine_bound_DNA_off",
-    "allowed_to_change": ["ligand_pocket_core", "allosteric_hinge", "relay_helix", "domain_connector", "HTH_exit_loop", "HTH_recognition_helix"],
-    "not_allowed_to_change": ["TetO_operator", "N_term_support", "HTH_helix1", "HTH_turn", "C_terminal_support"],
+    "allowed_to_change": [
+      "ligand_pocket_core",
+      "allosteric_hinge",
+      "relay_helix",
+      "domain_connector",
+      "HTH_exit_loop",
+      "HTH_recognition_helix"
+    ],
+    "not_allowed_to_change": [
+      "TetO_operator",
+      "N_term_support",
+      "HTH_helix1",
+      "HTH_turn",
+      "C_terminal_support"
+    ],
     "formal_success_definition": "A successful candidate should strengthen dopamine-pocket contacts, preserve enough TetO-compatible apo contacts, weaken TetO contacts in dopamine-bound competition state, and keep the dimer/global fold stable."
   },
   "reference_inputs": {
@@ -69,9 +82,23 @@
   },
   "residue_level_constraints": {
     "indexing": "Node names are from design_state binder segmentation; exact residue numbering is pending reference-structure mapping.",
-    "primary_design_nodes": ["ligand_pocket_core", "allosteric_hinge", "relay_helix"],
-    "secondary_design_nodes": ["domain_connector", "HTH_exit_loop", "HTH_recognition_helix"],
-    "preserved_nodes": ["dimerization_interface", "N_term_support", "C_terminal_support", "HTH_helix1", "HTH_turn"],
+    "primary_design_nodes": [
+      "ligand_pocket_core",
+      "allosteric_hinge",
+      "relay_helix"
+    ],
+    "secondary_design_nodes": [
+      "domain_connector",
+      "HTH_exit_loop",
+      "HTH_recognition_helix"
+    ],
+    "preserved_nodes": [
+      "dimerization_interface",
+      "N_term_support",
+      "C_terminal_support",
+      "HTH_helix1",
+      "HTH_turn"
+    ],
     "ligand_pharmacophore": {
       "ligand": "dopamine",
       "smiles": "NCCc1ccc(O)c(O)c1",
@@ -113,6 +140,16 @@
     "node_confidence": {
       "ligand_pocket_plddt_mean_target": 70,
       "allosteric_pathway_plddt_min_target": 45
+    },
+    "dopamine_pocket_pharmacophore": {
+      "acidic_fraction": 0.18,
+      "polar_fraction": 0.35,
+      "aromatic_fraction": 0.18
+    },
+    "apo_vs_holo_dna_release_delta": {
+      "min_delta": 0.1,
+      "target_delta": 0.42,
+      "contact_delta_target": 35
     }
   },
   "provisional_assumptions": [

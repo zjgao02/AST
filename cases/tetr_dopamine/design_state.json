@@ -21,29 +21,79 @@
     "domain_annotations": [
       {
         "name": "Homeodomain-like HTH DNA-binding domain",
-        "span_1_based": [1, 66],
+        "span_1_based": [
+          1,
+          66
+        ],
         "source": "user-provided InterPro/AlphaFold domain view"
       },
       {
         "name": "TED consensus ligand/dimerization domain",
-        "span_1_based": [68, 205],
+        "span_1_based": [
+          68,
+          205
+        ],
         "source": "user-provided InterPro/AlphaFold domain view"
       }
     ],
     "dna_binding_segments": [
-      ["N_term_support", "support", "MSRLDKSKVI"],
-      ["HTH_helix1", "helix", "NSALELLNEVGIEGL"],
-      ["HTH_turn", "loop", "TTRKLAQK"],
-      ["HTH_recognition_helix", "dna_contact", "LGVEQPTLYWHVKNKR"],
-      ["HTH_exit_loop", "hinge", "ALLDALAIEMLDRHHTH"]
+      [
+        "N_term_support",
+        "support",
+        "MSRLDKSKVI"
+      ],
+      [
+        "HTH_helix1",
+        "helix",
+        "NSALELLNEVGIEGL"
+      ],
+      [
+        "HTH_turn",
+        "loop",
+        "TTRKLAQK"
+      ],
+      [
+        "HTH_recognition_helix",
+        "dna_contact",
+        "LGVEQPTLYWHVKNKR"
+      ],
+      [
+        "HTH_exit_loop",
+        "hinge",
+        "ALLDALAIEMLDRHHTH"
+      ]
     ],
     "ted_ligand_dimer_segments": [
-      ["domain_connector", "hinge", "FCPL"],
-      ["ligand_pocket_core", "pocket", "EGESWQDFLRNNAKSFRCALLSHRDGAKVHLGTRPTEKQYETLEN"],
-      ["allosteric_hinge", "hinge", "QLAFLCQQGFSLENALY"],
-      ["relay_helix", "relay", "ALSAVGHFTLGCVLEDQEHQVAKEE"],
-      ["dimerization_interface", "dimer_interface", "RETPTTDSMPPLLRQAIELFDHQGAE"],
-      ["C_terminal_support", "support", "PAFLFGLELIICGLEKQLKCESGS"]
+      [
+        "domain_connector",
+        "hinge",
+        "FCPL"
+      ],
+      [
+        "ligand_pocket_core",
+        "pocket",
+        "EGESWQDFLRNNAKSFRCALLSHRDGAKVHLGTRPTEKQYETLEN"
+      ],
+      [
+        "allosteric_hinge",
+        "hinge",
+        "QLAFLCQQGFSLENALY"
+      ],
+      [
+        "relay_helix",
+        "relay",
+        "ALSAVGHFTLGCVLEDQEHQVAKEE"
+      ],
+      [
+        "dimerization_interface",
+        "dimer_interface",
+        "RETPTTDSMPPLLRQAIELFDHQGAE"
+      ],
+      [
+        "C_terminal_support",
+        "support",
+        "PAFLFGLELIICGLEKQLKCESGS"
+      ]
     ]
   },
   "target": {
@@ -55,7 +105,12 @@
     "feature_kind": "operator",
     "epitope_name": "TetO_operator",
     "epitope_source": "User-provided TetO operator sequence; used as a fixed DNA state anchor.",
-    "epitope_spans": [[0, 19]]
+    "epitope_spans": [
+      [
+        0,
+        19
+      ]
+    ]
   },
   "ligands": {
     "dopamine": {
@@ -99,9 +154,20 @@
       "known_gap": "The current case does not yet encode a residue-level tetracycline-pocket template, dopamine pharmacophore contact map, or experimental DNA-release conformational reference."
     },
     "operator_policy": {
-      "explore": ["motif_graft", "segment_mutagenesis", "site_resample"],
-      "refine": ["site_resample", "block", "point"],
-      "stabilize": ["point", "swap"]
+      "explore": [
+        "motif_graft",
+        "segment_mutagenesis",
+        "site_resample"
+      ],
+      "refine": [
+        "site_resample",
+        "block",
+        "point"
+      ],
+      "stabilize": [
+        "point",
+        "swap"
+      ]
     }
   },
   "complex_states": [
@@ -111,9 +177,22 @@
       "objective": "TetR homodimer should remain structurally compatible with TetO operator binding.",
       "metric": "plddt",
       "entities": [
-        {"type": "protein", "id": "TetR_dimer", "source_chain": "BB", "count": 2},
-        {"type": "dna", "id": "TetO_plus", "sequence": "TCCCTATCAGTGATAGAGA"},
-        {"type": "dna", "id": "TetO_minus", "sequence": "TCTCTATCACTGATAGGGA"}
+        {
+          "type": "protein",
+          "id": "TetR_dimer",
+          "source_chain": "BB",
+          "count": 2
+        },
+        {
+          "type": "dna",
+          "id": "TetO_plus",
+          "sequence": "TCCCTATCAGTGATAGAGA"
+        },
+        {
+          "type": "dna",
+          "id": "TetO_minus",
+          "sequence": "TCTCTATCACTGATAGGGA"
+        }
       ]
     },
     {
@@ -122,8 +201,18 @@
       "objective": "Dopamine should occupy the redesigned ligand pocket with low clash and plausible interface contacts.",
       "metric": "plddt",
       "entities": [
-        {"type": "protein", "id": "TetR_dimer", "source_chain": "BB", "count": 2},
-        {"type": "ligand", "id": "dopamine", "smiles": "NCCc1ccc(O)c(O)c1", "count": 2}
+        {
+          "type": "protein",
+          "id": "TetR_dimer",
+          "source_chain": "BB",
+          "count": 2
+        },
+        {
+          "type": "ligand",
+          "id": "dopamine",
+          "smiles": "NCCc1ccc(O)c(O)c1",
+          "count": 2
+        }
       ]
     },
     {
@@ -132,10 +221,28 @@
       "objective": "Dopamine-bound TetR should weaken TetO-compatible DNA contacts while remaining structurally plausible.",
       "metric": "plddt",
       "entities": [
-        {"type": "protein", "id": "TetR_dimer", "source_chain": "BB", "count": 2},
-        {"type": "dna", "id": "TetO_plus", "sequence": "TCCCTATCAGTGATAGAGA"},
-        {"type": "dna", "id": "TetO_minus", "sequence": "TCTCTATCACTGATAGGGA"},
-        {"type": "ligand", "id": "dopamine", "smiles": "NCCc1ccc(O)c(O)c1", "count": 2}
+        {
+          "type": "protein",
+          "id": "TetR_dimer",
+          "source_chain": "BB",
+          "count": 2
+        },
+        {
+          "type": "dna",
+          "id": "TetO_plus",
+          "sequence": "TCCCTATCAGTGATAGAGA"
+        },
+        {
+          "type": "dna",
+          "id": "TetO_minus",
+          "sequence": "TCTCTATCACTGATAGGGA"
+        },
+        {
+          "type": "ligand",
+          "id": "dopamine",
+          "smiles": "NCCc1ccc(O)c(O)c1",
+          "count": 2
+        }
       ]
     }
   ],
@@ -166,20 +273,29 @@
       "name": "tetO_interface_on",
       "type": "interface_on",
       "state": "tetO_bound_state_A",
-      "pair": ["TetR_dimer", ["TetO_plus", "TetO_minus"]],
+      "pair": [
+        "TetR_dimer",
+        [
+          "TetO_plus",
+          "TetO_minus"
+        ]
+      ],
       "left_region": "dna_binding_head",
       "weight": 1.0,
       "contact_target": 45,
       "residue_pair_target": 10,
       "coverage_target": 0.25,
-      "off_target_penalty_weight": 0.10,
+      "off_target_penalty_weight": 0.1,
       "off_target_contact_tolerance": 120
     },
     {
       "name": "dopamine_binding_on",
       "type": "bind",
       "state": "dopamine_bound_state_B",
-      "pair": ["TetR_dimer", "dopamine"],
+      "pair": [
+        "TetR_dimer",
+        "dopamine"
+      ],
       "left_region": "ligand_pocket",
       "weight": 1.0,
       "contact_target": 18,
@@ -192,7 +308,13 @@
       "name": "tetO_interface_off_with_dopamine",
       "type": "interface_off",
       "state": "dopamine_tetO_competition_state_C",
-      "pair": ["TetR_dimer", ["TetO_plus", "TetO_minus"]],
+      "pair": [
+        "TetR_dimer",
+        [
+          "TetO_plus",
+          "TetO_minus"
+        ]
+      ],
       "left_region": "dna_binding_head",
       "weight": 1.2,
       "contact_target": 45,
@@ -203,10 +325,25 @@
     {
       "name": "dna_to_dopamine_allosteric_shift",
       "type": "mechanistic_transition",
-      "states": ["tetO_bound_state_A", "dopamine_bound_state_B"],
-      "moving_regions": ["allosteric_pathway", "ligand_pocket", "dna_binding_head"],
-      "preserved_regions": ["dimerization_interface", "N_term_support", "C_terminal_support"],
-      "forbid": ["chain_break", "severe_clash", "complete_unfolding"],
+      "states": [
+        "tetO_bound_state_A",
+        "dopamine_bound_state_B"
+      ],
+      "moving_regions": [
+        "allosteric_pathway",
+        "ligand_pocket",
+        "dna_binding_head"
+      ],
+      "preserved_regions": [
+        "dimerization_interface",
+        "N_term_support",
+        "C_terminal_support"
+      ],
+      "forbid": [
+        "chain_break",
+        "severe_clash",
+        "complete_unfolding"
+      ],
       "weight": 1.0,
       "min_moving_rmsd": 0.5,
       "target_moving_rmsd": 3.0,
@@ -217,7 +354,10 @@
     {
       "name": "ligand_pocket_node_confidence",
       "type": "region_confidence",
-      "states": ["dopamine_bound_state_B", "dopamine_tetO_competition_state_C"],
+      "states": [
+        "dopamine_bound_state_B",
+        "dopamine_tetO_competition_state_C"
+      ],
       "region": "ligand_pocket",
       "metric": "plddt_mean",
       "target": 70,
@@ -226,7 +366,10 @@
     {
       "name": "allosteric_pathway_node_confidence",
       "type": "region_confidence",
-      "states": ["tetO_bound_state_A", "dopamine_bound_state_B"],
+      "states": [
+        "tetO_bound_state_A",
+        "dopamine_bound_state_B"
+      ],
       "region": "allosteric_pathway",
       "metric": "plddt_min",
       "target": 45,
@@ -242,6 +385,66 @@
       ],
       "metric": "plddt",
       "weight": 0.6
+    },
+    {
+      "name": "dopamine_pocket_pharmacophore",
+      "type": "ligand_pocket_pharmacophore",
+      "state": "dopamine_bound_state_B",
+      "pair": [
+        "TetR_dimer",
+        "dopamine"
+      ],
+      "left_region": "ligand_pocket",
+      "required_classes": {
+        "acidic": 0.18,
+        "polar": 0.35,
+        "aromatic": 0.18
+      },
+      "weight": 0.85,
+      "contact_target": 18,
+      "residue_pair_target": 5,
+      "coverage_target": 0.12
+    },
+    {
+      "name": "apo_vs_holo_dna_release_delta",
+      "type": "interface_delta",
+      "positive_state": "tetO_bound_state_A",
+      "negative_state": "dopamine_tetO_competition_state_C",
+      "positive_pair": [
+        "TetR_dimer",
+        [
+          "TetO_plus",
+          "TetO_minus"
+        ]
+      ],
+      "negative_pair": [
+        "TetR_dimer",
+        [
+          "TetO_plus",
+          "TetO_minus"
+        ]
+      ],
+      "positive_left_region": "dna_binding_head",
+      "negative_left_region": "dna_binding_head",
+      "weight": 1.1,
+      "direction": "decrease",
+      "min_delta": 0.1,
+      "target_delta": 0.42,
+      "contact_delta_target": 35
+    },
+    {
+      "name": "allosteric_pathway_confidence_floor",
+      "type": "region_confidence_floor",
+      "states": [
+        "tetO_bound_state_A",
+        "dopamine_bound_state_B",
+        "dopamine_tetO_competition_state_C"
+      ],
+      "region": "allosteric_pathway",
+      "metric": "plddt_min",
+      "floor": 42,
+      "target": 70,
+      "weight": 0.45
     }
   ],
   "mutation_policy": {
@@ -278,7 +481,9 @@
     "Reference TetR-family template structure and exact residue numbering for the ligand pocket, HTH domain, dimer interface, and allosteric hinge.",
     "Dopamine pharmacophore/contact constraints: catechol H-bond donors/acceptors, amine salt-bridge preference, allowed pocket volume, and forbidden contacts.",
     "DNA operator geometry or native TetR-DNA reference contacts that should be preserved in apo and disrupted in holo.",
-    "Assay direction and thresholds: desired dopamine response window, tolerated basal DNA leakage, mutation budget, and whether dimer interface redesign is allowed."
+    "Assay direction and thresholds: desired dopamine response window, tolerated basal DNA leakage, mutation budget, and whether dimer interface redesign is allowed.",
+    "Residue-level dopamine pocket pharmacophore positions from a reference TetR-like pocket.",
+    "Exact catecholamine selectivity panel if dopamine-specific behavior is required."
   ],
   "round_history": []
 }

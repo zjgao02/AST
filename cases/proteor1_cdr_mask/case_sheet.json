@@ -1,0 +1,40 @@
+{
+  "schema_version": "ast_case_sheet_v1",
+  "case_name": "proteor1_cdr_mask",
+  "readiness": {
+    "runtime": "ready",
+    "biological_specificity": "structured_provisional",
+    "primary_reason": "Case includes explicit states, target/decoy entities, node regions, hotspot spans, typed objectives, and confidence/clash guardrails; wet-lab construct details can further tighten thresholds."
+  },
+  "design_goal": {
+    "primary": "Re-evolve masked H/L CDRs from a Proteo-R1 demo case while preserving framework and focusing the antigen spec-mask hotspot.",
+    "formal_success_definition": "Improve the typed positive-state objectives while suppressing typed negative/decoy objectives, preserving local node confidence, and avoiding severe clashes or unfolding."
+  },
+  "state_success_criteria": {
+    "positive_signals": [
+      "CDR-hotspot contacts recover.",
+      "Contacts remain concentrated on ProteoR1_spec_mask_hotspot.",
+      "Masked CDR node confidence stays above floor."
+    ],
+    "failure_signals": [
+      "Interface is broad but not hotspot-centered.",
+      "Framework replaces CDRs as binder.",
+      "CDR loops become low-confidence."
+    ]
+  },
+  "objective_thresholds": {
+    "hotspot_interface": {
+      "contacts": 70,
+      "residue_pairs": 18,
+      "coverage": 0.38
+    },
+    "cdr_confidence": {
+      "hard_floor": 45,
+      "target": 72
+    }
+  },
+  "information_gaps": [
+    "Whether the goal is de novo CDR recovery, improvement over ground truth, or robustness to masked inputs.",
+    "External negative antigens for selectivity if desired."
+  ]
+}

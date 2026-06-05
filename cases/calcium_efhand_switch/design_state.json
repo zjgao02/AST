@@ -1,0 +1,324 @@
+{
+  "task_name": "Calcium_EFhand_Switch_Design_Task",
+  "task_type": "ion_gated_peptide_binding_switch",
+  "version": "calcium_efhand_switch_v1",
+  "memory_path": "memory.yaml",
+  "case_sheet_path": "case_sheet.json",
+  "binder": {
+    "name": "Calmodulin_EF_hand_sensor",
+    "chain_id": "BB",
+    "architecture": "single_chain_four_EF_hand_calcium_switch",
+    "domain_segment_keys": {
+      "CaM_EFhand_domain": "cam_segments"
+    },
+    "domain_order": [
+      "CaM_EFhand_domain"
+    ],
+    "cam_segments": [
+      [
+        "CaM_scaffold_1",
+        "framework",
+        "MADQLTEEQIAEFKEAFSL"
+      ],
+      [
+        "EFhand_loop_1",
+        "framework",
+        "FDKDGDGTITTK"
+      ],
+      [
+        "CaM_scaffold_2",
+        "framework",
+        "ELGTVMRSLGQNPTEAELQDMINEV"
+      ],
+      [
+        "EFhand_loop_2",
+        "framework",
+        "DADGNGTIDFPE"
+      ],
+      [
+        "CaM_scaffold_3",
+        "framework",
+        "FLTMMARKMKDTDSEEEIREAFRV"
+      ],
+      [
+        "EFhand_loop_3",
+        "framework",
+        "FDKDGNGYISAA"
+      ],
+      [
+        "CaM_scaffold_4",
+        "framework",
+        "ELRHVMTNLGEKLTDEEVDEMIREA"
+      ],
+      [
+        "EFhand_loop_4",
+        "framework",
+        "DIDGDGQVNYEE"
+      ],
+      [
+        "CaM_scaffold_5",
+        "framework",
+        "FVQMMTAK"
+      ]
+    ]
+  },
+  "target": {
+    "chain_id": "T",
+    "name": "MLCK_like_target_peptide",
+    "sequence": "KRRWKKNFIAVSAANRFKKISSSGAL",
+    "feature_kind": "peptide",
+    "epitope_name": "MLCK_peptide_binding_surface",
+    "epitope_source": "Canonical calmodulin target-peptide readout proxy; full peptide is treated as the desired binding region.",
+    "epitope_spans": [
+      [
+        0,
+        26
+      ]
+    ]
+  },
+  "ligands": {
+    "calcium": {
+      "name": "calcium",
+      "ccd": "CA",
+      "role": "EF-hand activating ion"
+    }
+  },
+  "design_points": {
+    "schema_version": "ast_design_points_v1",
+    "design_intent": "Design an EF-hand calcium switch: apo state should avoid strong peptide binding; calcium-loaded state should keep acidic EF pockets and improve peptide interface.",
+    "primary_design_nodes": [
+      "EFhand_loop_1",
+      "EFhand_loop_2",
+      "EFhand_loop_3",
+      "EFhand_loop_4"
+    ],
+    "secondary_design_nodes": [
+      "CaM_scaffold_1",
+      "CaM_scaffold_2",
+      "CaM_scaffold_3"
+    ],
+    "default_open_nodes": [
+      "EFhand_loop_1",
+      "EFhand_loop_2",
+      "EFhand_loop_3",
+      "EFhand_loop_4"
+    ],
+    "preserved_nodes": [
+      "CaM_scaffold_1",
+      "CaM_scaffold_2",
+      "CaM_scaffold_3",
+      "CaM_scaffold_4",
+      "CaM_scaffold_5"
+    ]
+  },
+  "complex_states": [
+    {
+      "name": "apo_peptide_state",
+      "role": "apo negative peptide-binding state",
+      "objective": "Without calcium, the scaffold should avoid strong MLCK peptide binding while remaining folded.",
+      "metric": "plddt",
+      "entities": [
+        {
+          "type": "protein",
+          "id": "CaM",
+          "source_chain": "BB"
+        },
+        {
+          "type": "protein",
+          "id": "MLCK_peptide",
+          "source_chain": "T"
+        }
+      ]
+    },
+    {
+      "name": "calcium_peptide_state",
+      "role": "calcium-loaded positive peptide-binding state",
+      "objective": "Calcium-loaded CaM should bind the MLCK-like peptide more strongly.",
+      "metric": "plddt",
+      "entities": [
+        {
+          "type": "protein",
+          "id": "CaM",
+          "source_chain": "BB"
+        },
+        {
+          "type": "protein",
+          "id": "MLCK_peptide",
+          "source_chain": "T"
+        },
+        {
+          "type": "ion",
+          "id": "calcium",
+          "ccd": "CA",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "name": "calcium_only_state",
+      "role": "calcium pocket sanity state",
+      "objective": "EF-hand loops should remain compatible with calcium coordination without peptide.",
+      "metric": "plddt",
+      "entities": [
+        {
+          "type": "protein",
+          "id": "CaM",
+          "source_chain": "BB"
+        },
+        {
+          "type": "ion",
+          "id": "calcium",
+          "ccd": "CA",
+          "count": 4
+        }
+      ]
+    }
+  ],
+  "multistate_regions": {
+    "efhand_calcium_loops": [
+      "EFhand_loop_1",
+      "EFhand_loop_2",
+      "EFhand_loop_3",
+      "EFhand_loop_4"
+    ],
+    "cam_scaffold_core": [
+      "CaM_scaffold_1",
+      "CaM_scaffold_2",
+      "CaM_scaffold_3",
+      "CaM_scaffold_4",
+      "CaM_scaffold_5"
+    ],
+    "target_peptide": [
+      "MLCK_peptide_binding_surface"
+    ]
+  },
+  "multistate_objectives": [
+    {
+      "name": "calcium_state_peptide_interface_on",
+      "type": "interface_on",
+      "state": "calcium_peptide_state",
+      "pair": [
+        "CaM",
+        "MLCK_peptide"
+      ],
+      "left_region": "efhand_calcium_loops",
+      "right_region": "MLCK_peptide_binding_surface",
+      "weight": 1.05,
+      "contact_target": 42,
+      "residue_pair_target": 12,
+      "coverage_target": 0.25,
+      "off_target_penalty_weight": 0.1,
+      "off_target_contact_tolerance": 110
+    },
+    {
+      "name": "apo_state_peptide_interface_off",
+      "type": "interface_off",
+      "state": "apo_peptide_state",
+      "pair": [
+        "CaM",
+        "MLCK_peptide"
+      ],
+      "left_region": "efhand_calcium_loops",
+      "weight": 0.95,
+      "contact_target": 32,
+      "residue_pair_target": 8,
+      "off_target_contact_tolerance": 55
+    },
+    {
+      "name": "calcium_vs_apo_peptide_delta",
+      "type": "interface_delta",
+      "positive_state": "calcium_peptide_state",
+      "negative_state": "apo_peptide_state",
+      "positive_pair": [
+        "CaM",
+        "MLCK_peptide"
+      ],
+      "negative_pair": [
+        "CaM",
+        "MLCK_peptide"
+      ],
+      "positive_left_region": "efhand_calcium_loops",
+      "positive_right_region": "MLCK_peptide_binding_surface",
+      "negative_left_region": "efhand_calcium_loops",
+      "weight": 1.15,
+      "direction": "increase",
+      "min_delta": 0.1,
+      "target_delta": 0.4,
+      "contact_delta_target": 25
+    },
+    {
+      "name": "efhand_acidic_calcium_pocket",
+      "type": "ligand_pocket_pharmacophore",
+      "state": "calcium_only_state",
+      "pair": [
+        "CaM",
+        "calcium"
+      ],
+      "left_region": "efhand_calcium_loops",
+      "required_classes": {
+        "acidic": 0.32,
+        "polar": 0.45
+      },
+      "weight": 0.95,
+      "contact_target": 24,
+      "residue_pair_target": 8,
+      "coverage_target": 0.25
+    },
+    {
+      "name": "efhand_loop_confidence_floor",
+      "type": "region_confidence_floor",
+      "states": [
+        "apo_peptide_state",
+        "calcium_peptide_state",
+        "calcium_only_state"
+      ],
+      "region": "efhand_calcium_loops",
+      "metric": "plddt_min",
+      "floor": 45,
+      "target": 72,
+      "weight": 0.55
+    },
+    {
+      "name": "state_confidence",
+      "type": "confidence",
+      "states": [
+        "apo_peptide_state",
+        "calcium_peptide_state",
+        "calcium_only_state"
+      ],
+      "metric": "plddt",
+      "weight": 0.45
+    }
+  ],
+  "mutation_policy": {
+    "preferred_edit_order": [
+      "EFhand_loop_1",
+      "EFhand_loop_2",
+      "EFhand_loop_3",
+      "EFhand_loop_4",
+      "CaM_scaffold_1",
+      "CaM_scaffold_2",
+      "CaM_scaffold_3"
+    ],
+    "always_open_segments": [
+      "EFhand_loop_1",
+      "EFhand_loop_2",
+      "EFhand_loop_3",
+      "EFhand_loop_4"
+    ],
+    "conditionally_open_segments": [
+      "CaM_scaffold_1",
+      "CaM_scaffold_2",
+      "CaM_scaffold_3"
+    ],
+    "generally_frozen": [
+      "CaM_scaffold_4",
+      "CaM_scaffold_5"
+    ]
+  },
+  "case_information_needed": [
+    "Exact target peptide or protein readout for the calcium sensor.",
+    "Allowed edits in EF-loop acidic residues versus scaffold helices.",
+    "Whether the goal is calcium affinity tuning, peptide affinity switching, or both."
+  ]
+}
