@@ -1,0 +1,895 @@
+{
+  "metadata": {
+    "provider_schema": "astevolve_external_prior_v1",
+    "source": "magneton_interpro_substructure_v0",
+    "description": "Function/domain-site priors for AST non-antibody cases using Magneton InterPro substructure embeddings.",
+    "do_not_copy_sequences": true,
+    "notes": [
+      "PDZ filters target InterPro/Pfam/SMART/CDD PDZ domain and PDZ superfamily entries.",
+      "EF-hand filters target EF-hand domain, EF-hand pair, and calcium-binding site entries."
+    ]
+  },
+  "defaults": {
+    "priority_boost": 1.0,
+    "confidence": 0.28,
+    "disfavored_residues": [
+      "C"
+    ],
+    "source": "magneton:functional_substructure_prior"
+  },
+  "by_kind": {
+    "framework": {
+      "priority_boost": 0.85,
+      "confidence": 0.22,
+      "favored_residues": [
+        "S",
+        "T",
+        "N",
+        "Q",
+        "D",
+        "E",
+        "G",
+        "A"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "contextual_charge"
+      ],
+      "source": "magneton:domain_background"
+    },
+    "linker": {
+      "priority_boost": 0.75,
+      "confidence": 0.35,
+      "favored_residues": [
+        "G",
+        "S",
+        "T",
+        "A",
+        "P"
+      ],
+      "favored_residue_classes": [
+        "flexible_small"
+      ],
+      "disfavored_residues": [
+        "C",
+        "W",
+        "F",
+        "I",
+        "L",
+        "V"
+      ],
+      "source": "magneton:flexible_loop_background"
+    }
+  },
+  "nodes": {
+    "PDZ_groove_1": {
+      "priority_boost": 1.18,
+      "confidence": 0.42,
+      "favored_residues": [
+        "S",
+        "T",
+        "N",
+        "Q",
+        "D",
+        "E",
+        "Y",
+        "H",
+        "K",
+        "R",
+        "G"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "contextual_charge",
+        "aromatic"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "magneton:PDZ_domain_prior"
+    },
+    "PDZ_groove_2": {
+      "priority_boost": 1.18,
+      "confidence": 0.42,
+      "favored_residues": [
+        "S",
+        "T",
+        "N",
+        "Q",
+        "D",
+        "E",
+        "Y",
+        "H",
+        "K",
+        "R",
+        "G"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "contextual_charge",
+        "aromatic"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "magneton:PDZ_domain_prior"
+    },
+    "PDZ_groove_3": {
+      "priority_boost": 1.18,
+      "confidence": 0.42,
+      "favored_residues": [
+        "S",
+        "T",
+        "N",
+        "Q",
+        "D",
+        "E",
+        "Y",
+        "H",
+        "K",
+        "R",
+        "G"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "contextual_charge",
+        "aromatic"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "magneton:PDZ_domain_prior"
+    },
+    "PDZ_groove_4": {
+      "priority_boost": 1.18,
+      "confidence": 0.42,
+      "favored_residues": [
+        "S",
+        "T",
+        "N",
+        "Q",
+        "D",
+        "E",
+        "Y",
+        "H",
+        "K",
+        "R",
+        "G"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "contextual_charge",
+        "aromatic"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "magneton:PDZ_domain_prior"
+    },
+    "PDZ_groove_5": {
+      "priority_boost": 1.18,
+      "confidence": 0.42,
+      "favored_residues": [
+        "S",
+        "T",
+        "N",
+        "Q",
+        "D",
+        "E",
+        "Y",
+        "H",
+        "K",
+        "R",
+        "G"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "contextual_charge",
+        "aromatic"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "magneton:PDZ_domain_prior"
+    },
+    "PDZ_groove_6": {
+      "priority_boost": 1.18,
+      "confidence": 0.42,
+      "favored_residues": [
+        "S",
+        "T",
+        "N",
+        "Q",
+        "D",
+        "E",
+        "Y",
+        "H",
+        "K",
+        "R",
+        "G"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "contextual_charge",
+        "aromatic"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "magneton:PDZ_domain_prior"
+    },
+    "PDZ_groove_7": {
+      "priority_boost": 1.18,
+      "confidence": 0.42,
+      "favored_residues": [
+        "S",
+        "T",
+        "N",
+        "Q",
+        "D",
+        "E",
+        "Y",
+        "H",
+        "K",
+        "R",
+        "G"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "contextual_charge",
+        "aromatic"
+      ],
+      "disfavored_residues": [
+        "C"
+      ],
+      "source": "magneton:PDZ_domain_prior"
+    },
+    "PDZ_scaffold_1": {
+      "priority_boost": 0.78,
+      "confidence": 0.28,
+      "favored_residues": [
+        "A",
+        "S",
+        "T",
+        "N",
+        "Q",
+        "V",
+        "I",
+        "L",
+        "G"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "small",
+        "hydrophobic"
+      ],
+      "disfavored_residues": [
+        "C",
+        "P"
+      ],
+      "source": "magneton:PDZ_scaffold_prior"
+    },
+    "PDZ_scaffold_2": {
+      "priority_boost": 0.78,
+      "confidence": 0.28,
+      "favored_residues": [
+        "A",
+        "S",
+        "T",
+        "N",
+        "Q",
+        "V",
+        "I",
+        "L",
+        "G"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "small",
+        "hydrophobic"
+      ],
+      "disfavored_residues": [
+        "C",
+        "P"
+      ],
+      "source": "magneton:PDZ_scaffold_prior"
+    },
+    "PDZ_scaffold_3": {
+      "priority_boost": 0.78,
+      "confidence": 0.28,
+      "favored_residues": [
+        "A",
+        "S",
+        "T",
+        "N",
+        "Q",
+        "V",
+        "I",
+        "L",
+        "G"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "small",
+        "hydrophobic"
+      ],
+      "disfavored_residues": [
+        "C",
+        "P"
+      ],
+      "source": "magneton:PDZ_scaffold_prior"
+    },
+    "EFhand_loop_1": {
+      "priority_boost": 1.22,
+      "confidence": 0.48,
+      "favored_residues": [
+        "D",
+        "E",
+        "N",
+        "Q",
+        "S",
+        "T",
+        "G"
+      ],
+      "favored_residue_classes": [
+        "calcium_ligand",
+        "polar_uncharged",
+        "contextual_charge"
+      ],
+      "disfavored_residues": [
+        "C",
+        "W",
+        "F"
+      ],
+      "source": "magneton:EF_hand_calcium_site_prior"
+    },
+    "EFhand_loop_2": {
+      "priority_boost": 1.22,
+      "confidence": 0.48,
+      "favored_residues": [
+        "D",
+        "E",
+        "N",
+        "Q",
+        "S",
+        "T",
+        "G"
+      ],
+      "favored_residue_classes": [
+        "calcium_ligand",
+        "polar_uncharged",
+        "contextual_charge"
+      ],
+      "disfavored_residues": [
+        "C",
+        "W",
+        "F"
+      ],
+      "source": "magneton:EF_hand_calcium_site_prior"
+    },
+    "EFhand_loop_3": {
+      "priority_boost": 1.22,
+      "confidence": 0.48,
+      "favored_residues": [
+        "D",
+        "E",
+        "N",
+        "Q",
+        "S",
+        "T",
+        "G"
+      ],
+      "favored_residue_classes": [
+        "calcium_ligand",
+        "polar_uncharged",
+        "contextual_charge"
+      ],
+      "disfavored_residues": [
+        "C",
+        "W",
+        "F"
+      ],
+      "source": "magneton:EF_hand_calcium_site_prior"
+    },
+    "EFhand_loop_4": {
+      "priority_boost": 1.22,
+      "confidence": 0.48,
+      "favored_residues": [
+        "D",
+        "E",
+        "N",
+        "Q",
+        "S",
+        "T",
+        "G"
+      ],
+      "favored_residue_classes": [
+        "calcium_ligand",
+        "polar_uncharged",
+        "contextual_charge"
+      ],
+      "disfavored_residues": [
+        "C",
+        "W",
+        "F"
+      ],
+      "source": "magneton:EF_hand_calcium_site_prior"
+    },
+    "CaM_scaffold_1": {
+      "priority_boost": 0.82,
+      "confidence": 0.3,
+      "favored_residues": [
+        "A",
+        "L",
+        "I",
+        "V",
+        "S",
+        "T",
+        "N",
+        "Q",
+        "E",
+        "K"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "hydrophobic",
+        "charged"
+      ],
+      "disfavored_residues": [
+        "C",
+        "P"
+      ],
+      "source": "magneton:EF_hand_domain_prior"
+    },
+    "CaM_scaffold_2": {
+      "priority_boost": 0.82,
+      "confidence": 0.3,
+      "favored_residues": [
+        "A",
+        "L",
+        "I",
+        "V",
+        "S",
+        "T",
+        "N",
+        "Q",
+        "E",
+        "K"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "hydrophobic",
+        "charged"
+      ],
+      "disfavored_residues": [
+        "C",
+        "P"
+      ],
+      "source": "magneton:EF_hand_domain_prior"
+    },
+    "CaM_scaffold_3": {
+      "priority_boost": 0.82,
+      "confidence": 0.3,
+      "favored_residues": [
+        "A",
+        "L",
+        "I",
+        "V",
+        "S",
+        "T",
+        "N",
+        "Q",
+        "E",
+        "K"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "hydrophobic",
+        "charged"
+      ],
+      "disfavored_residues": [
+        "C",
+        "P"
+      ],
+      "source": "magneton:EF_hand_domain_prior"
+    },
+    "CaM_scaffold_4": {
+      "priority_boost": 0.82,
+      "confidence": 0.3,
+      "favored_residues": [
+        "A",
+        "L",
+        "I",
+        "V",
+        "S",
+        "T",
+        "N",
+        "Q",
+        "E",
+        "K"
+      ],
+      "favored_residue_classes": [
+        "polar_uncharged",
+        "hydrophobic",
+        "charged"
+      ],
+      "disfavored_residues": [
+        "C",
+        "P"
+      ],
+      "source": "magneton:EF_hand_domain_prior"
+    }
+  },
+  "retrieval": {
+    "node_filters": {
+      "PDZ_groove_1": {
+        "class_filter": [
+          "Domain",
+          "Homologous_superfamily"
+        ],
+        "substructure_filter": [
+          "IPR001478",
+          "IPR036034",
+          "PF00595",
+          "PS50106",
+          "SM00228",
+          "cd00992",
+          "G3DSA:2.30.42.10",
+          "SSF50156"
+        ],
+        "name_keywords": [
+          "PDZ"
+        ],
+        "match_node_name": false
+      },
+      "PDZ_groove_2": {
+        "class_filter": [
+          "Domain",
+          "Homologous_superfamily"
+        ],
+        "substructure_filter": [
+          "IPR001478",
+          "IPR036034",
+          "PF00595",
+          "PS50106",
+          "SM00228",
+          "cd00992",
+          "G3DSA:2.30.42.10",
+          "SSF50156"
+        ],
+        "name_keywords": [
+          "PDZ"
+        ],
+        "match_node_name": false
+      },
+      "PDZ_groove_3": {
+        "class_filter": [
+          "Domain",
+          "Homologous_superfamily"
+        ],
+        "substructure_filter": [
+          "IPR001478",
+          "IPR036034",
+          "PF00595",
+          "PS50106",
+          "SM00228",
+          "cd00992",
+          "G3DSA:2.30.42.10",
+          "SSF50156"
+        ],
+        "name_keywords": [
+          "PDZ"
+        ],
+        "match_node_name": false
+      },
+      "PDZ_groove_4": {
+        "class_filter": [
+          "Domain",
+          "Homologous_superfamily"
+        ],
+        "substructure_filter": [
+          "IPR001478",
+          "IPR036034",
+          "PF00595",
+          "PS50106",
+          "SM00228",
+          "cd00992",
+          "G3DSA:2.30.42.10",
+          "SSF50156"
+        ],
+        "name_keywords": [
+          "PDZ"
+        ],
+        "match_node_name": false
+      },
+      "PDZ_groove_5": {
+        "class_filter": [
+          "Domain",
+          "Homologous_superfamily"
+        ],
+        "substructure_filter": [
+          "IPR001478",
+          "IPR036034",
+          "PF00595",
+          "PS50106",
+          "SM00228",
+          "cd00992",
+          "G3DSA:2.30.42.10",
+          "SSF50156"
+        ],
+        "name_keywords": [
+          "PDZ"
+        ],
+        "match_node_name": false
+      },
+      "PDZ_groove_6": {
+        "class_filter": [
+          "Domain",
+          "Homologous_superfamily"
+        ],
+        "substructure_filter": [
+          "IPR001478",
+          "IPR036034",
+          "PF00595",
+          "PS50106",
+          "SM00228",
+          "cd00992",
+          "G3DSA:2.30.42.10",
+          "SSF50156"
+        ],
+        "name_keywords": [
+          "PDZ"
+        ],
+        "match_node_name": false
+      },
+      "PDZ_groove_7": {
+        "class_filter": [
+          "Domain",
+          "Homologous_superfamily"
+        ],
+        "substructure_filter": [
+          "IPR001478",
+          "IPR036034",
+          "PF00595",
+          "PS50106",
+          "SM00228",
+          "cd00992",
+          "G3DSA:2.30.42.10",
+          "SSF50156"
+        ],
+        "name_keywords": [
+          "PDZ"
+        ],
+        "match_node_name": false
+      },
+      "PDZ_scaffold_1": {
+        "class_filter": [
+          "Domain",
+          "Homologous_superfamily"
+        ],
+        "substructure_filter": [
+          "IPR001478",
+          "IPR036034",
+          "PF00595",
+          "PS50106",
+          "SM00228",
+          "cd00992",
+          "G3DSA:2.30.42.10",
+          "SSF50156"
+        ],
+        "name_keywords": [
+          "PDZ"
+        ],
+        "match_node_name": false
+      },
+      "PDZ_scaffold_2": {
+        "class_filter": [
+          "Domain",
+          "Homologous_superfamily"
+        ],
+        "substructure_filter": [
+          "IPR001478",
+          "IPR036034",
+          "PF00595",
+          "PS50106",
+          "SM00228",
+          "cd00992",
+          "G3DSA:2.30.42.10",
+          "SSF50156"
+        ],
+        "name_keywords": [
+          "PDZ"
+        ],
+        "match_node_name": false
+      },
+      "PDZ_scaffold_3": {
+        "class_filter": [
+          "Domain",
+          "Homologous_superfamily"
+        ],
+        "substructure_filter": [
+          "IPR001478",
+          "IPR036034",
+          "PF00595",
+          "PS50106",
+          "SM00228",
+          "cd00992",
+          "G3DSA:2.30.42.10",
+          "SSF50156"
+        ],
+        "name_keywords": [
+          "PDZ"
+        ],
+        "match_node_name": false
+      },
+      "EFhand_loop_1": {
+        "class_filter": [
+          "Binding_site",
+          "Conserved_site",
+          "Domain"
+        ],
+        "substructure_filter": [
+          "IPR018247",
+          "IPR002048",
+          "IPR011992",
+          "PS00018",
+          "PF13499",
+          "PS50222",
+          "SM00054",
+          "cd00051",
+          "SSF47473"
+        ],
+        "name_keywords": [
+          "EF-hand",
+          "calcium"
+        ],
+        "match_node_name": false
+      },
+      "EFhand_loop_2": {
+        "class_filter": [
+          "Binding_site",
+          "Conserved_site",
+          "Domain"
+        ],
+        "substructure_filter": [
+          "IPR018247",
+          "IPR002048",
+          "IPR011992",
+          "PS00018",
+          "PF13499",
+          "PS50222",
+          "SM00054",
+          "cd00051",
+          "SSF47473"
+        ],
+        "name_keywords": [
+          "EF-hand",
+          "calcium"
+        ],
+        "match_node_name": false
+      },
+      "EFhand_loop_3": {
+        "class_filter": [
+          "Binding_site",
+          "Conserved_site",
+          "Domain"
+        ],
+        "substructure_filter": [
+          "IPR018247",
+          "IPR002048",
+          "IPR011992",
+          "PS00018",
+          "PF13499",
+          "PS50222",
+          "SM00054",
+          "cd00051",
+          "SSF47473"
+        ],
+        "name_keywords": [
+          "EF-hand",
+          "calcium"
+        ],
+        "match_node_name": false
+      },
+      "EFhand_loop_4": {
+        "class_filter": [
+          "Binding_site",
+          "Conserved_site",
+          "Domain"
+        ],
+        "substructure_filter": [
+          "IPR018247",
+          "IPR002048",
+          "IPR011992",
+          "PS00018",
+          "PF13499",
+          "PS50222",
+          "SM00054",
+          "cd00051",
+          "SSF47473"
+        ],
+        "name_keywords": [
+          "EF-hand",
+          "calcium"
+        ],
+        "match_node_name": false
+      },
+      "CaM_scaffold_1": {
+        "class_filter": [
+          "Domain",
+          "Homologous_superfamily"
+        ],
+        "substructure_filter": [
+          "IPR002048",
+          "IPR011992",
+          "PF13499",
+          "PS50222",
+          "SM00054",
+          "cd00051",
+          "SSF47473"
+        ],
+        "name_keywords": [
+          "EF-hand"
+        ],
+        "match_node_name": false
+      },
+      "CaM_scaffold_2": {
+        "class_filter": [
+          "Domain",
+          "Homologous_superfamily"
+        ],
+        "substructure_filter": [
+          "IPR002048",
+          "IPR011992",
+          "PF13499",
+          "PS50222",
+          "SM00054",
+          "cd00051",
+          "SSF47473"
+        ],
+        "name_keywords": [
+          "EF-hand"
+        ],
+        "match_node_name": false
+      },
+      "CaM_scaffold_3": {
+        "class_filter": [
+          "Domain",
+          "Homologous_superfamily"
+        ],
+        "substructure_filter": [
+          "IPR002048",
+          "IPR011992",
+          "PF13499",
+          "PS50222",
+          "SM00054",
+          "cd00051",
+          "SSF47473"
+        ],
+        "name_keywords": [
+          "EF-hand"
+        ],
+        "match_node_name": false
+      },
+      "CaM_scaffold_4": {
+        "class_filter": [
+          "Domain",
+          "Homologous_superfamily"
+        ],
+        "substructure_filter": [
+          "IPR002048",
+          "IPR011992",
+          "PF13499",
+          "PS50222",
+          "SM00054",
+          "cd00051",
+          "SSF47473"
+        ],
+        "name_keywords": [
+          "EF-hand"
+        ],
+        "match_node_name": false
+      }
+    }
+  }
+}

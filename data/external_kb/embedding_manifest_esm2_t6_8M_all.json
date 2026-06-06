@@ -1,7 +1,7 @@
 {
-  "records": "D:\\Downloads\\data\\external_kb\\substructure_records.jsonl",
-  "embeddings": "D:\\Downloads\\data\\external_kb\\embeddings_esm2_t6_8M_all.npy",
-  "metadata": "D:\\Downloads\\data\\external_kb\\embedding_metadata_esm2_t6_8M_all.jsonl",
+  "records": "substructure_records.jsonl",
+  "embeddings": "embeddings_esm2_t6_8M_all.npy",
+  "metadata": "embedding_metadata_esm2_t6_8M_all.jsonl",
   "model": "facebook/esm2_t6_8M_UR50D",
   "device": "cuda",
   "embedding_shape": [

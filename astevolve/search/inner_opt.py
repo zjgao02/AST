@@ -938,6 +938,7 @@ def _aa_class_members(class_name: str) -> str:
         "charged": "RKHDE",
         "small": "GAS",
         "turn_loop": "GSPNDT",
+        "calcium_ligand": "DENQSTG",
     }
     return table.get(class_name, "")
 
