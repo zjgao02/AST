@@ -71,14 +71,18 @@ class SAConfig:
     multistate_objective_weight: float = 1.0
 
     mutation_ops: Dict[str, float] = field(default_factory=lambda: {
-        "point": 0.50,
-        "block": 0.14,
-        "segment_resample": 0.10,
-        "site_resample": 0.10,
+        "point": 0.42,
+        "block": 0.12,
+        "segment_resample": 0.08,
+        "site_resample": 0.07,
         "segment_mutagenesis": 0.08,
-        "motif_graft": 0.04,
-        "region_shuffle": 0.03,
-        "swap": 0.05,
+        "motif_graft": 0.05,
+        "cdr_resample": 0.05,
+        "pocket_motif_swap": 0.05,
+        "linker_length_perturb": 0.02,
+        "domain_length_perturb": 0.02,
+        "region_shuffle": 0.04,
+        "swap": 0.04,
     })
 
     history_size: int = 50
@@ -1142,6 +1146,34 @@ def _sample_aa(
     return AA[int(rng.choice(len(AA), p=weights))]
 
 
+def _sample_aa_from_pool(rng: np.random.Generator, pool: str, old_aa: Optional[str] = None) -> str:
+    residues = [aa for aa in str(pool or "") if aa in AA]
+    if not residues:
+        residues = list(AA)
+    for _ in range(6):
+        aa = str(rng.choice(np.asarray(residues)))
+        if old_aa is None or aa != old_aa:
+            return aa
+    return str(rng.choice(np.asarray(residues)))
+
+
+def _node_default_motifs(seg: Any, node_policy: Optional[Dict[str, Any]]) -> List[str]:
+    motifs = _policy_motifs(node_policy)
+    if motifs:
+        return motifs
+    kind = str(getattr(seg, "kind", "") or "").lower()
+    name = str(getattr(seg, "name", "") or "").lower()
+    if kind == "cdr" or "cdr" in name:
+        return ["YYG", "GYW", "RYY", "DYY", "NSY", "STY"]
+    if "efhand" in name or "calcium" in name:
+        return ["DGD", "DND", "EDE", "DAD", "NDE", "DSE"]
+    if "pdz" in name or "groove" in name:
+        return ["GYF", "HST", "KQY", "STV", "YGD"]
+    if kind == "pocket" or "pocket" in name:
+        return ["DY", "EY", "YH", "DEN", "STN", "NQY"]
+    return ["GS", "ST", "NQ"]
+
+
 def _relative_to_abs_position(seg: Any, raw_pos: Any) -> Optional[int]:
     try:
         pos = int(raw_pos)
@@ -1425,7 +1457,46 @@ def _mutate_node_seqs(
     max_step = _policy_int(node_policy, "max_mutations_per_step", 0)
     if max_step > 0:
         base_k = min(base_k, max_step)
-    if op == "segment_resample":
+    if op == "cdr_resample":
+        if str(getattr(seg, "kind", "") or "").lower() == "cdr":
+            chosen = list(positions)
+        else:
+            k = min(len(positions), max(base_k, min(8, len(positions))))
+            chosen = _sample_positions(positions, rng, k, position_probs)
+    elif op == "pocket_motif_swap":
+        motif = str(rng.choice(np.asarray(_node_default_motifs(seg, node_policy))))
+        chosen, motif_changes = _graft_motif_into_node(new[cid], seg, positions, motif, rng, node_policy)
+        move["motif"] = motif
+        move["changes"] = [
+            {"chain_id": cid, "node": seg.name, **change}
+            for change in motif_changes
+        ]
+        if chosen:
+            move["positions"][cid] = [int(x) for x in chosen]
+            return {k: "".join(v) for k, v in new.items()}, move
+        preferred = _policy_abs_positions(seg, node_policy, "hotspot_positions") + _policy_anchor_positions(seg, node_policy)
+        k = min(len(positions), max(base_k, min(5, len(positions))))
+        chosen = _sample_positions(positions, rng, k, position_probs, preferred=preferred)
+    elif op == "linker_length_perturb":
+        move["virtual_length_delta"] = int(rng.choice(np.asarray([-3, -2, -1, 1, 2, 3])))
+        k = len(positions) if str(getattr(seg, "kind", "") or "").lower() == "linker" else min(len(positions), max(base_k, min(6, len(positions))))
+        chosen = _sample_positions(positions, rng, k, position_probs)
+        for pos in chosen:
+            old = new[cid][pos]
+            aa = _sample_aa_from_pool(rng, "GSTAQPN", old_aa=old)
+            new[cid][pos] = aa
+            move["changes"].append({"chain_id": cid, "position": int(pos), "from": old, "to": aa, "node": seg.name})
+        move["positions"][cid] = [int(x) for x in chosen]
+        return {k: "".join(v) for k, v in new.items()}, move
+    elif op == "domain_length_perturb":
+        move["virtual_length_delta"] = int(rng.choice(np.asarray([-5, -3, -2, 2, 3, 5])))
+        ordered = list(positions)
+        edge_count = min(4, len(ordered))
+        preferred = ordered[:edge_count] + ordered[-edge_count:]
+        preferred += _policy_abs_positions(seg, node_policy, "hotspot_positions") + _policy_anchor_positions(seg, node_policy)
+        k = min(len(positions), max(base_k, min(8, len(positions))))
+        chosen = _sample_positions(positions, rng, k, position_probs, preferred=preferred)
+    elif op == "segment_resample":
         k = min(len(positions), max(base_k, min(4, len(positions))))
         if max_step > 0:
             k = min(k, max_step)

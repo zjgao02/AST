@@ -328,7 +328,8 @@
       "weight": 0.85,
       "target_contact_fraction": 0.55,
       "contact_target": 60,
-      "coverage_target": 0.35
+      "coverage_target": 0.35,
+      "avoid_region": "CD25_non_epitope_surface"
     },
     {
       "name": "il2rb_decoy_interface_off",
@@ -342,7 +343,8 @@
       "weight": 1.0,
       "contact_target": 45,
       "residue_pair_target": 10,
-      "off_target_contact_tolerance": 65
+      "off_target_contact_tolerance": 65,
+      "right_region": "IL2RB_shared_receptor_decoy_epitope"
     },
     {
       "name": "cd25_over_il2rb_selectivity_delta",
@@ -459,5 +461,403 @@
     ],
     "rationale": "CD25 selectivity should be measured from a weak generic CDR seed, not from the original CD25 scFv CDRs.",
     "interpretation": "The executable binder segments are intentionally degraded relative to the reference/oracle sequence so evolution has measurable room to improve. The reference sequence is metadata only and is not used as the starting template."
+  },
+  "design_constraints": {
+    "schema_version": "ast_case_constraints_v1",
+    "indexing": "zero_based_end_exclusive; binder spans use compiled BB sequence coordinates; target/decoy spans use each entity sequence coordinates",
+    "mutable_nodes": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3",
+      "Linker_core"
+    ],
+    "frozen_nodes": [
+      "VH_FR1",
+      "VH_FR4",
+      "VL_FR1",
+      "VL_FR4",
+      "Linker_head",
+      "Linker_tail"
+    ],
+    "mutable_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "VH_CDR1",
+        "spans": [
+          [
+            21,
+            35
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_CDR2",
+        "spans": [
+          [
+            48,
+            64
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_CDR3",
+        "spans": [
+          [
+            97,
+            105
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_CDR1",
+        "spans": [
+          [
+            153,
+            163
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_CDR2",
+        "spans": [
+          [
+            178,
+            185
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_CDR3",
+        "spans": [
+          [
+            217,
+            226
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "Linker_core",
+        "spans": [
+          [
+            120,
+            125
+          ]
+        ]
+      }
+    ],
+    "frozen_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "VH_FR1",
+        "spans": [
+          [
+            0,
+            21
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_FR4",
+        "spans": [
+          [
+            105,
+            115
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_FR1",
+        "spans": [
+          [
+            130,
+            153
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_FR4",
+        "spans": [
+          [
+            226,
+            240
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "Linker_head",
+        "spans": [
+          [
+            115,
+            120
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "Linker_tail",
+        "spans": [
+          [
+            125,
+            130
+          ]
+        ]
+      }
+    ],
+    "binder_hotspots": [
+      {
+        "name": "cd25_selective_cdr_hotspot",
+        "chain_id": "BB",
+        "nodes": [
+          "VH_CDR3",
+          "VH_CDR2",
+          "VL_CDR3"
+        ],
+        "relative_positions": [
+          1,
+          2,
+          4,
+          5,
+          6
+        ],
+        "desired_chemistry": [
+          "aromatic",
+          "polar",
+          "contextual_charge"
+        ]
+      }
+    ],
+    "target_epitopes": [
+      {
+        "name": "CD25_basiliximab_epitope",
+        "entity": "CD25",
+        "spans": [
+          [
+            0,
+            2
+          ],
+          [
+            3,
+            6
+          ],
+          [
+            21,
+            23
+          ],
+          [
+            24,
+            25
+          ],
+          [
+            26,
+            27
+          ],
+          [
+            28,
+            29
+          ],
+          [
+            41,
+            43
+          ],
+          [
+            44,
+            45
+          ],
+          [
+            46,
+            48
+          ],
+          [
+            55,
+            57
+          ],
+          [
+            119,
+            120
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_epitope",
+        "source": "PDB 3IU3 Basiliximab-CD25 interface, strict three-copy consensus, 4.0 A heavy-atom cutoff."
+      }
+    ],
+    "decoy_epitopes": [
+      {
+        "name": "IL2RB_shared_receptor_decoy_epitope",
+        "entity": "IL2RB",
+        "spans": [
+          [
+            35,
+            65
+          ],
+          [
+            88,
+            120
+          ],
+          [
+            145,
+            174
+          ]
+        ],
+        "zero_based": true,
+        "role": "decoy_receptor_surface",
+        "source": "case_provisional"
+      },
+      {
+        "name": "CD25_non_epitope_surface",
+        "entity": "CD25",
+        "spans": [
+          [
+            70,
+            100
+          ],
+          [
+            130,
+            160
+          ],
+          [
+            180,
+            217
+          ]
+        ],
+        "zero_based": true,
+        "role": "avoid_broad_non_epitope_contacts",
+        "source": "case_provisional"
+      }
+    ],
+    "success_thresholds": {
+      "cd25_epitope_interface_on": {
+        "contacts": 64,
+        "residue_pairs": 15,
+        "coverage": 0.35
+      },
+      "selectivity_delta": {
+        "min_delta": 0.12,
+        "target_delta": 0.45,
+        "contact_delta_target": 35
+      },
+      "cdr_confidence": {
+        "hard_floor": 45,
+        "target": 72
+      }
+    },
+    "operator_intent": {
+      "large_step_allowed": [
+        "cdr_resample",
+        "motif_graft",
+        "domain_length_perturb",
+        "linker_length_perturb",
+        "pocket_motif_swap"
+      ],
+      "true_length_change_scope": "outer_loop_layout_plan_only",
+      "inner_loop_length_operators": "fixed-length proxy resampling at linker/domain edges to preserve compiled masks during one search round"
+    }
+  },
+  "entity_regions": {
+    "CD25_basiliximab_epitope": {
+      "entity": "CD25",
+      "spans": [
+        [
+          0,
+          2
+        ],
+        [
+          3,
+          6
+        ],
+        [
+          21,
+          23
+        ],
+        [
+          24,
+          25
+        ],
+        [
+          26,
+          27
+        ],
+        [
+          28,
+          29
+        ],
+        [
+          41,
+          43
+        ],
+        [
+          44,
+          45
+        ],
+        [
+          46,
+          48
+        ],
+        [
+          55,
+          57
+        ],
+        [
+          119,
+          120
+        ]
+      ],
+      "zero_based": true,
+      "role": "target_epitope",
+      "source": "PDB 3IU3 Basiliximab-CD25 interface, strict three-copy consensus, 4.0 A heavy-atom cutoff."
+    },
+    "IL2RB_shared_receptor_decoy_epitope": {
+      "entity": "IL2RB",
+      "spans": [
+        [
+          35,
+          65
+        ],
+        [
+          88,
+          120
+        ],
+        [
+          145,
+          174
+        ]
+      ],
+      "zero_based": true,
+      "role": "decoy_receptor_surface",
+      "source": "case_provisional"
+    },
+    "CD25_non_epitope_surface": {
+      "entity": "CD25",
+      "spans": [
+        [
+          70,
+          100
+        ],
+        [
+          130,
+          160
+        ],
+        [
+          180,
+          217
+        ]
+      ],
+      "zero_based": true,
+      "role": "avoid_broad_non_epitope_contacts",
+      "source": "case_provisional"
+    }
   }
 }

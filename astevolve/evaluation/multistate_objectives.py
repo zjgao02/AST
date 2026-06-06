@@ -863,10 +863,11 @@ def _ast_region_specs(
                 "zero_based": True,
             }
         )
-    if not out and isinstance(design_state, dict):
+    if isinstance(design_state, dict):
         target = design_state.get("target", {}) or {}
         target_name = str(target.get("epitope_name") or "")
-        if target_name and target_name in wanted:
+        existing_names = {str(spec.get("name") or "") for spec in out if isinstance(spec, dict)}
+        if target_name and target_name in wanted and target_name not in existing_names:
             indices: List[int] = []
             for span in target.get("epitope_spans", []) or []:
                 if not isinstance(span, (list, tuple)) or len(span) < 2:
@@ -885,6 +886,36 @@ def _ast_region_specs(
                     "zero_based": True,
                 }
             )
+    if isinstance(design_state, dict):
+        constraints = design_state.get("design_constraints", {})
+        region_tables: List[Any] = [design_state.get("entity_regions")]
+        if isinstance(constraints, dict):
+            region_tables.extend([constraints.get("target_epitopes"), constraints.get("decoy_epitopes")])
+        named: Dict[str, Dict[str, Any]] = {}
+        for table in region_tables:
+            if isinstance(table, dict):
+                for name, spec in table.items():
+                    if isinstance(spec, dict):
+                        named[str(name)] = dict(spec)
+            elif isinstance(table, list):
+                for item in table:
+                    if isinstance(item, dict) and item.get("name"):
+                        named[str(item["name"])] = dict(item)
+        existing_names = {str(spec.get("name") or "") for spec in out if isinstance(spec, dict)}
+        for name in names:
+            if str(name) in existing_names:
+                continue
+            spec = named.get(str(name))
+            if not isinstance(spec, dict):
+                continue
+            resolved = dict(spec)
+            resolved.setdefault("name", str(name))
+            if "entity" not in resolved and resolved.get("id"):
+                resolved["entity"] = resolved.get("id")
+            if "chain_id" not in resolved and resolved.get("source_chain"):
+                resolved["chain_id"] = resolved.get("source_chain")
+            resolved.setdefault("zero_based", True)
+            out.append(resolved)
     return out
 
 

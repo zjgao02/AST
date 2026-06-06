@@ -60,5 +60,256 @@
     "Actual target/decoy peptide panel for the biological question.",
     "Whether backbone remodeling of the PDZ groove is allowed.",
     "Desired peptide class constraints beyond KQTSV."
+  ],
+  "residue_level_constraints": {
+    "indexing": "zero_based_end_exclusive; binder spans use compiled BB sequence coordinates; target/decoy spans use each entity sequence coordinates",
+    "binder_hotspots": [
+      {
+        "name": "pdz_carboxylate_binding_groove",
+        "chain_id": "BB",
+        "nodes": [
+          "PDZ_groove_1",
+          "PDZ_groove_2",
+          "PDZ_groove_3",
+          "PDZ_groove_4",
+          "PDZ_groove_5",
+          "PDZ_groove_6",
+          "PDZ_groove_7"
+        ],
+        "relative_positions": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "desired_chemistry": [
+          "polar",
+          "positive",
+          "aromatic"
+        ]
+      }
+    ],
+    "target_epitopes": [
+      {
+        "name": "PDZ_target_peptide",
+        "entity": "target_C_terminal_peptide",
+        "spans": [
+          [
+            0,
+            5
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_epitope",
+        "source": "1BE9 chain B target peptide KQTSV; full peptide is the desired contact region."
+      }
+    ],
+    "decoy_epitopes": [
+      {
+        "name": "PDZ_decoy_peptide",
+        "entity": "decoy_peptide",
+        "spans": [
+          [
+            0,
+            5
+          ]
+        ],
+        "zero_based": true,
+        "role": "decoy_peptide_full",
+        "source": "case_provisional"
+      }
+    ],
+    "mutable_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "PDZ_groove_1",
+        "spans": [
+          [
+            21,
+            22
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_groove_2",
+        "spans": [
+          [
+            25,
+            33
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_groove_3",
+        "spans": [
+          [
+            34,
+            35
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_groove_4",
+        "spans": [
+          [
+            42,
+            43
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_groove_5",
+        "spans": [
+          [
+            75,
+            76
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_groove_6",
+        "spans": [
+          [
+            79,
+            80
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_groove_7",
+        "spans": [
+          [
+            82,
+            84
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_scaffold_1",
+        "spans": [
+          [
+            0,
+            21
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_scaffold_2",
+        "spans": [
+          [
+            22,
+            25
+          ]
+        ]
+      }
+    ],
+    "frozen_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "PDZ_scaffold_3",
+        "spans": [
+          [
+            33,
+            34
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_scaffold_4",
+        "spans": [
+          [
+            35,
+            42
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_scaffold_5",
+        "spans": [
+          [
+            43,
+            75
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_scaffold_6",
+        "spans": [
+          [
+            76,
+            79
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_scaffold_7",
+        "spans": [
+          [
+            80,
+            82
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_scaffold_8",
+        "spans": [
+          [
+            84,
+            119
+          ]
+        ]
+      }
+    ],
+    "mutable_nodes": [
+      "PDZ_groove_1",
+      "PDZ_groove_2",
+      "PDZ_groove_3",
+      "PDZ_groove_4",
+      "PDZ_groove_5",
+      "PDZ_groove_6",
+      "PDZ_groove_7",
+      "PDZ_scaffold_1",
+      "PDZ_scaffold_2"
+    ],
+    "frozen_nodes": [
+      "PDZ_scaffold_3",
+      "PDZ_scaffold_4",
+      "PDZ_scaffold_5",
+      "PDZ_scaffold_6",
+      "PDZ_scaffold_7",
+      "PDZ_scaffold_8"
+    ]
+  },
+  "success_thresholds": {
+    "target_interface": {
+      "contacts": 24,
+      "residue_pairs": 7,
+      "coverage": 0.45
+    },
+    "target_over_decoy_delta": {
+      "min_delta": 0.1,
+      "target_delta": 0.4,
+      "contact_delta_target": 18
+    },
+    "groove_confidence": {
+      "hard_floor": 45,
+      "target": 75
+    }
+  },
+  "provisional_assumptions": [
+    "Residue spans are construct-local proxies; replace with assay/reference-structure numbering when available."
   ]
 }

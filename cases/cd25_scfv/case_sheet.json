@@ -9,8 +9,24 @@
   "design_goal": {
     "primary": "Design a VH-linker-VL scFv that forms a plausible CD25 interface through antibody CDR nodes.",
     "binding_mode": "provisional_basiliximab_like",
-    "allowed_to_change": ["VH_CDR1", "VH_CDR2", "VH_CDR3", "VL_CDR1", "VL_CDR2", "VL_CDR3", "Linker_core"],
-    "not_allowed_to_change": ["Target_CD25", "VH_FR1", "VH_FR4", "VL_FR1", "VL_FR4", "Linker_head", "Linker_tail"],
+    "allowed_to_change": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3",
+      "Linker_core"
+    ],
+    "not_allowed_to_change": [
+      "Target_CD25",
+      "VH_FR1",
+      "VH_FR4",
+      "VL_FR1",
+      "VL_FR4",
+      "Linker_head",
+      "Linker_tail"
+    ],
     "formal_success_definition": "A successful candidate should improve CDR-CD25 epitope contacts without losing scFv fold confidence or producing broad off-target CD25 contacts outside the specified epitope spans."
   },
   "reference_inputs": {
@@ -41,15 +57,75 @@
     }
   },
   "residue_level_constraints": {
-    "indexing": "All target spans are zero-based indices in target.sequence unless otherwise stated.",
-    "binder_primary_nodes": ["VH_CDR3", "VH_CDR2", "VL_CDR3"],
-    "binder_secondary_nodes": ["VH_CDR1", "VL_CDR1", "VL_CDR2"],
-    "binder_frozen_nodes": ["VH_FR1", "VH_FR4", "VL_FR1", "VL_FR4", "Linker_head", "Linker_tail"],
+    "indexing": "zero_based_end_exclusive; binder spans use compiled BB sequence coordinates; target/decoy spans use each entity sequence coordinates",
+    "binder_primary_nodes": [
+      "VH_CDR3",
+      "VH_CDR2",
+      "VL_CDR3"
+    ],
+    "binder_secondary_nodes": [
+      "VH_CDR1",
+      "VL_CDR1",
+      "VL_CDR2"
+    ],
+    "binder_frozen_nodes": [
+      "VH_FR1",
+      "VH_FR4",
+      "VL_FR1",
+      "VL_FR4",
+      "Linker_head",
+      "Linker_tail"
+    ],
     "target_focus_regions": [
       {
         "name": "CD25_basiliximab_epitope",
         "source": "existing design_state epitope_spans",
-        "spans": [[0, 2], [3, 6], [21, 23], [24, 25], [26, 27], [28, 29], [41, 43], [44, 45], [46, 48], [55, 57], [119, 120]]
+        "spans": [
+          [
+            0,
+            2
+          ],
+          [
+            3,
+            6
+          ],
+          [
+            21,
+            23
+          ],
+          [
+            24,
+            25
+          ],
+          [
+            26,
+            27
+          ],
+          [
+            28,
+            29
+          ],
+          [
+            41,
+            43
+          ],
+          [
+            44,
+            45
+          ],
+          [
+            46,
+            48
+          ],
+          [
+            55,
+            57
+          ],
+          [
+            119,
+            120
+          ]
+        ]
       }
     ],
     "target_hotspot_motif": {
@@ -61,6 +137,258 @@
         "name": "unspecified_cd25_off_target_surface",
         "status": "needed_before_high_confidence_screening"
       }
+    ],
+    "binder_hotspots": [
+      {
+        "name": "primary_cdr_hotspot",
+        "chain_id": "BB",
+        "nodes": [
+          "VH_CDR3",
+          "VH_CDR2",
+          "VL_CDR3"
+        ],
+        "relative_positions": [
+          1,
+          2,
+          4,
+          5,
+          6
+        ],
+        "desired_chemistry": [
+          "aromatic",
+          "polar",
+          "contextual_charge"
+        ]
+      }
+    ],
+    "target_epitopes": [
+      {
+        "name": "CD25_basiliximab_epitope",
+        "entity": "CD25",
+        "spans": [
+          [
+            0,
+            2
+          ],
+          [
+            3,
+            6
+          ],
+          [
+            21,
+            23
+          ],
+          [
+            24,
+            25
+          ],
+          [
+            26,
+            27
+          ],
+          [
+            28,
+            29
+          ],
+          [
+            41,
+            43
+          ],
+          [
+            44,
+            45
+          ],
+          [
+            46,
+            48
+          ],
+          [
+            55,
+            57
+          ],
+          [
+            119,
+            120
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_epitope",
+        "source": "PDB 3IU3 Basiliximab-CD25 interface, strict three-copy consensus, 4.0 A heavy-atom cutoff."
+      }
+    ],
+    "decoy_epitopes": [
+      {
+        "name": "CD25_non_epitope_surface",
+        "entity": "CD25",
+        "spans": [
+          [
+            70,
+            100
+          ],
+          [
+            130,
+            160
+          ],
+          [
+            180,
+            217
+          ]
+        ],
+        "zero_based": true,
+        "role": "avoid_broad_non_epitope_contacts",
+        "source": "case_provisional"
+      }
+    ],
+    "mutable_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "VH_CDR1",
+        "spans": [
+          [
+            21,
+            35
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_CDR2",
+        "spans": [
+          [
+            48,
+            64
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_CDR3",
+        "spans": [
+          [
+            97,
+            105
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_CDR1",
+        "spans": [
+          [
+            153,
+            163
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_CDR2",
+        "spans": [
+          [
+            178,
+            185
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_CDR3",
+        "spans": [
+          [
+            217,
+            226
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "Linker_core",
+        "spans": [
+          [
+            120,
+            125
+          ]
+        ]
+      }
+    ],
+    "frozen_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "VH_FR1",
+        "spans": [
+          [
+            0,
+            21
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_FR4",
+        "spans": [
+          [
+            105,
+            115
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_FR1",
+        "spans": [
+          [
+            130,
+            153
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_FR4",
+        "spans": [
+          [
+            226,
+            240
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "Linker_head",
+        "spans": [
+          [
+            115,
+            120
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "Linker_tail",
+        "spans": [
+          [
+            125,
+            130
+          ]
+        ]
+      }
+    ],
+    "mutable_nodes": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3",
+      "Linker_core"
+    ],
+    "frozen_nodes": [
+      "VH_FR1",
+      "VH_FR4",
+      "VL_FR1",
+      "VL_FR4",
+      "Linker_head",
+      "Linker_tail"
     ]
   },
   "objective_thresholds": {
@@ -86,12 +414,33 @@
   "provisional_assumptions": [
     "The design target is treated as basiliximab-like until the user provides a different binding mode.",
     "The CDRs are the intended binding surface; framework contacts are tolerated only as support contacts.",
-    "CDR length changes are allowed only through the existing layout strategy bounds."
+    "CDR length changes are allowed only through the existing layout strategy bounds.",
+    "Residue spans are construct-local proxies; replace with assay/reference-structure numbering when available."
   ],
   "information_gaps": [
     "Exact CD25 residue numbering for the intended expression construct.",
     "Must-contact and avoid-contact residues from a reference complex or assay hypothesis.",
     "Whether IL2 binding interference should be preserved, disrupted, or ignored.",
     "Acceptable liability constraints for developability: Cys, glycosylation motifs, net charge, aggregation risk."
-  ]
+  ],
+  "success_thresholds": {
+    "cd25_interface_on": {
+      "interface_contact_target": 60,
+      "interface_residue_pair_target": 14,
+      "epitope_coverage_target": 0.35
+    },
+    "vh_cdr3_hotspot": {
+      "interface_contact_target": 24,
+      "interface_residue_pair_target": 6,
+      "epitope_coverage_target": 0.15
+    },
+    "cdr_region_confidence": {
+      "plddt_mean_target": 70,
+      "plddt_min_target": 50
+    },
+    "global_filters": {
+      "severe_clash": "penalize",
+      "framework_unfolding": "reject"
+    }
+  }
 }

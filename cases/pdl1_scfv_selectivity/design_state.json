@@ -351,7 +351,8 @@
       "weight": 0.9,
       "target_contact_fraction": 0.55,
       "contact_target": 55,
-      "coverage_target": 0.32
+      "coverage_target": 0.32,
+      "avoid_region": "PDL2_homologous_interface_decoy"
     },
     {
       "name": "pdl2_decoy_interface_off",
@@ -365,7 +366,8 @@
       "weight": 0.95,
       "contact_target": 42,
       "residue_pair_target": 9,
-      "off_target_contact_tolerance": 60
+      "off_target_contact_tolerance": 60,
+      "right_region": "PDL2_homologous_interface_decoy"
     },
     {
       "name": "pd1_offtarget_interface_off",
@@ -379,7 +381,8 @@
       "weight": 0.65,
       "contact_target": 35,
       "residue_pair_target": 8,
-      "off_target_contact_tolerance": 55
+      "off_target_contact_tolerance": 55,
+      "right_region": "PD1_receptor_interface_decoy"
     },
     {
       "name": "pdl1_over_pdl2_selectivity_delta",
@@ -488,5 +491,444 @@
     ],
     "rationale": "PD-L1 design starts from generic weak CDRs to test whether AST can discover a PD-L1-selective paratope rather than inherit a tuned binder.",
     "interpretation": "The executable binder segments are intentionally degraded relative to the reference/oracle sequence so evolution has measurable room to improve. The reference sequence is metadata only and is not used as the starting template."
+  },
+  "design_constraints": {
+    "schema_version": "ast_case_constraints_v1",
+    "indexing": "zero_based_end_exclusive; binder spans use compiled BB sequence coordinates; target/decoy spans use each entity sequence coordinates",
+    "mutable_nodes": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3",
+      "Linker_core"
+    ],
+    "frozen_nodes": [
+      "VH_FR1",
+      "VH_FR4",
+      "VL_FR1",
+      "VL_FR4",
+      "Linker_head",
+      "Linker_tail"
+    ],
+    "mutable_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "VH_CDR1",
+        "spans": [
+          [
+            21,
+            35
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_CDR2",
+        "spans": [
+          [
+            48,
+            64
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_CDR3",
+        "spans": [
+          [
+            97,
+            105
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_CDR1",
+        "spans": [
+          [
+            153,
+            163
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_CDR2",
+        "spans": [
+          [
+            178,
+            185
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_CDR3",
+        "spans": [
+          [
+            217,
+            226
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "Linker_core",
+        "spans": [
+          [
+            120,
+            125
+          ]
+        ]
+      }
+    ],
+    "frozen_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "VH_FR1",
+        "spans": [
+          [
+            0,
+            21
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_FR4",
+        "spans": [
+          [
+            105,
+            115
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_FR1",
+        "spans": [
+          [
+            130,
+            153
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_FR4",
+        "spans": [
+          [
+            226,
+            240
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "Linker_head",
+        "spans": [
+          [
+            115,
+            120
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "Linker_tail",
+        "spans": [
+          [
+            125,
+            130
+          ]
+        ]
+      }
+    ],
+    "binder_hotspots": [
+      {
+        "name": "pdl1_selective_cdr_hotspot",
+        "chain_id": "BB",
+        "nodes": [
+          "VH_CDR3",
+          "VH_CDR2",
+          "VL_CDR3"
+        ],
+        "relative_positions": [
+          1,
+          2,
+          4,
+          5,
+          6
+        ],
+        "desired_chemistry": [
+          "aromatic",
+          "polar",
+          "contextual_charge"
+        ]
+      }
+    ],
+    "target_epitopes": [
+      {
+        "name": "PDL1_avelumab_epitope",
+        "entity": "PDL1",
+        "spans": [
+          [
+            36,
+            37
+          ],
+          [
+            38,
+            39
+          ],
+          [
+            40,
+            46
+          ],
+          [
+            48,
+            49
+          ],
+          [
+            51,
+            52
+          ],
+          [
+            55,
+            56
+          ],
+          [
+            57,
+            59
+          ],
+          [
+            60,
+            61
+          ],
+          [
+            95,
+            96
+          ],
+          [
+            97,
+            98
+          ],
+          [
+            99,
+            100
+          ],
+          [
+            103,
+            104
+          ],
+          [
+            105,
+            106
+          ],
+          [
+            107,
+            108
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_epitope",
+        "source": "RCSB 5GRJ chain C antibody-contact residues, 4.5 A heavy-atom cutoff, converted to zero-based end-exclusive spans."
+      },
+      {
+        "name": "PDL1_PD1_overlap_surface",
+        "entity": "PDL1",
+        "spans": [
+          [
+            35,
+            62
+          ],
+          [
+            95,
+            108
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_blocking_surface",
+        "source": "PD-L1 PD-1/avelumab overlap proxy"
+      }
+    ],
+    "decoy_epitopes": [
+      {
+        "name": "PDL2_homologous_interface_decoy",
+        "entity": "PDL2",
+        "spans": [
+          [
+            32,
+            65
+          ],
+          [
+            92,
+            118
+          ]
+        ],
+        "zero_based": true,
+        "role": "decoy_homolog_surface",
+        "source": "case_provisional"
+      },
+      {
+        "name": "PD1_receptor_interface_decoy",
+        "entity": "PD1",
+        "spans": [
+          [
+            24,
+            61
+          ],
+          [
+            74,
+            101
+          ]
+        ],
+        "zero_based": true,
+        "role": "decoy_receptor_surface",
+        "source": "case_provisional"
+      }
+    ],
+    "success_thresholds": {
+      "pdl1_epitope_interface_on": {
+        "contacts": 58,
+        "residue_pairs": 14,
+        "coverage": 0.32
+      },
+      "pdl1_over_pdl2_delta": {
+        "min_delta": 0.12,
+        "target_delta": 0.45,
+        "contact_delta_target": 32
+      },
+      "cdr_confidence": {
+        "hard_floor": 45,
+        "target": 72
+      }
+    },
+    "operator_intent": {
+      "large_step_allowed": [
+        "cdr_resample",
+        "motif_graft",
+        "domain_length_perturb",
+        "linker_length_perturb",
+        "pocket_motif_swap"
+      ],
+      "true_length_change_scope": "outer_loop_layout_plan_only",
+      "inner_loop_length_operators": "fixed-length proxy resampling at linker/domain edges to preserve compiled masks during one search round"
+    }
+  },
+  "entity_regions": {
+    "PDL1_avelumab_epitope": {
+      "entity": "PDL1",
+      "spans": [
+        [
+          36,
+          37
+        ],
+        [
+          38,
+          39
+        ],
+        [
+          40,
+          46
+        ],
+        [
+          48,
+          49
+        ],
+        [
+          51,
+          52
+        ],
+        [
+          55,
+          56
+        ],
+        [
+          57,
+          59
+        ],
+        [
+          60,
+          61
+        ],
+        [
+          95,
+          96
+        ],
+        [
+          97,
+          98
+        ],
+        [
+          99,
+          100
+        ],
+        [
+          103,
+          104
+        ],
+        [
+          105,
+          106
+        ],
+        [
+          107,
+          108
+        ]
+      ],
+      "zero_based": true,
+      "role": "target_epitope",
+      "source": "RCSB 5GRJ chain C antibody-contact residues, 4.5 A heavy-atom cutoff, converted to zero-based end-exclusive spans."
+    },
+    "PDL1_PD1_overlap_surface": {
+      "entity": "PDL1",
+      "spans": [
+        [
+          35,
+          62
+        ],
+        [
+          95,
+          108
+        ]
+      ],
+      "zero_based": true,
+      "role": "target_blocking_surface",
+      "source": "PD-L1 PD-1/avelumab overlap proxy"
+    },
+    "PDL2_homologous_interface_decoy": {
+      "entity": "PDL2",
+      "spans": [
+        [
+          32,
+          65
+        ],
+        [
+          92,
+          118
+        ]
+      ],
+      "zero_based": true,
+      "role": "decoy_homolog_surface",
+      "source": "case_provisional"
+    },
+    "PD1_receptor_interface_decoy": {
+      "entity": "PD1",
+      "spans": [
+        [
+          24,
+          61
+        ],
+        [
+          74,
+          101
+        ]
+      ],
+      "zero_based": true,
+      "role": "decoy_receptor_surface",
+      "source": "case_provisional"
+    }
   }
 }

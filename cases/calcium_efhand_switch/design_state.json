@@ -223,7 +223,8 @@
       "weight": 0.95,
       "contact_target": 32,
       "residue_pair_target": 8,
-      "off_target_contact_tolerance": 55
+      "off_target_contact_tolerance": 55,
+      "right_region": "apo_MLCK_peptide_decoy_surface"
     },
     {
       "name": "calcium_vs_apo_peptide_delta",
@@ -336,5 +337,253 @@
     ],
     "rationale": "Native calmodulin is already a calcium-gated peptide binder; the executable start neutralizes EF-hand loop chemistry so recovery of calcium/peptide behavior is measurable.",
     "interpretation": "The executable binder segments are intentionally degraded relative to the reference/oracle sequence so evolution has measurable room to improve. The reference sequence is metadata only and is not used as the starting template."
+  },
+  "design_constraints": {
+    "schema_version": "ast_case_constraints_v1",
+    "indexing": "zero_based_end_exclusive; binder spans use compiled BB sequence coordinates; target/decoy spans use each entity sequence coordinates",
+    "mutable_nodes": [
+      "EFhand_loop_1",
+      "EFhand_loop_2",
+      "EFhand_loop_3",
+      "EFhand_loop_4",
+      "CaM_scaffold_1",
+      "CaM_scaffold_2",
+      "CaM_scaffold_3"
+    ],
+    "frozen_nodes": [
+      "CaM_scaffold_4",
+      "CaM_scaffold_5"
+    ],
+    "mutable_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "EFhand_loop_1",
+        "spans": [
+          [
+            19,
+            31
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "EFhand_loop_2",
+        "spans": [
+          [
+            56,
+            68
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "EFhand_loop_3",
+        "spans": [
+          [
+            92,
+            104
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "EFhand_loop_4",
+        "spans": [
+          [
+            129,
+            141
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "CaM_scaffold_1",
+        "spans": [
+          [
+            0,
+            19
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "CaM_scaffold_2",
+        "spans": [
+          [
+            31,
+            56
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "CaM_scaffold_3",
+        "spans": [
+          [
+            68,
+            92
+          ]
+        ]
+      }
+    ],
+    "frozen_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "CaM_scaffold_4",
+        "spans": [
+          [
+            104,
+            129
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "CaM_scaffold_5",
+        "spans": [
+          [
+            141,
+            149
+          ]
+        ]
+      }
+    ],
+    "binder_hotspots": [
+      {
+        "name": "efhand_calcium_coordination_loops",
+        "chain_id": "BB",
+        "nodes": [
+          "EFhand_loop_1",
+          "EFhand_loop_2",
+          "EFhand_loop_3",
+          "EFhand_loop_4"
+        ],
+        "relative_positions": [
+          0,
+          2,
+          4,
+          6,
+          8,
+          11
+        ],
+        "desired_chemistry": [
+          "acidic",
+          "polar",
+          "calcium_ligand"
+        ]
+      }
+    ],
+    "target_epitopes": [
+      {
+        "name": "MLCK_peptide_binding_surface",
+        "entity": "MLCK_like_target_peptide",
+        "spans": [
+          [
+            0,
+            26
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_epitope",
+        "source": "Canonical calmodulin target-peptide readout proxy; full peptide is treated as the desired binding region."
+      },
+      {
+        "name": "calcium_ion_sites",
+        "entity": "calcium",
+        "spans": [
+          [
+            0,
+            4
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_ion_sites",
+        "source": "case_provisional"
+      }
+    ],
+    "decoy_epitopes": [
+      {
+        "name": "apo_MLCK_peptide_decoy_surface",
+        "entity": "MLCK_peptide",
+        "spans": [
+          [
+            0,
+            26
+          ]
+        ],
+        "zero_based": true,
+        "role": "apo_state_should_not_bind_strongly",
+        "source": "case_provisional"
+      }
+    ],
+    "success_thresholds": {
+      "calcium_peptide_interface": {
+        "contacts": 42,
+        "residue_pairs": 12,
+        "coverage": 0.25
+      },
+      "calcium_vs_apo_delta": {
+        "min_delta": 0.1,
+        "target_delta": 0.4,
+        "contact_delta_target": 25
+      },
+      "efhand_pocket": {
+        "acidic_fraction": 0.32,
+        "polar_fraction": 0.45
+      },
+      "loop_confidence": {
+        "hard_floor": 45,
+        "target": 72
+      }
+    },
+    "operator_intent": {
+      "large_step_allowed": [
+        "cdr_resample",
+        "motif_graft",
+        "domain_length_perturb",
+        "linker_length_perturb",
+        "pocket_motif_swap"
+      ],
+      "true_length_change_scope": "outer_loop_layout_plan_only",
+      "inner_loop_length_operators": "fixed-length proxy resampling at linker/domain edges to preserve compiled masks during one search round"
+    }
+  },
+  "entity_regions": {
+    "MLCK_peptide_binding_surface": {
+      "entity": "MLCK_like_target_peptide",
+      "spans": [
+        [
+          0,
+          26
+        ]
+      ],
+      "zero_based": true,
+      "role": "target_epitope",
+      "source": "Canonical calmodulin target-peptide readout proxy; full peptide is treated as the desired binding region."
+    },
+    "calcium_ion_sites": {
+      "entity": "calcium",
+      "spans": [
+        [
+          0,
+          4
+        ]
+      ],
+      "zero_based": true,
+      "role": "target_ion_sites",
+      "source": "case_provisional"
+    },
+    "apo_MLCK_peptide_decoy_surface": {
+      "entity": "MLCK_peptide",
+      "spans": [
+        [
+          0,
+          26
+        ]
+      ],
+      "zero_based": true,
+      "role": "apo_state_should_not_bind_strongly",
+      "source": "case_provisional"
+    }
   }
 }

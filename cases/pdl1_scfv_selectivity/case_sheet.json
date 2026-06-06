@@ -61,5 +61,321 @@
     "Whether the desired antibody should block PD-1 by binding the PD-1 interface or bind a non-blocking PD-L1 epitope.",
     "Exact mature PD-L1/PD-L2 construct boundaries for assay matching.",
     "Allowed human framework families and developability liabilities."
+  ],
+  "residue_level_constraints": {
+    "indexing": "zero_based_end_exclusive; binder spans use compiled BB sequence coordinates; target/decoy spans use each entity sequence coordinates",
+    "binder_hotspots": [
+      {
+        "name": "pdl1_selective_cdr_hotspot",
+        "chain_id": "BB",
+        "nodes": [
+          "VH_CDR3",
+          "VH_CDR2",
+          "VL_CDR3"
+        ],
+        "relative_positions": [
+          1,
+          2,
+          4,
+          5,
+          6
+        ],
+        "desired_chemistry": [
+          "aromatic",
+          "polar",
+          "contextual_charge"
+        ]
+      }
+    ],
+    "target_epitopes": [
+      {
+        "name": "PDL1_avelumab_epitope",
+        "entity": "PDL1",
+        "spans": [
+          [
+            36,
+            37
+          ],
+          [
+            38,
+            39
+          ],
+          [
+            40,
+            46
+          ],
+          [
+            48,
+            49
+          ],
+          [
+            51,
+            52
+          ],
+          [
+            55,
+            56
+          ],
+          [
+            57,
+            59
+          ],
+          [
+            60,
+            61
+          ],
+          [
+            95,
+            96
+          ],
+          [
+            97,
+            98
+          ],
+          [
+            99,
+            100
+          ],
+          [
+            103,
+            104
+          ],
+          [
+            105,
+            106
+          ],
+          [
+            107,
+            108
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_epitope",
+        "source": "RCSB 5GRJ chain C antibody-contact residues, 4.5 A heavy-atom cutoff, converted to zero-based end-exclusive spans."
+      },
+      {
+        "name": "PDL1_PD1_overlap_surface",
+        "entity": "PDL1",
+        "spans": [
+          [
+            35,
+            62
+          ],
+          [
+            95,
+            108
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_blocking_surface",
+        "source": "PD-L1 PD-1/avelumab overlap proxy"
+      }
+    ],
+    "decoy_epitopes": [
+      {
+        "name": "PDL2_homologous_interface_decoy",
+        "entity": "PDL2",
+        "spans": [
+          [
+            32,
+            65
+          ],
+          [
+            92,
+            118
+          ]
+        ],
+        "zero_based": true,
+        "role": "decoy_homolog_surface",
+        "source": "case_provisional"
+      },
+      {
+        "name": "PD1_receptor_interface_decoy",
+        "entity": "PD1",
+        "spans": [
+          [
+            24,
+            61
+          ],
+          [
+            74,
+            101
+          ]
+        ],
+        "zero_based": true,
+        "role": "decoy_receptor_surface",
+        "source": "case_provisional"
+      }
+    ],
+    "mutable_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "VH_CDR1",
+        "spans": [
+          [
+            21,
+            35
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_CDR2",
+        "spans": [
+          [
+            48,
+            64
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_CDR3",
+        "spans": [
+          [
+            97,
+            105
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_CDR1",
+        "spans": [
+          [
+            153,
+            163
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_CDR2",
+        "spans": [
+          [
+            178,
+            185
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_CDR3",
+        "spans": [
+          [
+            217,
+            226
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "Linker_core",
+        "spans": [
+          [
+            120,
+            125
+          ]
+        ]
+      }
+    ],
+    "frozen_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "VH_FR1",
+        "spans": [
+          [
+            0,
+            21
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_FR4",
+        "spans": [
+          [
+            105,
+            115
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_FR1",
+        "spans": [
+          [
+            130,
+            153
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_FR4",
+        "spans": [
+          [
+            226,
+            240
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "Linker_head",
+        "spans": [
+          [
+            115,
+            120
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "Linker_tail",
+        "spans": [
+          [
+            125,
+            130
+          ]
+        ]
+      }
+    ],
+    "mutable_nodes": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3",
+      "Linker_core"
+    ],
+    "frozen_nodes": [
+      "VH_FR1",
+      "VH_FR4",
+      "VL_FR1",
+      "VL_FR4",
+      "Linker_head",
+      "Linker_tail"
+    ]
+  },
+  "success_thresholds": {
+    "pdl1_epitope_interface_on": {
+      "contacts": 58,
+      "residue_pairs": 14,
+      "coverage": 0.32
+    },
+    "pdl1_over_pdl2_delta": {
+      "min_delta": 0.12,
+      "target_delta": 0.45,
+      "contact_delta_target": 32
+    },
+    "cdr_confidence": {
+      "hard_floor": 45,
+      "target": 72
+    }
+  },
+  "provisional_assumptions": [
+    "Residue spans are construct-local proxies; replace with assay/reference-structure numbering when available."
   ]
 }

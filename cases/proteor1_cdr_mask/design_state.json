@@ -264,7 +264,8 @@
       "weight": 0.85,
       "target_contact_fraction": 0.55,
       "contact_target": 45,
-      "coverage_target": 0.3
+      "coverage_target": 0.3,
+      "avoid_region": "ProteoR1_off_hotspot_surface"
     },
     {
       "name": "cdr_mask_confidence_floor",
@@ -346,5 +347,370 @@
     ],
     "rationale": "The Proteo-R1 ground-truth CDRs are not used as the executable start; masked CDR spans are filled with neutral residues to create recovery room.",
     "interpretation": "The executable binder segments are intentionally degraded relative to the reference/oracle sequence so evolution has measurable room to improve. The reference sequence is metadata only and is not used as the starting template."
+  },
+  "design_constraints": {
+    "schema_version": "ast_case_constraints_v1",
+    "indexing": "zero_based_end_exclusive; binder spans use compiled BB sequence coordinates; target/decoy spans use each entity sequence coordinates",
+    "mutable_nodes": [
+      "VH_CDR1",
+      "VH_CDR2",
+      "VH_CDR3",
+      "VL_CDR1",
+      "VL_CDR2",
+      "VL_CDR3"
+    ],
+    "frozen_nodes": [
+      "VH_FR1",
+      "VH_FR2",
+      "VH_FR3",
+      "VH_FR4",
+      "VL_FR1",
+      "VL_FR2",
+      "VL_FR3",
+      "VL_FR4",
+      "Linker_head",
+      "Linker_core",
+      "Linker_tail"
+    ],
+    "mutable_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "VH_CDR1",
+        "spans": [
+          [
+            25,
+            32
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_CDR2",
+        "spans": [
+          [
+            51,
+            57
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_CDR3",
+        "spans": [
+          [
+            98,
+            110
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_CDR1",
+        "spans": [
+          [
+            159,
+            170
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_CDR2",
+        "spans": [
+          [
+            185,
+            192
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_CDR3",
+        "spans": [
+          [
+            224,
+            233
+          ]
+        ]
+      }
+    ],
+    "frozen_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "VH_FR1",
+        "spans": [
+          [
+            0,
+            25
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_FR2",
+        "spans": [
+          [
+            32,
+            51
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_FR3",
+        "spans": [
+          [
+            57,
+            98
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VH_FR4",
+        "spans": [
+          [
+            110,
+            121
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_FR1",
+        "spans": [
+          [
+            136,
+            159
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_FR2",
+        "spans": [
+          [
+            170,
+            185
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_FR3",
+        "spans": [
+          [
+            192,
+            224
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "VL_FR4",
+        "spans": [
+          [
+            233,
+            242
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "Linker_head",
+        "spans": [
+          [
+            121,
+            126
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "Linker_core",
+        "spans": [
+          [
+            126,
+            131
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "Linker_tail",
+        "spans": [
+          [
+            131,
+            136
+          ]
+        ]
+      }
+    ],
+    "binder_hotspots": [
+      {
+        "name": "masked_cdr_recovery_hotspot",
+        "chain_id": "BB",
+        "nodes": [
+          "VH_CDR3",
+          "VH_CDR1",
+          "VL_CDR1",
+          "VL_CDR3"
+        ],
+        "relative_positions": [
+          1,
+          2,
+          3,
+          5,
+          7
+        ],
+        "desired_chemistry": [
+          "aromatic",
+          "polar",
+          "contextual_charge"
+        ]
+      }
+    ],
+    "target_epitopes": [
+      {
+        "name": "ProteoR1_spec_mask_hotspot",
+        "entity": "ProteoR1_demo_antigen_8r9y_A",
+        "spans": [
+          [
+            52,
+            60
+          ],
+          [
+            62,
+            64
+          ],
+          [
+            66,
+            74
+          ],
+          [
+            77,
+            85
+          ],
+          [
+            98,
+            108
+          ],
+          [
+            109,
+            110
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_epitope",
+        "source": "Proteo-R1 demo canonical YAML 8r9y_H_L_A antigen spec_mask runs."
+      }
+    ],
+    "decoy_epitopes": [
+      {
+        "name": "ProteoR1_off_hotspot_surface",
+        "entity": "Antigen_A",
+        "spans": [
+          [
+            0,
+            24
+          ],
+          [
+            32,
+            51
+          ],
+          [
+            86,
+            98
+          ],
+          [
+            110,
+            114
+          ]
+        ],
+        "zero_based": true,
+        "role": "avoid_non_hotspot_antigen_surface",
+        "source": "case_provisional"
+      }
+    ],
+    "success_thresholds": {
+      "hotspot_interface": {
+        "contacts": 70,
+        "residue_pairs": 18,
+        "coverage": 0.38
+      },
+      "cdr_confidence": {
+        "hard_floor": 45,
+        "target": 72
+      }
+    },
+    "operator_intent": {
+      "large_step_allowed": [
+        "cdr_resample",
+        "motif_graft",
+        "domain_length_perturb",
+        "linker_length_perturb",
+        "pocket_motif_swap"
+      ],
+      "true_length_change_scope": "outer_loop_layout_plan_only",
+      "inner_loop_length_operators": "fixed-length proxy resampling at linker/domain edges to preserve compiled masks during one search round"
+    }
+  },
+  "entity_regions": {
+    "ProteoR1_spec_mask_hotspot": {
+      "entity": "ProteoR1_demo_antigen_8r9y_A",
+      "spans": [
+        [
+          52,
+          60
+        ],
+        [
+          62,
+          64
+        ],
+        [
+          66,
+          74
+        ],
+        [
+          77,
+          85
+        ],
+        [
+          98,
+          108
+        ],
+        [
+          109,
+          110
+        ]
+      ],
+      "zero_based": true,
+      "role": "target_epitope",
+      "source": "Proteo-R1 demo canonical YAML 8r9y_H_L_A antigen spec_mask runs."
+    },
+    "ProteoR1_off_hotspot_surface": {
+      "entity": "Antigen_A",
+      "spans": [
+        [
+          0,
+          24
+        ],
+        [
+          32,
+          51
+        ],
+        [
+          86,
+          98
+        ],
+        [
+          110,
+          114
+        ]
+      ],
+      "zero_based": true,
+      "role": "avoid_non_hotspot_antigen_surface",
+      "source": "case_provisional"
+    }
   }
 }

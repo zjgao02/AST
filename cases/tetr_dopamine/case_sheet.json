@@ -81,7 +81,7 @@
     }
   },
   "residue_level_constraints": {
-    "indexing": "Node names are from design_state binder segmentation; exact residue numbering is pending reference-structure mapping.",
+    "indexing": "zero_based_end_exclusive; binder spans use compiled BB sequence coordinates; target/decoy spans use each entity sequence coordinates",
     "primary_design_nodes": [
       "ligand_pocket_core",
       "allosteric_hinge",
@@ -114,7 +114,256 @@
       "preserve_in_state": "tetO_bound_state_A",
       "disrupt_in_state": "dopamine_tetO_competition_state_C",
       "status": "operator sequence known; reference contact map still needed"
-    }
+    },
+    "binder_hotspots": [
+      {
+        "name": "dopamine_pocket_hotspot",
+        "chain_id": "BB",
+        "nodes": [
+          "ligand_pocket_core"
+        ],
+        "relative_positions": [
+          4,
+          5,
+          8,
+          12,
+          17,
+          22,
+          28,
+          35,
+          40
+        ],
+        "desired_chemistry": [
+          "catechol_near",
+          "amine_near",
+          "aromatic_support"
+        ]
+      },
+      {
+        "name": "dna_release_allosteric_path",
+        "chain_id": "BB",
+        "nodes": [
+          "HTH_exit_loop",
+          "domain_connector",
+          "allosteric_hinge",
+          "relay_helix"
+        ],
+        "relative_positions": [
+          1,
+          3,
+          5,
+          8,
+          12
+        ],
+        "desired_chemistry": [
+          "polar",
+          "small",
+          "turn_loop"
+        ]
+      }
+    ],
+    "target_epitopes": [
+      {
+        "name": "TetO_operator",
+        "entity": "TetO_operator_proxy",
+        "spans": [
+          [
+            0,
+            19
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_epitope",
+        "source": "User-provided TetO operator sequence; used as a fixed DNA state anchor."
+      },
+      {
+        "name": "dopamine_ligand_pharmacophore",
+        "entity": "dopamine",
+        "spans": [
+          [
+            0,
+            1
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_ligand",
+        "source": "dopamine SMILES NCCc1ccc(O)c(O)c1"
+      },
+      {
+        "name": "TetO_operator_full",
+        "entity": "TetO_plus",
+        "spans": [
+          [
+            0,
+            19
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_dna_operator",
+        "source": "case_provisional"
+      }
+    ],
+    "decoy_epitopes": [
+      {
+        "name": "TetR_off_pocket_core",
+        "entity": "TetR_dimer",
+        "spans": [
+          [
+            157,
+            183
+          ],
+          [
+            183,
+            207
+          ]
+        ],
+        "zero_based": true,
+        "role": "forbid_ligand_off_pocket_contacts",
+        "source": "case_provisional"
+      },
+      {
+        "name": "TetO_holo_release_decoy",
+        "entity": "TetO_plus",
+        "spans": [
+          [
+            0,
+            19
+          ]
+        ],
+        "zero_based": true,
+        "role": "should_weaken_in_holo",
+        "source": "case_provisional"
+      }
+    ],
+    "mutable_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "ligand_pocket_core",
+        "spans": [
+          [
+            70,
+            115
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "allosteric_hinge",
+        "spans": [
+          [
+            115,
+            132
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "relay_helix",
+        "spans": [
+          [
+            132,
+            157
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "domain_connector",
+        "spans": [
+          [
+            66,
+            70
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "HTH_exit_loop",
+        "spans": [
+          [
+            49,
+            66
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "HTH_recognition_helix",
+        "spans": [
+          [
+            33,
+            49
+          ]
+        ]
+      }
+    ],
+    "frozen_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "N_term_support",
+        "spans": [
+          [
+            0,
+            10
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "HTH_helix1",
+        "spans": [
+          [
+            10,
+            25
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "HTH_turn",
+        "spans": [
+          [
+            25,
+            33
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "dimerization_interface",
+        "spans": [
+          [
+            157,
+            183
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "C_terminal_support",
+        "spans": [
+          [
+            183,
+            207
+          ]
+        ]
+      }
+    ],
+    "mutable_nodes": [
+      "ligand_pocket_core",
+      "allosteric_hinge",
+      "relay_helix",
+      "domain_connector",
+      "HTH_exit_loop",
+      "HTH_recognition_helix"
+    ],
+    "frozen_nodes": [
+      "N_term_support",
+      "HTH_helix1",
+      "HTH_turn",
+      "dimerization_interface",
+      "C_terminal_support"
+    ]
   },
   "objective_thresholds": {
     "tetO_interface_on": {
@@ -155,7 +404,8 @@
   "provisional_assumptions": [
     "Dopamine acts as a replacement effector for a TetR-like allosteric switch.",
     "HTH recognition geometry should not be destroyed in apo/DNA state.",
-    "Dimer interface is mostly preserved; sparse edits are support-only unless the user explicitly permits dimer redesign."
+    "Dimer interface is mostly preserved; sparse edits are support-only unless the user explicitly permits dimer redesign.",
+    "Residue spans are construct-local proxies; replace with assay/reference-structure numbering when available."
   ],
   "information_gaps": [
     "Reference TetR-DNA and TetR-ligand structures mapped to the current sequence.",
@@ -174,5 +424,41 @@
     ],
     "rationale": "TetR should not start from a fully optimized ligand pocket. The initial executable pocket is chemically softened while the DNA-binding head and dimer core stay intact, giving the evaluator room to reward dopamine-pocket recovery plus apo/holo DNA-release behavior.",
     "interpretation": "The executable binder segments are intentionally degraded relative to the reference/oracle sequence so evolution has measurable room to improve. The reference sequence is metadata only and is not used as the starting template."
+  },
+  "success_thresholds": {
+    "tetO_interface_on": {
+      "interface_contact_target": 45,
+      "interface_residue_pair_target": 10,
+      "operator_coverage_target": 0.25
+    },
+    "dopamine_binding_on": {
+      "interface_contact_target": 18,
+      "interface_residue_pair_target": 5,
+      "pocket_coverage_target": 0.12
+    },
+    "tetO_interface_off_with_dopamine": {
+      "desired_direction": "lower_than_tetO_bound_state_A",
+      "current_metric": "interface_off score from contact strength"
+    },
+    "mechanistic_transition": {
+      "min_moving_rmsd": 0.5,
+      "target_moving_rmsd": 3.0,
+      "max_moving_rmsd": 12.0,
+      "stable_region_rmsd": 1.5
+    },
+    "node_confidence": {
+      "ligand_pocket_plddt_mean_target": 70,
+      "allosteric_pathway_plddt_min_target": 45
+    },
+    "dopamine_pocket_pharmacophore": {
+      "acidic_fraction": 0.18,
+      "polar_fraction": 0.35,
+      "aromatic_fraction": 0.18
+    },
+    "apo_vs_holo_dna_release_delta": {
+      "min_delta": 0.1,
+      "target_delta": 0.42,
+      "contact_delta_target": 35
+    }
   }
 }

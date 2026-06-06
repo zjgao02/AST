@@ -33,6 +33,10 @@ MUTATION_OPS = {
     "region_shuffle",
     "motif_graft",
     "segment_mutagenesis",
+    "cdr_resample",
+    "pocket_motif_swap",
+    "linker_length_perturb",
+    "domain_length_perturb",
 }
 MAX_DESIGN_REGIONS = 8
 MAX_REGION_TARGETS = 6
@@ -619,6 +623,40 @@ def _combine_unique(old: Any, new: Any) -> List[str]:
     return out
 
 
+def _augment_large_step_ops_for_policy(policy: Dict[str, Any], kind: str, node_name: str) -> None:
+    if not _as_bool(policy.get("large_jump"), False):
+        return
+    ops = policy.get("mutation_ops")
+    if not isinstance(ops, dict):
+        ops = {}
+    kind_text = str(kind or "").lower()
+    name_text = str(node_name or "").lower()
+    if kind_text == "cdr" or "cdr" in name_text:
+        additions = {"cdr_resample": 0.12, "motif_graft": 0.10, "segment_mutagenesis": 0.10}
+    elif kind_text == "linker" or "linker" in name_text:
+        additions = {"linker_length_perturb": 0.12, "segment_resample": 0.08, "region_shuffle": 0.04}
+    elif kind_text in {"pocket", "ligand", "dna_contact"} or any(token in name_text for token in ("pocket", "groove", "efhand", "loop")):
+        additions = {"pocket_motif_swap": 0.12, "motif_graft": 0.08, "segment_mutagenesis": 0.08}
+    elif kind_text in {"hinge", "relay", "framework", "helix"}:
+        additions = {"domain_length_perturb": 0.08, "segment_mutagenesis": 0.06}
+    else:
+        additions = {"segment_mutagenesis": 0.08, "motif_graft": 0.04}
+    for op, weight in additions.items():
+        ops.setdefault(op, weight)
+    policy["mutation_ops"] = ops
+
+
+def _augment_large_step_ops(
+    policies: Dict[str, Dict[str, Any]],
+    segment_meta: Dict[str, Dict[str, Any]],
+) -> None:
+    for node_name, policy in policies.items():
+        if not isinstance(policy, dict):
+            continue
+        kind = segment_meta.get(node_name, {}).get("kind", policy.get("kind", ""))
+        _augment_large_step_ops_for_policy(policy, str(kind), str(node_name))
+
+
 def _merge_region_policy(
     base: Dict[str, Any],
     region: Dict[str, Any],
@@ -945,6 +983,7 @@ def normalize_strategy_tree(
         policies,
         memory_bias,
     )
+    _augment_large_step_ops(policies, _segment_metadata(state))
     if layout_edit_order:
         edit_order = layout_edit_order
     if not policies:
@@ -1158,6 +1197,64 @@ def _mask_from_spans(length: int, allowed_spans: List[Tuple[int, int]]) -> List[
     return mask
 
 
+def _spans_from_constraint_entries(entries: Any, default_chain: str) -> Dict[str, List[Tuple[int, int]]]:
+    out: Dict[str, List[Tuple[int, int]]] = {}
+    if not isinstance(entries, list):
+        return out
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        chain_id = str(entry.get("chain_id") or entry.get("chain") or default_chain)
+        raw_spans = entry.get("spans", entry.get("ranges", entry.get("residue_ranges", [])))
+        spans: List[Tuple[int, int]] = []
+        if isinstance(raw_spans, list):
+            for raw in raw_spans:
+                if not isinstance(raw, (list, tuple)) or len(raw) < 2:
+                    continue
+                try:
+                    start, end = int(raw[0]), int(raw[1])
+                except (TypeError, ValueError):
+                    continue
+                spans.append((start, end))
+        raw_residues = entry.get("residues", entry.get("indices", []))
+        if isinstance(raw_residues, list):
+            for raw in raw_residues:
+                try:
+                    idx = int(raw)
+                except (TypeError, ValueError):
+                    continue
+                spans.append((idx, idx + 1))
+        if spans:
+            out.setdefault(chain_id, []).extend(spans)
+    return out
+
+
+def _constraint_spans_by_chain(
+    state: Dict[str, Any],
+    span_key: str,
+    node_key: str,
+) -> Dict[str, List[Tuple[int, int]]]:
+    constraints = state.get("design_constraints", {})
+    if not isinstance(constraints, dict):
+        return {}
+    binder_chain = state["binder"].get("chain_id", "BB")
+    spans = segment_spans(flatten_binder_parts(state))
+    out: Dict[str, List[Tuple[int, int]]] = {}
+    for node_name in _name_list(constraints.get(node_key, [])):
+        if node_name in spans:
+            out.setdefault(binder_chain, []).append(spans[node_name])
+    explicit = _spans_from_constraint_entries(constraints.get(span_key, []), binder_chain)
+    for chain_id, chain_spans in explicit.items():
+        out.setdefault(chain_id, []).extend(chain_spans)
+    return out
+
+
+def _apply_closed_spans(mask: List[bool], closed_spans: List[Tuple[int, int]]) -> None:
+    for start, end in closed_spans:
+        for idx in range(max(0, start), min(len(mask), end)):
+            mask[idx] = False
+
+
 def build_masks(state: Dict[str, Any], memory_bias: Dict[str, Any], strategy: Dict[str, Any]) -> Dict[str, List[bool]]:
     parts = flatten_binder_parts(state)
     spans = segment_spans(parts)
@@ -1189,9 +1286,18 @@ def build_masks(state: Dict[str, Any], memory_bias: Dict[str, Any], strategy: Di
             if name in spans and spans[name] not in selected:
                 selected.append(spans[name])
 
+    binder_chain = state["binder"].get("chain_id", "BB")
+    target_chain = state["target"].get("chain_id", "T")
+    for span in _constraint_spans_by_chain(state, "mutable_residue_spans", "mutable_nodes").get(binder_chain, []):
+        if span not in selected:
+            selected.append(span)
+    binder_mask = _mask_from_spans(len(binder_sequence(state)), selected)
+    frozen = _constraint_spans_by_chain(state, "frozen_residue_spans", "frozen_nodes")
+    _apply_closed_spans(binder_mask, frozen.get(binder_chain, []))
+
     return {
-        state["binder"].get("chain_id", "BB"): _mask_from_spans(len(binder_sequence(state)), selected),
-        state["target"].get("chain_id", "T"): [False] * len(state["target"]["sequence"]),
+        binder_chain: binder_mask,
+        target_chain: [False] * len(state["target"]["sequence"]),
     }
 
 
@@ -1212,6 +1318,12 @@ def build_fixed_residues(state: Dict[str, Any], memory_bias: Dict[str, Any]) -> 
         for i, pos in enumerate(range(start, end)):
             if 0 <= offset + i < len(linker_seq):
                 fixed[state["binder"].get("chain_id", "BB")][pos] = linker_seq[offset + i]
+
+    binder_chain = state["binder"].get("chain_id", "BB")
+    binder_seq = binder_sequence(state)
+    for start, end in _constraint_spans_by_chain(state, "frozen_residue_spans", "frozen_nodes").get(binder_chain, []):
+        for pos in range(max(0, start), min(len(binder_seq), end)):
+            fixed[binder_chain][pos] = binder_seq[pos]
 
     for i, aa in enumerate(state["target"]["sequence"]):
         fixed[state["target"].get("chain_id", "T")][i] = aa
@@ -1374,6 +1486,23 @@ def build_sa_config(strategy: Dict[str, Any]) -> Dict[str, Any]:
 
     external_kb_path = resolve_optional_project_path(strategy.get("external_kb_path"))
     external_kb_embedding_manifest_value = resolve_optional_project_path(strategy.get("external_kb_embedding_manifest"))
+    mutation_ops = dict(strategy.get("mutation_ops", {
+        "point": 0.42,
+        "block": 0.12,
+        "segment_resample": 0.08,
+        "site_resample": 0.07,
+        "segment_mutagenesis": 0.08,
+        "motif_graft": 0.05,
+        "region_shuffle": 0.04,
+        "swap": 0.04,
+    }))
+    for op, weight in {
+        "cdr_resample": 0.05,
+        "pocket_motif_swap": 0.05,
+        "linker_length_perturb": 0.02,
+        "domain_length_perturb": 0.02,
+    }.items():
+        mutation_ops.setdefault(op, weight)
 
     return {
         "iterations": int(strategy.get("iterations", 1200)),
@@ -1409,16 +1538,7 @@ def build_sa_config(strategy: Dict[str, Any]) -> Dict[str, Any]:
         "esmfold2_num_diffusion_samples": int(strategy.get("esmfold2_num_diffusion_samples", 1)),
         "multistate_objectives_enabled": bool(strategy.get("multistate_objectives_enabled", True)),
         "multistate_objective_weight": float(strategy.get("multistate_objective_weight", 1.0)),
-        "mutation_ops": dict(strategy.get("mutation_ops", {
-            "point": 0.55,
-            "block": 0.14,
-            "segment_resample": 0.08,
-            "site_resample": 0.08,
-            "segment_mutagenesis": 0.07,
-            "motif_graft": 0.04,
-            "region_shuffle": 0.03,
-            "swap": 0.03,
-        })),
+        "mutation_ops": mutation_ops,
         "history_size": int(strategy.get("history_size", 50)),
         "search_method": str(strategy.get("search_method", "mcts")),
         "mcts_c_puct": float(strategy.get("mcts_c_puct", 1.4)),

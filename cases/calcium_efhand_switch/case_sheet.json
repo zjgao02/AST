@@ -63,5 +63,206 @@
     "Exact target peptide or protein readout for the calcium sensor.",
     "Allowed edits in EF-loop acidic residues versus scaffold helices.",
     "Whether the goal is calcium affinity tuning, peptide affinity switching, or both."
+  ],
+  "residue_level_constraints": {
+    "indexing": "zero_based_end_exclusive; binder spans use compiled BB sequence coordinates; target/decoy spans use each entity sequence coordinates",
+    "binder_hotspots": [
+      {
+        "name": "efhand_calcium_coordination_loops",
+        "chain_id": "BB",
+        "nodes": [
+          "EFhand_loop_1",
+          "EFhand_loop_2",
+          "EFhand_loop_3",
+          "EFhand_loop_4"
+        ],
+        "relative_positions": [
+          0,
+          2,
+          4,
+          6,
+          8,
+          11
+        ],
+        "desired_chemistry": [
+          "acidic",
+          "polar",
+          "calcium_ligand"
+        ]
+      }
+    ],
+    "target_epitopes": [
+      {
+        "name": "MLCK_peptide_binding_surface",
+        "entity": "MLCK_like_target_peptide",
+        "spans": [
+          [
+            0,
+            26
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_epitope",
+        "source": "Canonical calmodulin target-peptide readout proxy; full peptide is treated as the desired binding region."
+      },
+      {
+        "name": "calcium_ion_sites",
+        "entity": "calcium",
+        "spans": [
+          [
+            0,
+            4
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_ion_sites",
+        "source": "case_provisional"
+      }
+    ],
+    "decoy_epitopes": [
+      {
+        "name": "apo_MLCK_peptide_decoy_surface",
+        "entity": "MLCK_peptide",
+        "spans": [
+          [
+            0,
+            26
+          ]
+        ],
+        "zero_based": true,
+        "role": "apo_state_should_not_bind_strongly",
+        "source": "case_provisional"
+      }
+    ],
+    "mutable_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "EFhand_loop_1",
+        "spans": [
+          [
+            19,
+            31
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "EFhand_loop_2",
+        "spans": [
+          [
+            56,
+            68
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "EFhand_loop_3",
+        "spans": [
+          [
+            92,
+            104
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "EFhand_loop_4",
+        "spans": [
+          [
+            129,
+            141
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "CaM_scaffold_1",
+        "spans": [
+          [
+            0,
+            19
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "CaM_scaffold_2",
+        "spans": [
+          [
+            31,
+            56
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "CaM_scaffold_3",
+        "spans": [
+          [
+            68,
+            92
+          ]
+        ]
+      }
+    ],
+    "frozen_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "CaM_scaffold_4",
+        "spans": [
+          [
+            104,
+            129
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "CaM_scaffold_5",
+        "spans": [
+          [
+            141,
+            149
+          ]
+        ]
+      }
+    ],
+    "mutable_nodes": [
+      "EFhand_loop_1",
+      "EFhand_loop_2",
+      "EFhand_loop_3",
+      "EFhand_loop_4",
+      "CaM_scaffold_1",
+      "CaM_scaffold_2",
+      "CaM_scaffold_3"
+    ],
+    "frozen_nodes": [
+      "CaM_scaffold_4",
+      "CaM_scaffold_5"
+    ]
+  },
+  "success_thresholds": {
+    "calcium_peptide_interface": {
+      "contacts": 42,
+      "residue_pairs": 12,
+      "coverage": 0.25
+    },
+    "calcium_vs_apo_delta": {
+      "min_delta": 0.1,
+      "target_delta": 0.4,
+      "contact_delta_target": 25
+    },
+    "efhand_pocket": {
+      "acidic_fraction": 0.32,
+      "polar_fraction": 0.45
+    },
+    "loop_confidence": {
+      "hard_floor": 45,
+      "target": 72
+    }
+  },
+  "provisional_assumptions": [
+    "Residue spans are construct-local proxies; replace with assay/reference-structure numbering when available."
   ]
 }
