@@ -1334,38 +1334,59 @@ def _graft_motif_into_node(
     rng: np.random.Generator,
     node_policy: Optional[Dict[str, Any]],
 ) -> Tuple[List[int], List[Dict[str, Any]]]:
-    pos_set = set(int(p) for p in positions)
-    indices = [int(x) for x in seg.indices()]
-    anchors = _policy_anchor_positions(seg, node_policy) + _policy_abs_positions(seg, node_policy, "hotspot_positions")
-    candidate_starts = [int(p) for p in anchors if int(p) in pos_set]
-    if not candidate_starts:
-        candidate_starts = [
-            start
-            for start in positions
-            if all((int(start) + offset) in pos_set for offset in range(len(motif)))
-        ]
-    if not candidate_starts and indices:
-        max_start_idx = max(0, len(indices) - len(motif))
-        candidate_starts = [
-            indices[offset]
-            for offset in range(0, max_start_idx + 1)
-            if all(indices[offset + j] in pos_set for j in range(len(motif)))
-        ]
-    if not candidate_starts:
+    motif = "".join(aa for aa in str(motif).upper() if aa in AA)
+    if not motif:
         return [], []
 
-    start = int(rng.choice(np.asarray(candidate_starts)))
+    pos_set = {int(p) for p in positions if 0 <= int(p) < len(seq_list)}
+    if len(pos_set) < len(motif):
+        return [], []
+
+    def numeric_window(start: int) -> Optional[List[int]]:
+        window = [int(start) + offset for offset in range(len(motif))]
+        if all(pos in pos_set for pos in window):
+            return window
+        return None
+
+    candidate_windows: List[List[int]] = []
+    seen_windows = set()
+
+    def add_window(window: Optional[List[int]]) -> None:
+        if not window:
+            return
+        key = tuple(int(pos) for pos in window)
+        if key not in seen_windows:
+            seen_windows.add(key)
+            candidate_windows.append([int(pos) for pos in window])
+
+    anchors = _policy_anchor_positions(seg, node_policy) + _policy_abs_positions(seg, node_policy, "hotspot_positions")
+    for anchor in anchors:
+        add_window(numeric_window(int(anchor)))
+
+    if not candidate_windows:
+        for start in sorted(pos_set):
+            add_window(numeric_window(int(start)))
+
+    if not candidate_windows:
+        indices = [int(x) for x in seg.indices() if int(x) in pos_set and 0 <= int(x) < len(seq_list)]
+        if len(indices) >= len(motif):
+            for offset in range(0, len(indices) - len(motif) + 1):
+                window = indices[offset : offset + len(motif)]
+                if all(window[i + 1] == window[i] + 1 for i in range(len(window) - 1)):
+                    add_window(window)
+
+    if not candidate_windows:
+        return [], []
+
+    window = candidate_windows[int(rng.integers(0, len(candidate_windows)))]
     changes: List[Dict[str, Any]] = []
     chosen: List[int] = []
-    for offset, aa in enumerate(motif):
-        pos = start + offset
-        if pos not in pos_set or pos >= len(seq_list):
-            continue
+    for pos, aa in zip(window, motif):
         old = seq_list[pos]
         if old == aa:
             continue
         seq_list[pos] = aa
-        chosen.append(pos)
+        chosen.append(int(pos))
         changes.append({"position": int(pos), "from": old, "to": aa, "motif": motif})
     return chosen, changes
 
