@@ -20,6 +20,11 @@ except ModuleNotFoundError:
 ARTIFACTS_DIR = "artifacts"
 
 
+def _run_output_root():
+    raw = os.environ.get("ASTEVOLVE_RUN_ROOT") or os.environ.get("ASTEVOLVE_CASE_OUTPUT_ROOT")
+    return os.path.abspath(raw) if raw else None
+
+
 def _case_id_from_program_path(program_path):
     try:
         parts = os.path.abspath(program_path).split(os.sep)
@@ -33,7 +38,11 @@ def _case_id_from_program_path(program_path):
 
 
 def _best_sequence_dir(program_path):
-    path = os.path.join(ARTIFACTS_DIR, _case_id_from_program_path(program_path), "best_sequences")
+    run_root = _run_output_root()
+    if run_root:
+        path = os.path.join(run_root, "best_sequences")
+    else:
+        path = os.path.join(ARTIFACTS_DIR, _case_id_from_program_path(program_path), "best_sequences")
     os.makedirs(path, exist_ok=True)
     return path
 

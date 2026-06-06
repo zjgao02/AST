@@ -83,6 +83,11 @@ class OpenEvolve:
         )
         os.makedirs(self.output_dir, exist_ok=True)
 
+        # Keep evaluator artifacts under this run's OpenEvolve output directory.
+        # Without this, large artifacts are written to ./artifacts/<program_uuid>.
+        if not getattr(self.config.database, "artifacts_base_path", None):
+            self.config.database.artifacts_base_path = os.path.join(self.output_dir, "artifacts")
+
         # Set up logging
         self._setup_logging()
 

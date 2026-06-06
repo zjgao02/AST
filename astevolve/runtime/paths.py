@@ -69,7 +69,9 @@ def data_path(*parts: str) -> Path:
 
 def artifact_path(*parts: str) -> Path:
     if len(parts) == 1 and _looks_like_uuid(str(parts[0])):
-        return artifact_root().joinpath(transient_artifact_dir(), str(parts[0]))
+        run_root = os.environ.get("ASTEVOLVE_RUN_ROOT")
+        base = Path(run_root).expanduser().resolve() if run_root else artifact_root()
+        return base.joinpath(transient_artifact_dir(), str(parts[0]))
     return artifact_root().joinpath(*parts)
 
 
