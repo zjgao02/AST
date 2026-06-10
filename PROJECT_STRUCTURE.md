@@ -26,6 +26,7 @@ astevolve/
   models/                   # model interface registry
   metrics/                  # structure metric summaries
   runtime/                  # current-case helpers
+  semantic_graph/           # Protein Semantic Graph summaries for LLM feedback
 
 engine/                     # strategy -> AST/input compilation and memory update
 cases/                      # case-specific state, memory, strategy entry, config
@@ -58,14 +59,14 @@ Run CD25 scFv:
 
 ```powershell
 $env:ASTEVOLVE_LLM_API_KEY="..."
-conda run -n pytorch python openevolve\openevolve-run.py cases\cd25_scfv\initial_program.py evaluator.py --config cases\cd25_scfv\config.yaml
+conda run -n <ast-or-pytorch> python openevolve\openevolve-run.py cases\cd25_scfv\initial_program.py evaluator.py --config cases\cd25_scfv\config.yaml
 ```
 
 Run TetR dopamine:
 
 ```powershell
 $env:ASTEVOLVE_LLM_API_KEY="..."
-conda run -n pytorch python openevolve\openevolve-run.py cases\tetr_dopamine\initial_program.py evaluator.py --config cases\tetr_dopamine\config.yaml
+conda run -n <ast-or-pytorch> python openevolve\openevolve-run.py cases\tetr_dopamine\initial_program.py evaluator.py --config cases\tetr_dopamine\config.yaml
 ```
 
 The vendored `openevolve/` directory intentionally keeps only `openevolve-run.py`,

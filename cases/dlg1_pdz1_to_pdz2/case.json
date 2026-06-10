@@ -1,0 +1,11 @@
+{
+  "case_id": "dlg1_pdz1_to_pdz2",
+  "name": "DLG1 PDZ1 to PDZ2 specificity-transfer semantic graph case",
+  "task_type": "pdz_specificity_transfer_semantic_graph",
+  "design_state_path": "design_state.json",
+  "memory_path": "memory.yaml",
+  "output_root": "../../artifacts/dlg1_pdz1_to_pdz2",
+  "entry_program": "initial_program.py",
+  "config_path": "config.yaml",
+  "notes": "DLG1/SAP97 PDZ1 source scaffold retuned toward DLG1/SAP97 PDZ2 peptide-tail recognition using a two-layer Protein Semantic Graph."
+}

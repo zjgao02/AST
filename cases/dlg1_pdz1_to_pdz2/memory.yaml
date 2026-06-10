@@ -1,0 +1,9 @@
+schema_version: ast_case_memory_v1
+case_id: dlg1_pdz1_to_pdz2
+case_name: DLG1 PDZ1 to PDZ2 specificity transfer
+notes:
+  - Initial run starts from source DLG1/SAP97 PDZ1 construct, not target PDZ2.
+  - Functional edges are perturbation/coupling hypotheses for outer-loop design decisions.
+recent_runs: []
+node_biases: {}
+avoid_patterns: []

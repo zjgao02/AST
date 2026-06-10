@@ -23,6 +23,7 @@ from astevolve.models.registry import (
 )
 from astevolve.evaluation.multistate_objectives import evaluate_multistate_objectives
 from astevolve.metrics.structure import summarize_structure_metrics
+from astevolve.runtime.conda import resolve_protenix_conda_env
 
 
 @dataclass
@@ -52,7 +53,7 @@ class SAConfig:
 
     # ---- protenix 娑撴挾鏁ら柊宥囩枂 ----
     protenix_model_name: str = "protenix_mini_esm_v0.5.0"
-    protenix_conda_env: str = "pytorch"
+    protenix_conda_env: str = field(default_factory=resolve_protenix_conda_env)
     protenix_seed: int = 101
     protenix_complex_use_msa: Optional[bool] = None
     protenix_complex_cycle: Optional[int] = None

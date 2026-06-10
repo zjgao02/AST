@@ -11,7 +11,7 @@ EXTERNAL_KB="auto"
 EXTERNAL_RETRIEVAL="auto"
 PROGEN_WEIGHT=""
 RUN_NAME=""
-CONDA_ENV="pytorch"
+CONDA_ENV="auto"
 NO_CONDA=0
 DRY_RUN=0
 SKIP_LLM_KEY_CHECK=0
@@ -80,6 +80,29 @@ resolve_toggle() {
   esac
 }
 
+resolve_conda_env() {
+  local requested="${1:-auto}"
+  if [[ -n "$requested" && "$requested" != "auto" ]]; then
+    echo "$requested"
+    return 0
+  fi
+  if [[ -n "${ASTEVOLVE_CONDA_ENV:-}" && "${ASTEVOLVE_CONDA_ENV}" != "auto" ]]; then
+    echo "$ASTEVOLVE_CONDA_ENV"
+    return 0
+  fi
+  if [[ -n "${CONDA_DEFAULT_ENV:-}" && "${CONDA_DEFAULT_ENV}" != "base" ]]; then
+    echo "$CONDA_DEFAULT_ENV"
+    return 0
+  fi
+  if command -v conda >/dev/null 2>&1; then
+    local envs
+    envs="$(conda env list 2>/dev/null | awk 'NF && $1 !~ /^#/ { if ($1 == "*") print $2; else print $1 }' || true)"
+    if grep -qx "ast" <<<"$envs"; then echo "ast"; return 0; fi
+    if grep -qx "pytorch" <<<"$envs"; then echo "pytorch"; return 0; fi
+  fi
+  echo "ast"
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
@@ -143,6 +166,7 @@ PROGEN_WEIGHT="${PROGEN_WEIGHT:-$PROFILE_PROGEN}"
 USE_PROTENIX="$(resolve_toggle "$PROTENIX" "$PROFILE_PROTENIX")"
 USE_EXTERNAL_KB="$(resolve_toggle "$EXTERNAL_KB" "$PROFILE_EXTERNAL_KB")"
 USE_EXTERNAL_RETRIEVAL="$(resolve_toggle "$EXTERNAL_RETRIEVAL" "$PROFILE_EXTERNAL_RETRIEVAL")"
+CONDA_ENV_RESOLVED="$(resolve_conda_env "$CONDA_ENV")"
 
 if [[ -z "$RUN_NAME" ]]; then
   RUN_NAME="${CASE}_${PROFILE}_$(date +%Y%m%d_%H%M%S)"
@@ -152,6 +176,7 @@ export ASTEVOLVE_PROJECT_ROOT="${ASTEVOLVE_PROJECT_ROOT:-$PROJECT_ROOT}"
 export ASTEVOLVE_DATA_ROOT="${ASTEVOLVE_DATA_ROOT:-$PROJECT_ROOT/data}"
 export ASTEVOLVE_ARTIFACT_ROOT="${ASTEVOLVE_ARTIFACT_ROOT:-$PROJECT_ROOT/artifacts}"
 export ASTEVOLVE_TMP_ROOT="${ASTEVOLVE_TMP_ROOT:-$ASTEVOLVE_ARTIFACT_ROOT/tmp}"
+export ASTEVOLVE_CONDA_ENV="${ASTEVOLVE_CONDA_ENV:-$CONDA_ENV_RESOLVED}"
 RUN_ROOT="$ASTEVOLVE_ARTIFACT_ROOT/runs/$CASE/$RUN_NAME"
 
 export ASTEVOLVE_RUN_ROOT="$RUN_ROOT"
@@ -166,7 +191,7 @@ export ASTEVOLVE_PROGEN_WEIGHT="$PROGEN_WEIGHT"
 export ASTEVOLVE_MCTS_OUTPUT_DIR="$RUN_ROOT/inner"
 export ASTEVOLVE_PROTENIX_TMP="$RUN_ROOT/protenix_tmp"
 export ASTEVOLVE_PROTENIX_NUM_WORKERS="${ASTEVOLVE_PROTENIX_NUM_WORKERS:-1}"
-export ASTEVOLVE_PROTENIX_CONDA_ENV="${ASTEVOLVE_PROTENIX_CONDA_ENV:-${CONDA_DEFAULT_ENV:-$CONDA_ENV}}"
+export ASTEVOLVE_PROTENIX_CONDA_ENV="${ASTEVOLVE_PROTENIX_CONDA_ENV:-$ASTEVOLVE_CONDA_ENV}"
 export ASTEVOLVE_PROTENIX_COMPLEX_USE_MSA="${ASTEVOLVE_PROTENIX_COMPLEX_USE_MSA:-0}"
 export ASTEVOLVE_PROTENIX_COMPLEX_CYCLE="${ASTEVOLVE_PROTENIX_COMPLEX_CYCLE:-1}"
 export ASTEVOLVE_PROTENIX_COMPLEX_STEP="${ASTEVOLVE_PROTENIX_COMPLEX_STEP:-1}"
@@ -175,6 +200,7 @@ export ASTEVOLVE_PROTENIX_COMPLEX_USE_DEFAULT_PARAMS="${ASTEVOLVE_PROTENIX_COMPL
 
 echo "case=$CASE stage=$STAGE profile=$PROFILE run=$RUN_NAME"
 echo "outer_iterations=$OUTER_ITERATIONS inner_iterations=$INNER_ITERATIONS protenix=$USE_PROTENIX external_kb=$USE_EXTERNAL_KB retrieval=$USE_EXTERNAL_RETRIEVAL progen_weight=$PROGEN_WEIGHT"
+echo "conda_env=$CONDA_ENV_RESOLVED"
 echo "run_root=$RUN_ROOT"
 
 run_cmd() {
@@ -188,7 +214,7 @@ run_cmd() {
 if [[ "$NO_CONDA" == 1 ]]; then
   PYTHON_CMD=(python)
 else
-  PYTHON_CMD=(conda run -n "$CONDA_ENV" python)
+  PYTHON_CMD=(conda run -n "$CONDA_ENV_RESOLVED" python)
 fi
 
 run_python() {

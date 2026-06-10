@@ -231,7 +231,7 @@ _LOCKED_RUNTIME_DEFAULTS: Dict[str, Any] = {
     "structure_model": "protenix",
     "structure_model_name": None,
     "protenix_model_name": "protenix_mini_esm_v0.5.0",
-    "protenix_conda_env": "pytorch",
+    "protenix_conda_env": "auto",
     "protenix_seed": 101,
     "protenix_complex_use_msa": None,
     "protenix_complex_cycle": None,

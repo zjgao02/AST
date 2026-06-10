@@ -10,6 +10,8 @@ import numpy as np
 from astevolve.core.protein_lang import Blueprint, Node
 from astevolve.search.inner_opt import SAConfig, optimize_multichain
 from astevolve.knowledge.registry import load_external_knowledge_provider
+from astevolve.runtime.conda import resolve_protenix_conda_env
+from astevolve.semantic_graph import build_semantic_graph_summary
 from .memory_update import update_internal_memory
 
 from .design_state import (
@@ -1521,7 +1523,7 @@ def build_sa_config(strategy: Dict[str, Any]) -> Dict[str, Any]:
         "chai1_num_trunk_recycles": 3,
         "chai1_num_diffn_timesteps": 50,
         "protenix_model_name": str(strategy.get("protenix_model_name", "protenix_mini_esm_v0.5.0")),
-        "protenix_conda_env": str(strategy.get("protenix_conda_env", "pytorch")),
+        "protenix_conda_env": resolve_protenix_conda_env(strategy.get("protenix_conda_env")),
         "protenix_seed": int(strategy.get("protenix_seed", 101)),
         "protenix_complex_use_msa": strategy.get("protenix_complex_use_msa"),
         "protenix_complex_cycle": strategy.get("protenix_complex_cycle"),
@@ -1688,6 +1690,11 @@ def run_design_search(
         "case_information_needed": state.get("case_information_needed", []),
     }
     out["case_sheet_summary"] = compact_case_sheet(state.get("_case_sheet", {}))
+    out["semantic_graph_summary"] = build_semantic_graph_summary(
+        state,
+        compiled,
+        out.get("node_plddt") or (out.get("structure_metrics", {}) or {}).get("node_plddt"),
+    )
     out["layout_summary"] = state.get("_layout_summary", {})
     out["strategy_schema_report"] = state.get("_strategy_schema_report", {})
     out["score_config"] = score_cfg

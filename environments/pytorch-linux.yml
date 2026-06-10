@@ -1,4 +1,5 @@
-name: pytorch
+# Default environment name. Override with: conda env create -n pytorch -f environments/pytorch-linux.yml
+name: ast
 channels:
   - pytorch
   - nvidia

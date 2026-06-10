@@ -312,6 +312,7 @@ def _build_llm_feedback_summary(out, metrics):
         },
         "case_design_points": out.get("case_design_points", {}),
         "case_sheet_summary": out.get("case_sheet_summary", {}),
+        "semantic_graph": out.get("semantic_graph_summary", {}),
         "aggregate_structure": {
             "confidence": _compact_scalar(structure),
             "interface": _compact_interface(structure, pair_limit=0),
@@ -549,6 +550,7 @@ def evaluate(program_path: str):
                 "blueprint_summary": best_trial_out.get("blueprint_summary") if best_trial_out else None,
                 "layout_summary": best_trial_out.get("layout_summary") if best_trial_out else None,
                 "strategy_schema_report": best_trial_out.get("strategy_schema_report") if best_trial_out else None,
+                "semantic_graph_summary": best_trial_out.get("semantic_graph_summary") if best_trial_out else None,
                 "segments": best_trial_out.get("segments") if best_trial_out else None,
                 "search_artifacts": best_trial_out.get("search_artifacts") if best_trial_out else None,
                 "saved_fasta_path": saved_path,

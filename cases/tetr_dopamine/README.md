@@ -59,5 +59,5 @@ structurally plausible while avoiding loss of the TetO-bound state.
 
 ```powershell
 $env:ASTEVOLVE_LLM_API_KEY="..."
-conda run -n pytorch python openevolve\openevolve-run.py cases\tetr_dopamine\initial_program.py evaluator.py --config cases\tetr_dopamine\config.yaml
+conda run -n <ast-or-pytorch> python openevolve\openevolve-run.py cases\tetr_dopamine\initial_program.py evaluator.py --config cases\tetr_dopamine\config.yaml
 ```

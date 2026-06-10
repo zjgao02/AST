@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from astevolve.runtime.conda import resolve_protenix_conda_env
 from astevolve.runtime.paths import model_path, tmp_root
 
 
@@ -300,7 +301,7 @@ def _run_protenix(
     chains: List[Tuple[str, str]],
     seed: int,
     model_name: str,
-    conda_env: str,
+    conda_env: Optional[str],
     timeout: Optional[int] = None,
     use_msa: Optional[bool] = None,
     cycle: Optional[int] = None,
@@ -332,7 +333,7 @@ def _run_protenix_complex(
     entities: List[Dict[str, Any]],
     seed: int,
     model_name: str,
-    conda_env: str,
+    conda_env: Optional[str],
     constraint: Optional[Dict[str, Any]] = None,
     covalent_bonds: Optional[List[Dict[str, Any]]] = None,
     timeout: Optional[int] = None,
@@ -356,11 +357,13 @@ def _run_protenix_complex(
         covalent_bonds=covalent_bonds,
     )
 
+    resolved_conda_env = resolve_protenix_conda_env(conda_env)
+
     cmd = [
         _find_conda_exe(),
         "run",
         "-n",
-        conda_env,
+        resolved_conda_env,
         "python",
         str(Path(__file__).with_name("protenix_predict_worker.py")),
         "--input",
@@ -749,7 +752,7 @@ def run_protenix_confidence_multichain(
     device: Optional[str] = None,
     seed: int = 101,
     model_name: str = "protenix_mini_esm_v0.5.0",
-    conda_env: str = "pytorch",
+    conda_env: Optional[str] = None,
     timeout: Optional[int] = None,
     use_msa: Optional[bool] = None,
     cycle: Optional[int] = None,
@@ -812,7 +815,7 @@ def run_protenix_confidence_complex(
     device: Optional[str] = None,
     seed: int = 101,
     model_name: str = "protenix_mini_esm_v0.5.0",
-    conda_env: str = "pytorch",
+    conda_env: Optional[str] = None,
     timeout: Optional[int] = None,
     use_msa: Optional[bool] = None,
     cycle: Optional[int] = None,
@@ -935,7 +938,7 @@ def run_protenix_plddt_multichain(
     device: Optional[str] = None,
     seed: int = 101,
     model_name: str = "protenix_mini_esm_v0.5.0",
-    conda_env: str = "pytorch",
+    conda_env: Optional[str] = None,
     timeout: Optional[int] = None,
     use_msa: Optional[bool] = None,
     cycle: Optional[int] = None,

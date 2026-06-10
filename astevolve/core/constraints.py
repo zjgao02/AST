@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Any, List, Tuple, Optional, Callable
 import numpy as np
 import torch
+from astevolve.runtime.conda import resolve_protenix_conda_env
 from astevolve.models.registry import (
     run_structure_confidence_multichain,
     run_structure_plddt_multichain,
@@ -341,7 +342,7 @@ class ProtenixPlddtTerm(EnergyTerm):
     scale: float = 100.0
     device: Optional[str] = None
     model_name: str = "protenix_mini_esm_v0.5.0"
-    conda_env: str = "pytorch"
+    conda_env: str = field(default_factory=resolve_protenix_conda_env)
     seed: int = 101
 
     _cache: Dict[str, float] = field(
@@ -404,7 +405,7 @@ class ProtenixPlddtDeltaTerm(EnergyTerm):
     scale: float = 3
     device: Optional[str] = None
     model_name: str = "protenix_mini_esm_v0.5.0"
-    conda_env: str = "pytorch"
+    conda_env: str = field(default_factory=resolve_protenix_conda_env)
     seed: int = 101
 
     _cache: Dict[str, float] = field(
@@ -485,7 +486,7 @@ class ResiduePlddtTerm(EnergyTerm):
     missing_penalty: float = 2.0
     device: Optional[str] = None
     model_name: str = "protenix_mini_esm_v0.5.0"
-    conda_env: str = "pytorch"
+    conda_env: str = field(default_factory=resolve_protenix_conda_env)
     seed: int = 101
 
     def _collect_positions(self, compiled: Dict[str, Any]) -> Dict[str, List[int]]:
@@ -615,7 +616,7 @@ _TERM_REGISTRY: Dict[str, Callable[[Dict[str, Any]], EnergyTerm]] = {
         scale=float(p.get("scale", 100.0)),
         device=p.get("device", None),
         model_name=str(p.get("model_name", "protenix_mini_esm_v0.5.0")),
-        conda_env=str(p.get("conda_env", "pytorch")),
+        conda_env=resolve_protenix_conda_env(p.get("conda_env")),
         seed=int(p.get("seed", 101)),
     ),
     "chai_plddt_delta": lambda p: ProtenixPlddtDeltaTerm(
@@ -627,7 +628,7 @@ _TERM_REGISTRY: Dict[str, Callable[[Dict[str, Any]], EnergyTerm]] = {
         scale=float(p.get("scale", 100.0)),
         device=p.get("device", None),
         model_name=str(p.get("model_name", "protenix_mini_esm_v0.5.0")),
-        conda_env=str(p.get("conda_env", "pytorch")),
+        conda_env=resolve_protenix_conda_env(p.get("conda_env")),
         seed=int(p.get("seed", 101)),
     ),
     "residue_plddt": lambda p: ResiduePlddtTerm(
@@ -644,7 +645,7 @@ _TERM_REGISTRY: Dict[str, Callable[[Dict[str, Any]], EnergyTerm]] = {
         missing_penalty=float(p.get("missing_penalty", 2.0)),
         device=p.get("device", None),
         model_name=str(p.get("model_name", "protenix_mini_esm_v0.5.0")),
-        conda_env=str(p.get("conda_env", "pytorch")),
+        conda_env=resolve_protenix_conda_env(p.get("conda_env")),
         seed=int(p.get("seed", 101)),
     ),
 }

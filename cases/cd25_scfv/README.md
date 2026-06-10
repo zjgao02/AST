@@ -10,9 +10,9 @@ design_state.json       # CD25/scFv AST state
 memory.yaml             # case-specific internal memory
 ```
 
-Run from the project root with the `pytorch` conda environment:
+Run from the project root with your AST conda environment (`ast` or `pytorch`):
 
 ```powershell
 $env:ASTEVOLVE_LLM_API_KEY="..."
-conda run -n pytorch python openevolve\openevolve-run.py cases\cd25_scfv\initial_program.py evaluator.py --config cases\cd25_scfv\config.yaml
+conda run -n <ast-or-pytorch> python openevolve\openevolve-run.py cases\cd25_scfv\initial_program.py evaluator.py --config cases\cd25_scfv\config.yaml
 ```

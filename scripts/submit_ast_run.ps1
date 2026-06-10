@@ -22,7 +22,7 @@ param(
     [double]$ProgenWeight = -1.0,
 
     [string]$RunName = "",
-    [string]$CondaEnv = "pytorch",
+    [string]$CondaEnv = "auto",
     [string]$CondaExe = "conda",
     [switch]$NoConda,
     [switch]$DryRun,
@@ -118,6 +118,38 @@ function Format-Command {
     }) -join " ")
 }
 
+function Resolve-CondaEnv {
+    param([string]$Requested, [string]$CondaExecutable)
+    $requestedClean = if ($Requested) { $Requested.Trim() } else { "" }
+    if ($requestedClean -and $requestedClean -notin @("auto", "default", "current", "detect")) {
+        return $requestedClean
+    }
+    if ($env:ASTEVOLVE_CONDA_ENV -and $env:ASTEVOLVE_CONDA_ENV -notin @("auto", "default", "current", "detect")) {
+        return $env:ASTEVOLVE_CONDA_ENV
+    }
+    if ($env:CONDA_DEFAULT_ENV -and $env:CONDA_DEFAULT_ENV -ne "base") {
+        return $env:CONDA_DEFAULT_ENV
+    }
+    try {
+        $envLines = & $CondaExecutable env list 2>$null
+        $envNames = @()
+        foreach ($line in $envLines) {
+            $trimmed = $line.Trim()
+            if (-not $trimmed -or $trimmed.StartsWith("#")) { continue }
+            $parts = $trimmed -split "\s+"
+            if ($parts[0] -eq "*" -and $parts.Count -gt 1) {
+                $envNames += $parts[1]
+            } else {
+                $envNames += $parts[0].TrimStart("*")
+            }
+        }
+        if ($envNames -contains "ast") { return "ast" }
+        if ($envNames -contains "pytorch") { return "pytorch" }
+    } catch {
+    }
+    return "ast"
+}
+
 function Invoke-CommandLine {
     param([string[]]$Command)
     Write-Host ("+ " + (Format-Command $Command))
@@ -139,7 +171,7 @@ function Invoke-Python {
     if ($NoConda) {
         Invoke-CommandLine (@("python") + $PythonArgs)
     } else {
-        Invoke-CommandLine (@($CondaExe, "run", "-n", $CondaEnv, "python") + $PythonArgs)
+        Invoke-CommandLine (@($CondaExe, "run", "-n", $ResolvedCondaEnv, "python") + $PythonArgs)
     }
 }
 
@@ -158,6 +190,7 @@ if ($ProgenWeight -lt 0.0) {
 $useProtenix = Resolve-Toggle $Protenix ([bool]$profileDefault.Protenix)
 $useExternalKb = Resolve-Toggle $ExternalKb ([bool]$profileDefault.ExternalKb)
 $useExternalRetrieval = Resolve-Toggle $ExternalRetrieval ([bool]$profileDefault.ExternalRetrieval)
+$ResolvedCondaEnv = Resolve-CondaEnv $CondaEnv $CondaExe
 
 if (-not $RunName) {
     $RunName = ("{0}_{1}_{2}" -f $Case, $Profile, (Get-Date -Format "yyyyMMdd_HHmmss"))
@@ -173,6 +206,12 @@ if (-not $env:ASTEVOLVE_ARTIFACT_ROOT) {
 }
 if (-not $env:ASTEVOLVE_TMP_ROOT) {
     $env:ASTEVOLVE_TMP_ROOT = Join-Path $env:ASTEVOLVE_ARTIFACT_ROOT "tmp"
+}
+if (-not $env:ASTEVOLVE_CONDA_ENV) {
+    $env:ASTEVOLVE_CONDA_ENV = $ResolvedCondaEnv
+}
+if (-not $env:ASTEVOLVE_PROTENIX_CONDA_ENV) {
+    $env:ASTEVOLVE_PROTENIX_CONDA_ENV = $env:ASTEVOLVE_CONDA_ENV
 }
 
 $runRoot = Join-Path $env:ASTEVOLVE_ARTIFACT_ROOT ("runs\{0}\{1}" -f $Case, $RunName)
@@ -193,6 +232,7 @@ $env:ASTEVOLVE_PROTENIX_COMPLEX_USE_DEFAULT_PARAMS = if ($env:ASTEVOLVE_PROTENIX
 
 Write-Host ("case={0} stage={1} profile={2} run={3}" -f $Case, $Stage, $Profile, $RunName)
 Write-Host ("outer_iterations={0} inner_iterations={1} protenix={2} external_kb={3} retrieval={4} progen_weight={5}" -f $OuterIterations, $InnerIterations, $useProtenix, $useExternalKb, $useExternalRetrieval, $ProgenWeight)
+Write-Host ("conda_env={0}" -f $ResolvedCondaEnv)
 Write-Host ("run_root={0}" -f $runRoot)
 
 $steps = @($Stage)

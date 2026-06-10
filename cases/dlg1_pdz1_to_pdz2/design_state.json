@@ -1,0 +1,899 @@
+{
+  "task_name": "DLG1_PDZ1_to_DLG1_PDZ2_SemanticGraph_Transfer",
+  "task_type": "pdz_specificity_transfer_semantic_graph",
+  "version": "dlg1_pdz1_to_pdz2_semantic_graph_v1",
+  "memory_path": "memory.yaml",
+  "case_sheet_path": "case_sheet.json",
+  "source_metadata": {
+    "handoff": "data/pdz_cluster_analysis_v0/PDZ_HANDOFF.md",
+    "transfer_task_id": "DLG1_PDZ1_to_DLG1_PDZ2",
+    "source_pdb": "3RL7",
+    "target_pdb": "2G2L",
+    "source_case": "DLG1/SAP97 PDZ1",
+    "target_case": "DLG1/SAP97 PDZ2",
+    "seq_identity": 0.5051,
+    "ca_shape_rmsd_angstrom": 1.357,
+    "source_tail6": "YLVTSV",
+    "target_tail6": "LGATGL",
+    "source_tail4": "VTSV",
+    "target_tail4": "ATGL"
+  },
+  "binder": {
+    "name": "DLG1_PDZ1_source_domain",
+    "chain_id": "BB",
+    "architecture": "single_domain_PDZ_semantic_graph",
+    "domain_segment_keys": {
+      "PDZ_domain": "pdz_segments"
+    },
+    "domain_order": [
+      "PDZ_domain"
+    ],
+    "pdz_segments": [
+      [
+        "PDZ_expression_tag",
+        "framework",
+        "MGHHHHHHM"
+      ],
+      [
+        "PDZ_betaA_N_core",
+        "core",
+        "YEYEEITLERGN"
+      ],
+      [
+        "PDZ_carboxylate_loop_GLGF",
+        "motif",
+        "SGLGF"
+      ],
+      [
+        "PDZ_betaB_specificity_strand",
+        "pocket",
+        "SIAGGTDNPH"
+      ],
+      [
+        "PDZ_betaB_betaC_loop",
+        "loop",
+        "IGDDSS"
+      ],
+      [
+        "PDZ_betaC_core",
+        "core",
+        "IFITKIITGGAAAQDGRL"
+      ],
+      [
+        "PDZ_alphaA_core",
+        "core",
+        "RVNDCILRVNEVDVRDVTHSKAVEA"
+      ],
+      [
+        "PDZ_alphaB_specificity_helix",
+        "pocket",
+        "LKEAGSIVRLYVKRRKPV"
+      ],
+      [
+        "PDZ_C_terminal_tail",
+        "framework",
+        "SEKI"
+      ]
+    ]
+  },
+  "target": {
+    "chain_id": "T",
+    "name": "PDZ2_GluRA_target_peptide",
+    "sequence": "SIPCMSHSSGMPLGATGL",
+    "feature_kind": "peptide",
+    "epitope_name": "PDZ2_GluRA_tail6",
+    "epitope_source": "DLG1/SAP97 PDZ2 structure 2G2L target peptide; score focuses on C-terminal tail6 LGATGL and tail4 ATGL.",
+    "epitope_spans": [
+      [
+        12,
+        18
+      ]
+    ]
+  },
+  "additional_targets": {
+    "source_apc_peptide": {
+      "name": "PDZ1_APC_source_peptide",
+      "sequence": "RHSGSYLVTSV",
+      "biological_reason": "Source-state PDZ1/APC-like peptide from 3RL7; should be deprioritized after specificity transfer."
+    }
+  },
+  "design_points": {
+    "schema_version": "ast_design_points_v1",
+    "design_intent": "Retune DLG1/SAP97 PDZ1 from APC-like YLVTSV/VTSV recognition toward DLG1/SAP97 PDZ2 GluR-A-like LGATGL/ATGL recognition while preserving the PDZ fold.",
+    "initial_seed_policy": "Executable binder starts from the source DLG1 PDZ1 construct (3RL7), not from the target PDZ2 sequence; PDZ2 is oracle/reference metadata only.",
+    "primary_design_nodes": [
+      "PDZ_betaB_specificity_strand",
+      "PDZ_alphaB_specificity_helix",
+      "PDZ_betaB_betaC_loop"
+    ],
+    "secondary_design_nodes": [
+      "PDZ_carboxylate_loop_GLGF"
+    ],
+    "default_open_nodes": [
+      "PDZ_betaB_specificity_strand",
+      "PDZ_alphaB_specificity_helix",
+      "PDZ_betaB_betaC_loop"
+    ],
+    "preserved_nodes": [
+      "PDZ_expression_tag",
+      "PDZ_betaA_N_core",
+      "PDZ_carboxylate_loop_GLGF",
+      "PDZ_betaC_core",
+      "PDZ_alphaA_core",
+      "PDZ_C_terminal_tail"
+    ],
+    "operator_policy": {
+      "large_step_allowed": [
+        "pocket_motif_swap",
+        "motif_graft",
+        "segment_mutagenesis",
+        "site_resample"
+      ],
+      "large_step_scope": [
+        "PDZ_betaB_specificity_strand",
+        "PDZ_alphaB_specificity_helix",
+        "PDZ_betaB_betaC_loop"
+      ],
+      "guardrails": [
+        "preserve GLGF register",
+        "preserve fold-stability core",
+        "avoid Cys-rich artifacts"
+      ]
+    }
+  },
+  "complex_states": [
+    {
+      "name": "pdz2_target_tail_bound_state",
+      "role": "positive target state",
+      "objective": "Designed PDZ1-derived groove should bind the DLG1 PDZ2/GluR-A-like C-terminal tail LGATGL/ATGL.",
+      "metric": "plddt",
+      "entities": [
+        {
+          "type": "protein",
+          "id": "PDZ",
+          "source_chain": "BB"
+        },
+        {
+          "type": "protein",
+          "id": "target_peptide",
+          "source_chain": "T"
+        }
+      ]
+    },
+    {
+      "name": "pdz1_source_apc_state",
+      "role": "negative source-preference state",
+      "objective": "Designed PDZ1-derived groove should reduce APC-like source-tail preference after transfer.",
+      "metric": "plddt",
+      "entities": [
+        {
+          "type": "protein",
+          "id": "PDZ",
+          "source_chain": "BB"
+        },
+        {
+          "type": "protein",
+          "id": "source_apc_peptide",
+          "sequence": "RHSGSYLVTSV"
+        }
+      ]
+    }
+  ],
+  "multistate_regions": {
+    "pdz_recognition_groove": [
+      "PDZ_carboxylate_loop_GLGF",
+      "PDZ_betaB_specificity_strand",
+      "PDZ_alphaB_specificity_helix"
+    ],
+    "pdz_specificity_determinants": [
+      "PDZ_betaB_specificity_strand",
+      "PDZ_betaB_betaC_loop",
+      "PDZ_alphaB_specificity_helix"
+    ],
+    "pdz_coupling_path": [
+      "PDZ_betaB_specificity_strand",
+      "PDZ_betaB_betaC_loop",
+      "PDZ_alphaB_specificity_helix",
+      "PDZ_alphaA_core"
+    ],
+    "pdz_stability_core": [
+      "PDZ_betaA_N_core",
+      "PDZ_betaC_core",
+      "PDZ_alphaA_core",
+      "PDZ_C_terminal_tail"
+    ],
+    "target_tail6": [
+      "PDZ2_GluRA_tail6"
+    ],
+    "target_tail4": [
+      "PDZ2_GluRA_tail4"
+    ],
+    "source_tail6": [
+      "PDZ1_APC_tail6"
+    ],
+    "source_tail4": [
+      "PDZ1_APC_tail4"
+    ]
+  },
+  "multistate_objectives": [
+    {
+      "name": "pdz2_tail6_interface_on",
+      "type": "interface_on",
+      "state": "pdz2_target_tail_bound_state",
+      "pair": [
+        "PDZ",
+        "target_peptide"
+      ],
+      "left_region": "pdz_recognition_groove",
+      "right_region": "PDZ2_GluRA_tail6",
+      "weight": 1.35,
+      "contact_target": 26,
+      "residue_pair_target": 7,
+      "coverage_target": 0.42,
+      "off_target_penalty_weight": 0.08,
+      "off_target_contact_tolerance": 90
+    },
+    {
+      "name": "source_apc_tail6_interface_off",
+      "type": "interface_off",
+      "state": "pdz1_source_apc_state",
+      "pair": [
+        "PDZ",
+        "source_apc_peptide"
+      ],
+      "left_region": "pdz_recognition_groove",
+      "right_region": "PDZ1_APC_tail6",
+      "weight": 1.05,
+      "contact_target": 20,
+      "residue_pair_target": 6,
+      "off_target_contact_tolerance": 34
+    },
+    {
+      "name": "pdz2_over_pdz1_tail_delta",
+      "type": "interface_delta",
+      "positive_state": "pdz2_target_tail_bound_state",
+      "negative_state": "pdz1_source_apc_state",
+      "positive_pair": [
+        "PDZ",
+        "target_peptide"
+      ],
+      "negative_pair": [
+        "PDZ",
+        "source_apc_peptide"
+      ],
+      "positive_left_region": "pdz_specificity_determinants",
+      "positive_right_region": "PDZ2_GluRA_tail6",
+      "negative_left_region": "pdz_specificity_determinants",
+      "negative_right_region": "PDZ1_APC_tail6",
+      "weight": 1.35,
+      "direction": "decrease",
+      "min_delta": 0.08,
+      "target_delta": 0.35,
+      "contact_delta_target": 16
+    },
+    {
+      "name": "target_tail_specificity_focus",
+      "type": "epitope_specificity",
+      "state": "pdz2_target_tail_bound_state",
+      "pair": [
+        "PDZ",
+        "target_peptide"
+      ],
+      "left_region": "pdz_specificity_determinants",
+      "target_region": "PDZ2_GluRA_tail4",
+      "avoid_region": "PDZ2_GluRA_non_tail_context",
+      "weight": 0.8,
+      "target_fraction_goal": 0.48,
+      "off_target_contact_tolerance": 80
+    },
+    {
+      "name": "specificity_node_confidence",
+      "type": "region_confidence",
+      "states": [
+        "pdz2_target_tail_bound_state",
+        "pdz1_source_apc_state"
+      ],
+      "region": "pdz_specificity_determinants",
+      "metric": "plddt_mean",
+      "target": 72,
+      "weight": 0.6
+    },
+    {
+      "name": "groove_confidence_floor",
+      "type": "region_confidence_floor",
+      "states": [
+        "pdz2_target_tail_bound_state",
+        "pdz1_source_apc_state"
+      ],
+      "region": "pdz_recognition_groove",
+      "metric": "plddt_min",
+      "floor": 45,
+      "target": 75,
+      "weight": 0.55
+    },
+    {
+      "name": "stability_core_confidence",
+      "type": "region_confidence",
+      "states": [
+        "pdz2_target_tail_bound_state",
+        "pdz1_source_apc_state"
+      ],
+      "region": "pdz_stability_core",
+      "metric": "plddt_mean",
+      "target": 74,
+      "weight": 0.55
+    },
+    {
+      "name": "state_confidence",
+      "type": "confidence",
+      "states": [
+        "pdz2_target_tail_bound_state",
+        "pdz1_source_apc_state"
+      ],
+      "metric": "plddt",
+      "weight": 0.4
+    }
+  ],
+  "mutation_policy": {
+    "preferred_edit_order": [
+      "PDZ_betaB_specificity_strand",
+      "PDZ_alphaB_specificity_helix",
+      "PDZ_betaB_betaC_loop",
+      "PDZ_carboxylate_loop_GLGF"
+    ],
+    "always_open_segments": [
+      "PDZ_betaB_specificity_strand",
+      "PDZ_alphaB_specificity_helix",
+      "PDZ_betaB_betaC_loop"
+    ],
+    "conditionally_open_segments": [
+      "PDZ_carboxylate_loop_GLGF"
+    ],
+    "generally_frozen": [
+      "PDZ_expression_tag",
+      "PDZ_betaA_N_core",
+      "PDZ_betaC_core",
+      "PDZ_alphaA_core",
+      "PDZ_C_terminal_tail"
+    ]
+  },
+  "case_information_needed": [
+    "Assay-confirmed DLG1 PDZ1/APC and DLG1 PDZ2/GluR-A peptide panels for final validation.",
+    "Whether GLGF carboxylate loop substitutions are experimentally allowed or should stay fixed.",
+    "Whether the N-terminal His/tag construct residues should be removed before wet-lab design."
+  ],
+  "benchmark_start": {
+    "schema_version": "ast_benchmark_start_v1",
+    "case_id": "dlg1_pdz1_to_pdz2",
+    "start_type": "source_domain_specificity_transfer_seed",
+    "initial_seed_sequence": "MGHHHHHHMYEYEEITLERGNSGLGFSIAGGTDNPHIGDDSSIFITKIITGGAAAQDGRLRVNDCILRVNEVDVRDVTHSKAVEALKEAGSIVRLYVKRRKPVSEKI",
+    "source_oracle_sequence": "MGHHHHHHMYEYEEITLERGNSGLGFSIAGGTDNPHIGDDSSIFITKIITGGAAAQDGRLRVNDCILRVNEVDVRDVTHSKAVEALKEAGSIVRLYVKRRKPVSEKI",
+    "target_oracle_sequence": "MEKIMEIKLIKGPKGLGFSIAGGVGNQHIPGDNSIYVTKIIEGGAAHKDGKLQIGDKLLAVNSVCLEEVTHEEAVTALKNTSDFVYLKVAKPTSMYISRHHHHHH",
+    "changed_target_not_used_as_seed": true,
+    "rationale": "The run starts from source DLG1 PDZ1, which should preserve fold but is not target-ready for DLG1 PDZ2/GluR-A-like tail recognition.",
+    "interpretation": "Improvement should be measured as target-tail binding gain plus source-tail rejection, not as recovery of a degraded synthetic scaffold."
+  },
+  "design_constraints": {
+    "schema_version": "ast_case_constraints_v1",
+    "indexing": "zero_based_end_exclusive; binder spans use compiled BB sequence coordinates; target/source peptide spans use each entity sequence coordinates",
+    "mutable_nodes": [
+      "PDZ_betaB_specificity_strand",
+      "PDZ_betaB_betaC_loop",
+      "PDZ_alphaB_specificity_helix",
+      "PDZ_carboxylate_loop_GLGF"
+    ],
+    "frozen_nodes": [
+      "PDZ_expression_tag",
+      "PDZ_betaA_N_core",
+      "PDZ_betaC_core",
+      "PDZ_alphaA_core",
+      "PDZ_C_terminal_tail"
+    ],
+    "mutable_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "PDZ_betaB_specificity_strand",
+        "spans": [
+          [
+            26,
+            36
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_betaB_betaC_loop",
+        "spans": [
+          [
+            36,
+            42
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_alphaB_specificity_helix",
+        "spans": [
+          [
+            85,
+            103
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_carboxylate_loop_GLGF",
+        "spans": [
+          [
+            21,
+            26
+          ]
+        ],
+        "mutation_scope": "sparse; preserve GLGF register"
+      }
+    ],
+    "frozen_residue_spans": [
+      {
+        "chain_id": "BB",
+        "node": "PDZ_expression_tag",
+        "spans": [
+          [
+            0,
+            9
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_betaA_N_core",
+        "spans": [
+          [
+            9,
+            21
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_betaC_core",
+        "spans": [
+          [
+            42,
+            60
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_alphaA_core",
+        "spans": [
+          [
+            60,
+            85
+          ]
+        ]
+      },
+      {
+        "chain_id": "BB",
+        "node": "PDZ_C_terminal_tail",
+        "spans": [
+          [
+            103,
+            107
+          ]
+        ]
+      }
+    ],
+    "binder_hotspots": [
+      {
+        "name": "pdz_specificity_groove",
+        "chain_id": "BB",
+        "nodes": [
+          "PDZ_carboxylate_loop_GLGF",
+          "PDZ_betaB_specificity_strand",
+          "PDZ_alphaB_specificity_helix"
+        ],
+        "desired_chemistry": [
+          "hydrophobic packing for terminal Leu",
+          "polar tolerance around p-2 Thr",
+          "small-residue accommodation near p-1 Gly"
+        ]
+      },
+      {
+        "name": "pdz_coupling_path",
+        "chain_id": "BB",
+        "nodes": [
+          "PDZ_betaB_betaC_loop",
+          "PDZ_alphaB_specificity_helix",
+          "PDZ_alphaA_core"
+        ],
+        "desired_chemistry": [
+          "moderate flexibility",
+          "avoid core disruption"
+        ]
+      }
+    ],
+    "target_epitopes": [
+      {
+        "name": "PDZ2_GluRA_tail6",
+        "entity": "target_peptide",
+        "spans": [
+          [
+            12,
+            18
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_tail6_LGATGL",
+        "source": "2G2L peptide C-terminal tail6"
+      },
+      {
+        "name": "PDZ2_GluRA_tail4",
+        "entity": "target_peptide",
+        "spans": [
+          [
+            14,
+            18
+          ]
+        ],
+        "zero_based": true,
+        "role": "target_tail4_ATGL",
+        "source": "2G2L peptide C-terminal tail4"
+      },
+      {
+        "name": "PDZ2_GluRA_non_tail_context",
+        "entity": "target_peptide",
+        "spans": [
+          [
+            0,
+            12
+          ]
+        ],
+        "zero_based": true,
+        "role": "avoid overfitting to non-tail peptide context",
+        "source": "2G2L peptide non-tail context"
+      }
+    ],
+    "decoy_epitopes": [
+      {
+        "name": "PDZ1_APC_tail6",
+        "entity": "source_apc_peptide",
+        "spans": [
+          [
+            5,
+            11
+          ]
+        ],
+        "zero_based": true,
+        "role": "source_tail6_YLVTSV",
+        "source": "3RL7 peptide C-terminal tail6"
+      },
+      {
+        "name": "PDZ1_APC_tail4",
+        "entity": "source_apc_peptide",
+        "spans": [
+          [
+            7,
+            11
+          ]
+        ],
+        "zero_based": true,
+        "role": "source_tail4_VTSV",
+        "source": "3RL7 peptide C-terminal tail4"
+      }
+    ],
+    "success_thresholds": {
+      "target_tail6_interface": {
+        "contacts": 26,
+        "residue_pairs": 7,
+        "coverage": 0.42
+      },
+      "target_over_source_delta": {
+        "min_delta": 0.08,
+        "target_delta": 0.35,
+        "contact_delta_target": 16
+      },
+      "specificity_node_confidence": {
+        "plddt_mean_target": 72,
+        "plddt_min_floor": 45
+      },
+      "stability_core_confidence": {
+        "plddt_mean_target": 74
+      }
+    },
+    "operator_intent": {
+      "large_step_allowed": [
+        "pocket_motif_swap",
+        "motif_graft",
+        "segment_mutagenesis",
+        "site_resample",
+        "block"
+      ],
+      "true_length_change_scope": "outer_loop_layout_plan_only; keep compiled chain length fixed within one inner-loop search round",
+      "inner_loop_length_operators": "fixed-length proxy resampling at pocket/loop boundaries to preserve masks during a run"
+    }
+  },
+  "entity_regions": {
+    "PDZ2_GluRA_tail6": {
+      "entity": "target_peptide",
+      "spans": [
+        [
+          12,
+          18
+        ]
+      ],
+      "zero_based": true,
+      "role": "target_tail6_LGATGL"
+    },
+    "PDZ2_GluRA_tail4": {
+      "entity": "target_peptide",
+      "spans": [
+        [
+          14,
+          18
+        ]
+      ],
+      "zero_based": true,
+      "role": "target_tail4_ATGL"
+    },
+    "PDZ2_GluRA_non_tail_context": {
+      "entity": "target_peptide",
+      "spans": [
+        [
+          0,
+          12
+        ]
+      ],
+      "zero_based": true,
+      "role": "non_tail_context"
+    },
+    "PDZ1_APC_tail6": {
+      "entity": "source_apc_peptide",
+      "spans": [
+        [
+          5,
+          11
+        ]
+      ],
+      "zero_based": true,
+      "role": "source_tail6_YLVTSV"
+    },
+    "PDZ1_APC_tail4": {
+      "entity": "source_apc_peptide",
+      "spans": [
+        [
+          7,
+          11
+        ]
+      ],
+      "zero_based": true,
+      "role": "source_tail4_VTSV"
+    }
+  },
+  "semantic_graph": {
+    "schema_version": "protein_semantic_graph_v1",
+    "description": "Two-layer AST for PDZ specificity transfer.",
+    "structural_graph": {
+      "nodes": {
+        "PDZ_domain": {
+          "kind": "Domain",
+          "role": "single PDZ fold scaffold",
+          "children": [
+            "PDZ_expression_tag",
+            "PDZ_betaA_N_core",
+            "PDZ_carboxylate_loop_GLGF",
+            "PDZ_betaB_specificity_strand",
+            "PDZ_betaB_betaC_loop",
+            "PDZ_betaC_core",
+            "PDZ_alphaA_core",
+            "PDZ_alphaB_specificity_helix",
+            "PDZ_C_terminal_tail"
+          ]
+        },
+        "PDZ_expression_tag": {
+          "kind": "Loop",
+          "role": "construct tag, frozen"
+        },
+        "PDZ_betaA_N_core": {
+          "kind": "Core",
+          "role": "N-terminal beta/core support"
+        },
+        "PDZ_carboxylate_loop_GLGF": {
+          "kind": "Motif",
+          "role": "canonical carboxylate-binding loop; preserve GLGF register"
+        },
+        "PDZ_betaB_specificity_strand": {
+          "kind": "Pocket",
+          "role": "primary peptide-tail specificity strand"
+        },
+        "PDZ_betaB_betaC_loop": {
+          "kind": "Loop",
+          "role": "local plasticity gate between betaB and betaC"
+        },
+        "PDZ_betaC_core": {
+          "kind": "Core",
+          "role": "fold-stability beta core"
+        },
+        "PDZ_alphaA_core": {
+          "kind": "Core",
+          "role": "fold-stability alpha core"
+        },
+        "PDZ_alphaB_specificity_helix": {
+          "kind": "Pocket",
+          "role": "alphaB helix forming specificity wall of binding groove"
+        },
+        "PDZ_C_terminal_tail": {
+          "kind": "Loop",
+          "role": "terminal construct tail, frozen"
+        },
+        "PDZ2_GluRA_tail6": {
+          "kind": "Interface",
+          "role": "positive peptide epitope tail6 LGATGL"
+        },
+        "PDZ1_APC_tail6": {
+          "kind": "Interface",
+          "role": "negative/source peptide epitope tail6 YLVTSV"
+        }
+      },
+      "edges": [
+        {
+          "id": "motif_to_betaB_geometry",
+          "source": "PDZ_carboxylate_loop_GLGF",
+          "target": "PDZ_betaB_specificity_strand",
+          "edge_type": "structural_register",
+          "initial_weight": 0.85
+        },
+        {
+          "id": "betaB_to_alphaB_groove",
+          "source": "PDZ_betaB_specificity_strand",
+          "target": "PDZ_alphaB_specificity_helix",
+          "edge_type": "binding_groove_coupling",
+          "initial_weight": 0.9
+        },
+        {
+          "id": "loop_to_groove_plasticity",
+          "source": "PDZ_betaB_betaC_loop",
+          "target": "PDZ_betaB_specificity_strand",
+          "edge_type": "local_perturbation_buffer",
+          "initial_weight": 0.55
+        },
+        {
+          "id": "groove_to_core_risk",
+          "source": "PDZ_alphaB_specificity_helix",
+          "target": "PDZ_alphaA_core",
+          "edge_type": "stability_risk",
+          "initial_weight": 0.35
+        }
+      ]
+    },
+    "functional_graph": {
+      "nodes": {
+        "ligand_recognition": {
+          "role": "make a stable PDZ-target peptide interface",
+          "maps_to": [
+            "PDZ_carboxylate_loop_GLGF",
+            "PDZ_betaB_specificity_strand",
+            "PDZ_alphaB_specificity_helix",
+            "PDZ2_GluRA_tail6"
+          ]
+        },
+        "specificity_determination": {
+          "role": "prefer PDZ2 GluR-A-like tail over PDZ1 APC-like tail",
+          "maps_to": [
+            "PDZ_betaB_specificity_strand",
+            "PDZ_betaB_betaC_loop",
+            "PDZ_alphaB_specificity_helix",
+            "PDZ2_GluRA_tail6",
+            "PDZ1_APC_tail6"
+          ]
+        },
+        "coupling_path": {
+          "role": "propagate local pocket edits without breaking the PDZ fold",
+          "maps_to": [
+            "PDZ_betaB_specificity_strand",
+            "PDZ_betaB_betaC_loop",
+            "PDZ_alphaB_specificity_helix",
+            "PDZ_alphaA_core"
+          ]
+        },
+        "fold_stability": {
+          "role": "preserve PDZ global fold and core confidence",
+          "maps_to": [
+            "PDZ_betaA_N_core",
+            "PDZ_betaC_core",
+            "PDZ_alphaA_core",
+            "PDZ_C_terminal_tail"
+          ]
+        },
+        "developability": {
+          "role": "avoid cysteine/proline-rich or highly charged local artifacts",
+          "maps_to": [
+            "PDZ_betaB_specificity_strand",
+            "PDZ_alphaB_specificity_helix"
+          ]
+        }
+      },
+      "edges": [
+        {
+          "id": "recognition_to_specificity",
+          "source": "ligand_recognition",
+          "target": "specificity_determination",
+          "coupling_type": "shared_groove_perturbation",
+          "initial_weight": 0.9,
+          "evidence": "tail4 changes from VTSV to ATGL while scaffold cluster remains S16/T2"
+        },
+        {
+          "id": "specificity_to_coupling_path",
+          "source": "specificity_determination",
+          "target": "coupling_path",
+          "coupling_type": "betaB_alphaB_propagation",
+          "initial_weight": 0.75,
+          "evidence": "PDZ specificity normally spans betaB strand, carboxylate loop, and alphaB helix"
+        },
+        {
+          "id": "coupling_to_fold_stability",
+          "source": "coupling_path",
+          "target": "fold_stability",
+          "coupling_type": "stability_tradeoff",
+          "initial_weight": 0.45,
+          "evidence": "large pocket edits can lower local pLDDT or clash with the core"
+        },
+        {
+          "id": "specificity_to_developability",
+          "source": "specificity_determination",
+          "target": "developability",
+          "coupling_type": "sequence_quality_tradeoff",
+          "initial_weight": 0.25,
+          "evidence": "avoid solutions that overfit with cysteine/proline or charged runs"
+        }
+      ]
+    },
+    "mappings": {
+      "ligand_recognition": [
+        "PDZ_carboxylate_loop_GLGF",
+        "PDZ_betaB_specificity_strand",
+        "PDZ_alphaB_specificity_helix",
+        "PDZ2_GluRA_tail6"
+      ],
+      "specificity_determination": [
+        "PDZ_betaB_specificity_strand",
+        "PDZ_betaB_betaC_loop",
+        "PDZ_alphaB_specificity_helix",
+        "PDZ2_GluRA_tail6",
+        "PDZ1_APC_tail6"
+      ],
+      "coupling_path": [
+        "PDZ_betaB_specificity_strand",
+        "PDZ_betaB_betaC_loop",
+        "PDZ_alphaB_specificity_helix",
+        "PDZ_alphaA_core"
+      ],
+      "fold_stability": [
+        "PDZ_betaA_N_core",
+        "PDZ_betaC_core",
+        "PDZ_alphaA_core",
+        "PDZ_C_terminal_tail"
+      ],
+      "developability": [
+        "PDZ_betaB_specificity_strand",
+        "PDZ_alphaB_specificity_helix"
+      ]
+    },
+    "outer_loop_contract": {
+      "editable_functional_nodes": [
+        "ligand_recognition",
+        "specificity_determination",
+        "coupling_path",
+        "developability"
+      ],
+      "guardrail_functional_nodes": [
+        "fold_stability"
+      ],
+      "preferred_decision_logic": [
+        "If target binding is weak but source rejection is good, open ligand_recognition nodes and strengthen tail6 contacts.",
+        "If both target and source bind strongly, shift edits to specificity_determination nodes and increase betaB/alphaB discrimination.",
+        "If confidence drops in core nodes, reduce coupling_path edit breadth and increase fold_stability guardrail weight."
+      ]
+    }
+  }
+}

@@ -1,0 +1,56 @@
+max_iterations: 200
+checkpoint_interval: 10
+log_level: "INFO"
+random_seed: 42
+max_tasks_per_child: 1
+
+diff_based_evolution: true
+max_code_length: 42000
+
+llm:
+  models:
+    - name: "qwen3.7-max"
+      weight: 1.0
+  api_base: "${ASTEVOLVE_LLM_API_BASE}"
+  api_key: "${ASTEVOLVE_LLM_API_KEY}"
+  temperature: 0.88
+  top_p: 0.95
+  max_tokens: 4096
+  timeout: 180
+  retries: 1
+  retry_delay: 5
+
+prompt:
+  system_message: |
+    You are ASTevolve's outer-loop Protein Semantic Graph designer for the fixed DLG1 PDZ1 to DLG1 PDZ2 specificity-transfer task.
+
+    Modify only the EVOLVE-BLOCK in cases/dlg1_pdz1_to_pdz2/initial_program.py. Prefer exact SEARCH/REPLACE diffs.
+    Your entire response must be one or more exact diff blocks and nothing else:
+    <<<<<<< SEARCH
+    exact original code
+    =======
+    replacement code
+    >>>>>>> REPLACE
+
+    Preserve propose_strategy(), run_search(seed=None), preview_case(), design_state.json,
+    evaluator.py, engine interfaces, and the fixed biological case identity.
+    Runtime settings are locked outside the EVOLVE-BLOCK and will be overwritten before evaluation.
+
+    Editable scope is the two-layer Protein Semantic Graph layout/topology only:
+    - edit design_regions, semantic_focus, node priorities, residue-class priors, motif candidates, and coupling-edge emphasis;
+    - map functional nodes to concrete structural nodes: PDZ_carboxylate_loop_GLGF, PDZ_betaB_specificity_strand, PDZ_betaB_betaC_loop, PDZ_alphaB_specificity_helix, PDZ_betaA_N_core, PDZ_betaC_core, PDZ_alphaA_core, PDZ_C_terminal_tail;
+    - use functional edges as perturbation/coupling hypotheses, not mere contact edges;
+    - allow larger jumps through pocket_motif_swap, motif_graft, segment_mutagenesis, site_resample, and block operators inside mutable pocket/loop nodes;
+    - keep fold_stability and developability as guardrails.
+
+    Do not hard-code final sequences, copy PDZ2 sequence verbatim, edit target/source peptide sequences,
+    bypass evaluation, change model/KB paths, or add top-level runtime settings outside layout_plan.
+    Use prompt artifacts such as llm_feedback_summary.semantic_graph, objectives, objective warnings,
+    node pLDDT, state/interface metrics, and embedding retrieval to decide the next graph edit.
+
+evaluator:
+  timeout: 180000
+  parallel_evaluations: 1
+  enable_artifacts: true
+  cascade_evaluation: false
+  use_llm_feedback: false

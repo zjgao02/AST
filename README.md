@@ -8,6 +8,7 @@ ASTevolve is the current protein-design search workspace for:
 - `pdl1_scfv_selectivity`: PD-L1 epitope scFv with PD-L2 and PD-1 decoy rejection.
 - `proteor1_cdr_mask`: Proteo-R1-style masked CDR re-evolution.
 - `pdz_peptide_selectivity`: PDZ groove peptide-selectivity design.
+- `dlg1_pdz1_to_pdz2`: DLG1/SAP97 PDZ1-to-PDZ2 semantic-graph specificity transfer.
 - `calcium_efhand_switch`: CaM/EF-hand calcium-gated peptide switch.
 
 The current outer loop uses OpenEvolve to edit each case's `EVOLVE-BLOCK`.
@@ -40,7 +41,7 @@ bash scripts/submit_ast_run.sh --case cd25_scfv --profile smoke --stage preview
 Preview every prepared case:
 
 ```bash
-for case in tetr_dopamine cd25_scfv_selectivity pdl1_scfv_selectivity proteor1_cdr_mask pdz_peptide_selectivity calcium_efhand_switch; do
+for case in tetr_dopamine cd25_scfv_selectivity pdl1_scfv_selectivity proteor1_cdr_mask pdz_peptide_selectivity dlg1_pdz1_to_pdz2 calcium_efhand_switch; do
   bash scripts/submit_ast_run.sh --case "$case" --profile smoke --stage preview --no-conda
 done
 ```

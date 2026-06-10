@@ -26,6 +26,15 @@ ATF_KB_ASSETS = [
     data_path("atf_kb", "embeddings_esm2_t6_8M_atf_interpro.npy"),
 ]
 
+PDZ_TRANSFER_ASSETS = [
+    data_path("pdz_cluster_analysis_v0", "PDZ_HANDOFF.md"),
+    data_path("pdz_cluster_analysis_v0", "pdz_transfer_tasks_v0.csv"),
+    data_path("pdz_cluster_analysis_v0", "pdz_case_sequence_info_v0.csv"),
+    data_path("pdz_cluster_analysis_v0", "pdz_case_cluster_features_v0.csv"),
+    data_path("pdz_structures", "pdb", "3RL7.pdb"),
+    data_path("pdz_structures", "pdb", "2G2L.pdb"),
+]
+
 CASE_ASSETS = {
     "cd25_scfv": ANTIBODY_KB_ASSETS,
     "cd25_scfv_selectivity": ANTIBODY_KB_ASSETS,
@@ -34,6 +43,7 @@ CASE_ASSETS = {
     "tetr_dopamine": ATF_KB_ASSETS,
     "calcium_efhand_switch": ATF_KB_ASSETS,
     "pdz_peptide_selectivity": [],
+    "dlg1_pdz1_to_pdz2": PDZ_TRANSFER_ASSETS,
 }
 
 

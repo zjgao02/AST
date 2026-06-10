@@ -18,7 +18,7 @@ GPUS="${GPUS:-1}"
 CPUS_PER_TASK="${CPUS_PER_TASK:-8}"
 MEM="${MEM:-80G}"
 TIME="${TIME:-24:00:00}"
-CONDA_ENV="${CONDA_ENV:-ast}"
+CONDA_ENV="${CONDA_ENV:-auto}"
 CONDA_SH="${CONDA_SH:-/mnt/petrelfs/zhaoyiyang/anaconda3/etc/profile.d/conda.sh}"
 SUBMIT_MODE="${SUBMIT_MODE:-sbatch}"
 

@@ -1,0 +1,21 @@
+rank,priority,domain_case,protein_gene,representative_pdb,selected_pdz_chain,pdz_sequence_length,pdz_ca_residue_count,pdz_uniprot_ids,peptide_sequence,peptide_length,peptide_tail4,peptide_tail6,p_minus_3,p_minus_2,p_minus_1,p0,motif_class,reduced_tail4,sequence_cluster_50pct,structure_shape_cluster_2p5A,motif_cluster
+1,A,PSD-95/DLG4 PDZ3,DLG4,1BE9,A,119,115,P31016,KQTSV,5,QTSV,KQTSV,Q,T,S,V,class_I_X-S/T-X-Phi,Amide-ST-ST-Phi,S1,T1,class_I_X-S/T-X-Phi
+2,A,Erbin PDZ,ERBB2IP,1MFG,A,95,95,Q96RT1,EYLGLDVPV,9,DVPV,GLDVPV,D,V,P,V,class_II_X-Phi-X-Phi,Acid-Phi-Pro-Phi,S2,T2,class_II_X-Phi-X-Phi
+3,A,NHERF1 PDZ1,SLC9A3R1,2M0U,A,117,117,O14745,QDTRL,5,DTRL,QDTRL,D,T,R,L,class_I_X-S/T-X-Phi,Acid-ST-Basic-Phi,S3,T3,class_I_X-S/T-X-Phi
+4,A,NHERF1 PDZ2,SLC9A3R1,2M0V,A,128,128,O14745,QDTRL,5,DTRL,QDTRL,D,T,R,L,class_I_X-S/T-X-Phi,Acid-ST-Basic-Phi,S3,T4,class_I_X-S/T-X-Phi
+5,A,Syntenin-1 PDZ2,SDCBP,1OBY,A,79,75,O00560,TNEFYA,6,EFYA,TNEFYA,E,F,Y,A,class_II_X-Phi-X-Phi,Acid-Phi-Phi-Phi,S4,T2,class_II_X-Phi-X-Phi
+6,A,GRIP1 PDZ6,GRIP1,1N7F,A,97,86,P97879,ATVRTYSC,8,TYSC,VRTYSC,T,Y,S,C,noncanonical_Cterm,ST-Phi-ST-Cys,S5,T2,noncanonical_Cterm
+7,B,Afadin/AF-6 PDZ,MLLT4,2AIN,A,93,93,P55196,LFSTEV,6,STEV,LFSTEV,S,T,E,V,class_I_X-S/T-X-Phi,ST-ST-Acid-Phi,S6,T2,class_I_X-S/T-X-Phi
+8,B,Tamalin/GRASP PDZ,GRASP,2EGN,A,96,83,Q8R4T5,SSSSL,5,SSSL,SSSSL,S,S,S,L,class_I_X-S/T-X-Phi,ST-ST-ST-Phi,S7,T2,class_I_X-S/T-X-Phi
+9,B,PICK1 PDZ,PICK1,2PKU,A,87,87,Q9EP80,ESVKI,5,SVKI,ESVKI,S,V,K,I,class_II_X-Phi-X-Phi,ST-Phi-Basic-Phi,S8,T2,class_II_X-Phi-X-Phi
+10,B,LARG PDZ,ARHGEF12,2OS6,A,89,89,Q9NZN5,VENKVTDL,8,VTDL,NKVTDL,V,T,D,L,class_I_X-S/T-X-Phi,Phi-ST-Acid-Phi,S9,T5,class_I_X-S/T-X-Phi
+11,B,Par-6 PDZ,par-6,1RZX,A,98,98,O97111,XVKESLV,7,ESLV,VKESLV,E,S,L,V,class_I_X-S/T-X-Phi,Acid-ST-Phi-Phi,S10,T6,class_I_X-S/T-X-Phi
+12,B,Par-3 PDZ3,PARD3,2K20,A,104,104,Q9Z340,DEDQHSQITKV,11,ITKV,SQITKV,I,T,K,V,class_I_X-S/T-X-Phi,Phi-ST-Basic-Phi,S11,T2,class_I_X-S/T-X-Phi
+13,B,Harmonin PDZ2,USH1C,2KBS,A,92,92,Q9Y6N9,TPLEITEL,8,ITEL,LEITEL,I,T,E,L,class_I_X-S/T-X-Phi,Phi-ST-Acid-Phi,S12,T2,class_I_X-S/T-X-Phi
+14,A,SNX27 PDZ,SNX27,3QGL,A,101,96,Q8K4V4,ESESKV,6,ESKV,ESESKV,E,S,K,V,class_I_X-S/T-X-Phi,Acid-ST-Basic-Phi,S3,T2,class_I_X-S/T-X-Phi
+15,B,PTPN4 PDZ,PTPN4,3NFK,A,107,92,P29074,SWESHKSGGETRL,13,ETRL,GGETRL,E,T,R,L,class_I_X-S/T-X-Phi,Acid-ST-Basic-Phi,S13,T2,class_I_X-S/T-X-Phi
+16,A,ZO-1 PDZ2,TJP1,3CYY,A,92,80,Q07157,RPRPDDLEI,9,DLEI,PDDLEI,D,L,E,I,class_II_X-Phi-X-Phi,Acid-Phi-Acid-Phi,S14,T7,class_II_X-Phi-X-Phi
+17,B,TIP-1 PDZ,TAX1BP3,3SFJ,A,104,103,O14907,ANSRWPTSII,10,TSII,WPTSII,T,S,I,I,class_I_X-S/T-X-Phi,ST-ST-Phi-Phi,S15,T2,class_I_X-S/T-X-Phi
+18,A,CAL/GOPC PDZ,GOPC,4E34,A,87,87,Q9HD26,ANSRWPTSII,10,TSII,WPTSII,T,S,I,I,class_I_X-S/T-X-Phi,ST-ST-Phi-Phi,S1,T2,class_I_X-S/T-X-Phi
+19,A,DLG1/SAP97 PDZ1,DLG1,3RL7,A,107,90,Q12959,RHSGSYLVTSV,11,VTSV,YLVTSV,V,T,S,V,class_I_X-S/T-X-Phi,Phi-ST-ST-Phi,S16,T2,class_I_X-S/T-X-Phi
+20,A,DLG1/SAP97 PDZ2,DLG1,2G2L,A,105,90,Q62696,SIPCMSHSSGMPLGATGL,18,ATGL,LGATGL,A,T,G,L,class_I_X-S/T-X-Phi,Phi-ST-Small-Phi,S16,T2,class_I_X-S/T-X-Phi
